@@ -40,7 +40,7 @@ dynamicmart/
 │   ├── payment-service/
 │   └── engagement-service/
 ├── contracts/                 # Đã tạo nhưng đang trống
-├── dynamicmart-frontend/      # Đã tạo nhưng đang trống; chưa phải Next.js app
+├── dynamicmart-frontend/      # Next.js App Router/TypeScript/Tailwind; đã có frontend foundation dùng chung
 ├── infra/                     # Đã tạo nhưng đang trống; chưa có Docker Compose
 └── docs/
 ```
@@ -71,21 +71,21 @@ Set-Location ..\services\catalog-service
 | Spring Cloud BOM | `2025.1.3` |
 | File cấu hình | `src/main/resources/application.yaml` |
 
-Tất cả `application.yaml` hiện chỉ có `spring.application.name`; chưa có profile, datasource, Flyway, RabbitMQ, JWT, route Gateway hoặc port.
+Tất cả `application.yaml` hiện chỉ có `spring.application.name`; chưa có profile, datasource, Flyway, RabbitMQ, JWT, route Gateway hoặc port. Riêng `payment-service` chưa có GHN client, endpoint danh mục Tỉnh/Thành phố → Phường/Xã, cache/migration địa giới, quote adapter hoặc cấu hình `GHN_*`; mô hình GHN mới hiện mới nằm trong tài liệu thiết kế.
 
 ## 4. Dependency đã có theo project
 
 | Project | Artifact / application name | Dependency hiện có |
 |---|---|---|
 | `api-gateway` | `api-gateway` / `api-gateway` | Actuator, Spring Security, OAuth2 Resource Server, Spring Cloud Gateway **Server Web MVC**, configuration processor cho compile, các test starter tương ứng |
-| `identity-service` | `identity` / `identity` | Actuator, Data JPA, Flyway, Spring Security, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, Lombok, configuration processor và test dependency tương ứng |
+| `identity-service` | `identity-service` / `identity-service` | Actuator, Data JPA, Flyway, Spring Security, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, Lombok, configuration processor và test dependency tương ứng |
 | `catalog-service` | `catalog-service` / `catalog-service` | Actuator, Data JPA, Flyway, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, configuration processor và test dependency tương ứng |
 | `cart-service` | `cart-service` / `cart-service` | Actuator, Data JPA, Flyway, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, configuration processor và test dependency tương ứng |
 | `order-service` | `order-service` / `order-service` | Actuator, Data JPA, Flyway, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, configuration processor và test dependency tương ứng |
 | `payment-service` | `payment-service` / `payment-service` | Actuator, Data JPA, Flyway, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, configuration processor và test dependency tương ứng |
 | `engagement-service` | `engagement-service` / `engagement-service` | Actuator, Data JPA, Flyway, Validation, Spring Web MVC, PostgreSQL driver, `spring-cloud-stream`, configuration processor và test dependency tương ứng |
 
-`identity-service` có folder tên `identity-service` nhưng Maven artifact và `spring.application.name` đang là `identity`. Trước khi tạo Gateway route, Docker service name và RabbitMQ binding, nhóm phải thống nhất một tên; khuyến nghị chuẩn hóa thành `identity-service`.
+Identity đã được chuẩn hóa nhất quán: folder, Maven artifact và `spring.application.name` đều dùng `identity-service`. Java package `com.dynamicmart.identity` vẫn giữ nguyên vì đó là namespace mã nguồn, không phải service name.
 
 ## 5. RabbitMQ, Saga và Outbox
 
@@ -122,7 +122,7 @@ payment_db
 engagement_db
 ```
 
-Voucher/reservation thuộc `cart_db`; không tạo `promotion_db`. Shipping P1 nằm trong `payment-service`; không tạo `shipping_db` trong phạm vi hiện tại.
+Voucher/reservation thuộc `cart_db`; không tạo `promotion_db`. Danh mục địa giới GHN và GHN quote P0 nằm trong `payment-service`; không tạo `shipping_db` trong phạm vi hiện tại. Khi cấu hình GHN, chỉ dùng biến môi trường như `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_FROM_PROVINCE_ID`, `GHN_FROM_WARD_ID`; không commit credential hoặc địa chỉ kho nhạy cảm.
 
 Mỗi service cần bổ sung:
 
@@ -152,7 +152,7 @@ Các phần chưa có và cần cấu hình trước khi frontend gọi API:
 
 ## 8. Frontend
 
-`dynamicmart-frontend/` hiện trống. Khi khởi tạo, dùng Next.js/React/TypeScript/Tailwind trong chính folder này; frontend chỉ gọi API Gateway qua biến không nhạy cảm như `NEXT_PUBLIC_API_BASE_URL`.
+`dynamicmart-frontend/` đã là Next.js App Router với React, TypeScript và Tailwind. Nền dùng chung gồm layout, component UI/common, API client qua Gateway, contract API và mẫu `features/`; frontend chỉ gọi API Gateway qua biến không nhạy cảm như `NEXT_PUBLIC_API_BASE_URL`.
 
 Các thư viện có thể thêm sau khi app Next.js được tạo:
 
@@ -179,12 +179,11 @@ Redis là optional cho P0; chỉ thêm khi đã có use case cache/rate limit r�
 
 ## 10. Việc cần làm trước khi bắt đầu business logic
 
-1. Chuẩn hóa tên `identity-service` giữa folder, Maven artifact và `spring.application.name`.
-2. Chốt Java 17 hoặc nâng đồng loạt lên Java 21; hiện source là Java 17.
-3. Khởi tạo Next.js trong `dynamicmart-frontend/`.
-4. Tạo `infra/docker-compose.yml` cho PostgreSQL và RabbitMQ Management.
-5. Thêm Rabbit binder và cấu hình Cloud Stream trước khi viết event thật.
-6. Thêm datasource/Flyway profile và migration `V1` cho từng business service.
-7. Tạo migration chuẩn cho `outbox_events` và `processed_events` ở service có event.
-8. Cấu hình Gateway route/CORS/JWT trước khi tích hợp frontend.
-9. Tạo `.env.example`; không commit `.env` hoặc bất kỳ secret nào.
+1. Chốt Java 17 hoặc nâng đồng loạt lên Java 21; hiện source là Java 17.
+2. Khởi tạo Next.js trong `dynamicmart-frontend/`.
+3. Tạo `infra/docker-compose.yml` cho PostgreSQL và RabbitMQ Management.
+4. Thêm Rabbit binder và cấu hình Cloud Stream trước khi viết event thật.
+5. Thêm datasource/Flyway profile và migration `V1` cho từng business service.
+6. Tạo migration chuẩn cho `outbox_events` và `processed_events` ở service có event.
+7. Cấu hình Gateway route/CORS/JWT trước khi tích hợp frontend.
+8. Tạo `.env.example`; không commit `.env` hoặc bất kỳ secret nào.

@@ -1,3 +1,14 @@
 spring:
+  config:
+    import: "optional:file:./.env[.properties],optional:file:./cart-service/.env[.properties],optional:file:./services/cart-service/.env[.properties]"
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cart_db}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   application:
     name: cart-service

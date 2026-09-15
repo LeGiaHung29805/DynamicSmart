@@ -1,3 +1,25 @@
 spring:
+  config:
+    import: "optional:file:./.env[.properties],optional:file:./api-gateway/.env[.properties]"
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
   application:
     name: api-gateway
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  cors:
+    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+  routes:
+    identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+    catalog-service-url: ${CATALOG_SERVICE_URL:http://localhost:8082}
+    cart-service-url: ${CART_SERVICE_URL:http://localhost:8083}
+    order-service-url: ${ORDER_SERVICE_URL:http://localhost:8084}
+    payment-service-url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+    engagement-service-url: ${ENGAGEMENT_SERVICE_URL:http://localhost:8086}
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:dynamicmart-identity-service}
+      hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}
