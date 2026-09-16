@@ -98,6 +98,14 @@ body {
   margin: 0;
 }
 
+.filter-sidebar-scroll {
+  scrollbar-width: none;
+}
+
+.filter-sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 button,
 input,
 select,
