@@ -15,7 +15,7 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "payment_attempts")
-@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @Setter @NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class PaymentAttempt {
     @Id private UUID id;
     @Column(name = "payment_id", nullable = false) private UUID paymentId;

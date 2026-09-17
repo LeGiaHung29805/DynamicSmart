@@ -12,7 +12,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "ghn_location_wards")
-@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @Setter @NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class GhnLocationWard {
     @Id private int id;
     @Column(name = "province_id", nullable = false) private int provinceId;

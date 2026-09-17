@@ -13,7 +13,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "payments")
-@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @Setter @NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class Payment {
     @Id private UUID id;
     @Column(name = "order_id", nullable = false) private UUID orderId;
