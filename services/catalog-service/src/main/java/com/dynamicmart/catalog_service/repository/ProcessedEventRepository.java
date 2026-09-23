@@ -1,0 +1,8 @@
+package com.dynamicmart.catalog_service.repository;
+
+import com.dynamicmart.catalog_service.entity.ProcessedEvent;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProcessedEventRepository extends JpaRepository<ProcessedEvent, UUID> {
+}
