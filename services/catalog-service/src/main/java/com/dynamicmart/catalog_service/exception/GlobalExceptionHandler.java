@@ -2,6 +2,7 @@ package com.dynamicmart.catalog_service.exception;
 
 import com.dynamicmart.catalog_service.dto.response.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -9,6 +10,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -28,6 +31,14 @@ public class GlobalExceptionHandler {
                 fields.putIfAbsent(error.getField(), error.getDefaultMessage()));
         return response(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Dữ liệu gửi lên không hợp lệ.",
                 request, fields);
+    }
+
+    @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class,
+            MethodArgumentTypeMismatchException.class})
+    ResponseEntity<ApiErrorResponse> handleRequestValidation(Exception exception,
+                                                              HttpServletRequest request) {
+        return response(HttpStatus.BAD_REQUEST, "REQUEST_PARAMETER_INVALID",
+                "Tham số yêu cầu không hợp lệ.", request, Map.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

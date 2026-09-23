@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProductAttributeValueRepository extends JpaRepository<ProductAttributeValue, UUID> {
     List<ProductAttributeValue> findAllByProductId(UUID productId);
+    List<ProductAttributeValue> findAllByProductIdIn(List<UUID> productIds);
     Optional<ProductAttributeValue> findByProductIdAndAttributeId(UUID productId, UUID attributeId);
     void deleteAllByProductId(UUID productId);
 }

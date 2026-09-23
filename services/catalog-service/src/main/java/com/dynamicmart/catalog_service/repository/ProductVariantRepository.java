@@ -13,6 +13,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     boolean existsBySkuIgnoreCaseAndIdNot(String sku, UUID id);
     Optional<ProductVariant> findBySkuIgnoreCase(String sku);
     List<ProductVariant> findAllByProductIdOrderBySortOrderAsc(UUID productId);
+    List<ProductVariant> findAllByProductIdInOrderByProductIdAscSortOrderAsc(Collection<UUID> productIds);
     List<ProductVariant> findAllByProductIdAndStatusOrderBySortOrderAsc(UUID productId, VariantStatus status);
     List<ProductVariant> findAllByIdIn(Collection<UUID> ids);
 }

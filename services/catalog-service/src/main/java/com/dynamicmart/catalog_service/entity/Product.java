@@ -71,6 +71,11 @@ public class Product {
         publishedAt = publicationTime == null ? Instant.now() : publicationTime;
     }
 
+    public void moveToDraft() {
+        status = ProductStatus.DRAFT;
+        publishedAt = null;
+    }
+
     public void deactivate() { status = ProductStatus.INACTIVE; }
     public void archive() { status = ProductStatus.ARCHIVED; }
     public void markFeatured(boolean value) { featured = value; }

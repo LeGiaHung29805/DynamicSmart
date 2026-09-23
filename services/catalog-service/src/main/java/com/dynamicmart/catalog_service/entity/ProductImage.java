@@ -45,6 +45,8 @@ public class ProductImage {
         this.primary = primary;
     }
 
+    public void markPrimary(boolean value) { this.primary = value; }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
