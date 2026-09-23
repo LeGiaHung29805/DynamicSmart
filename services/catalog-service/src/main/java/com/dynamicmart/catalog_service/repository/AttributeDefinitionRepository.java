@@ -11,5 +11,6 @@ public interface AttributeDefinitionRepository extends JpaRepository<AttributeDe
     boolean existsByCodeIgnoreCase(String code);
     boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);
     Optional<AttributeDefinition> findByCodeIgnoreCase(String code);
+    List<AttributeDefinition> findAllByOrderByNameAsc();
     List<AttributeDefinition> findAllByStatusOrderByNameAsc(CatalogStatus status);
 }

@@ -12,3 +12,16 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8082}
+
+app:
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:dynamicmart-identity-service}
+      hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64:}
+  internal:
+    api-key: ${INTERNAL_API_KEY:}

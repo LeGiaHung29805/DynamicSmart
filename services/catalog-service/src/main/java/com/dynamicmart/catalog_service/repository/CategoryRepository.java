@@ -13,6 +13,7 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
     boolean existsBySlugIgnoreCase(String slug);
     boolean existsBySlugIgnoreCaseAndIdNot(String slug, UUID id);
     Optional<Category> findBySlugIgnoreCase(String slug);
+    List<Category> findAllByOrderBySortOrderAscNameAsc();
     List<Category> findAllByStatusOrderBySortOrderAscNameAsc(CatalogStatus status);
     List<Category> findAllByParentIdOrderBySortOrderAscNameAsc(UUID parentId);
 }

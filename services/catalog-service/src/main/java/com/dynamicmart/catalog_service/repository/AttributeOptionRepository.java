@@ -9,4 +9,6 @@ public interface AttributeOptionRepository extends JpaRepository<AttributeOption
     boolean existsByAttributeIdAndCodeIgnoreCase(UUID attributeId, String code);
     boolean existsByAttributeIdAndCodeIgnoreCaseAndIdNot(UUID attributeId, String code, UUID id);
     List<AttributeOption> findAllByAttributeIdOrderBySortOrderAscLabelAsc(UUID attributeId);
+    List<AttributeOption> findAllByAttributeIdInOrderByAttributeIdAscSortOrderAscLabelAsc(
+            List<UUID> attributeIds);
 }
