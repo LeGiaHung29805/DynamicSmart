@@ -107,7 +107,9 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
 - API Checkout Preview điều phối Address, Voucher, GHN quote và tính tiền nhưng không tạo reservation.
 - Preview gọi service ngoài transaction, sau đó khóa session để chống ghi snapshot stale; quote cũ bị invalidated.
 - Migration V3 và snapshot kích thước/trọng lượng phục vụ GHN package rule.
-- 50 automated test hiện có: security, JWT role, payment contract, pricing, Checkout Session/Preview, state machine và context smoke test.
+- 57 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
+  Create Order admission/idempotency, state machine và context smoke test.
+- Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
 
 Chưa có:
 
@@ -115,7 +117,7 @@ Chưa có:
 - REST adapter thật sang Identity, Catalog và Cart (hiện chỉ có gateway interface/fallback an toàn).
 - Controller/API Order Customer và Admin.
 - Saga orchestrator và trạng thái Saga bền vững.
-- Xử lý `Idempotency-Key` thực tế.
+- Hoàn tất toàn bộ vòng đời `Idempotency-Key`; admission của Create Order đã được lưu bền vững trong Saga.
 - Outbox publisher.
 - RabbitMQ consumer/producer nghiệp vụ.
 - Repository constraint/locking test, controller test và integration test.
@@ -392,7 +394,7 @@ Tiêu chí hoàn thành:
 
 ### M6. Tạo Order, idempotency và Saga
 
-**Trạng thái: Chưa bắt đầu**
+**Trạng thái: Đang thực hiện**
 
 API dự kiến:
 
@@ -436,6 +438,15 @@ Tiêu chí hoàn thành:
 - Lỗi từng bước đều bù trừ đúng.
 - Restart giữa Saga không làm mất reservation hoặc tạo Order trùng.
 - Snapshot không thay đổi khi dữ liệu nguồn bị sửa.
+
+Đã triển khai bước admission đầu tiên:
+
+- Migration V4 thêm `idempotency_key`, `request_hash` và unique index vào `order_sagas`.
+- Khóa pessimistic Checkout Session trước khi bắt đầu Saga.
+- Kiểm tra ownership, TTL, trạng thái, Address, Preview totals, payment pair và quote `ACTIVE` còn hạn.
+- Cùng key/cùng request trả lại Saga hiện có; cùng key/request khác hoặc hai key trên cùng session bị từ chối.
+- Admission được commit trước mọi lời gọi reserve bên ngoài; chưa mở endpoint Create Order cho đến khi orchestrator có thể chạy/compensate an toàn.
+- 7 unit test admission đạt; Flyway V1→V4 và Hibernate validate đạt trên PostgreSQL thật.
 
 ### M7. State machine và vòng đời Order
 
@@ -682,7 +693,7 @@ Quy ước:
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
 | M4 | Client interface và mock adapter | [-] | Payment/GHN adapter, Address/Voucher/selection gateway đã có; HTTP adapter còn chờ contract thật |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [ ] | Dùng mock adapter trước |
+| M6 | Create Order, idempotency, Saga | [-] | Admission/idempotency bền vững đã có; còn revalidation, reserve, snapshot, Payment và compensation |
 | M7 | State machine và Payment event | [-] | State machine + 9 unit test đạt; command service/consumer chưa triển khai |
 | M8 | API Customer/Admin | [ ] | Có thể làm ngay |
 | M9 | Outbox và RabbitMQ | [ ] | Cần convention RabbitMQ chung |
@@ -754,3 +765,11 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
 - PATCH đổi địa chỉ lập tức invalidated quote ACTIVE, xóa voucher/tổng tiền dẫn xuất và buộc Preview lại.
 - Thêm 12 test cho package calculation, Preview orchestration, transaction persistence, invalidation khi đổi địa chỉ và endpoint Preview; toàn module đạt **50 test, 0 failure, 0 error, 0 skipped**.
 - Tạo PostgreSQL 13 tạm, chạy thành công Flyway V1→V3, Hibernate `ddl-auto=validate`, khởi động service và xác nhận `/actuator/health` trả `UP`; cụm tạm đã được dừng và xóa.
+
+#### 2026-09-24
+
+- Bắt đầu M6 bằng admission transaction cho Create Order trước mọi side effect liên service.
+- Thêm migration V4: Saga lưu `idempotency_key`, `request_hash` và unique index để chống trùng bền vững qua restart.
+- `OrderCreationAdmissionService` khóa Checkout Session, kiểm tra ownership/TTL/Preview/payment/quote và replay đúng Saga khi retry cùng key.
+- Thêm 7 unit test cho admission; toàn module đạt **57 test, 0 failure, 0 error, 0 skipped**.
+- Thêm `DatabaseMigrationSmokeIT` opt-in; PostgreSQL 13 tạm chạy thành công Flyway V1→V4, Hibernate validate và kiểm tra schema idempotency; cụm tạm đã được dừng và xóa.

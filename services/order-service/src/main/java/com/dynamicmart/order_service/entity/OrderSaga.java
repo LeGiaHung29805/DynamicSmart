@@ -13,6 +13,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "order_sagas")
@@ -20,6 +22,10 @@ import lombok.Setter;
 public class OrderSaga {
     @Id private UUID id;
     @Column(name = "checkout_session_id", nullable = false) private UUID checkoutSessionId;
+    @Column(name = "idempotency_key", nullable = false) private UUID idempotencyKey;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "request_hash", nullable = false, length = 64, columnDefinition = "char(64)")
+    private String requestHash;
     @Column(name = "order_id") private UUID orderId;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40) private SagaStatus status;
@@ -34,4 +40,25 @@ public class OrderSaga {
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     @Column(name = "completed_at") private Instant completedAt;
+
+    public static OrderSaga start(
+            UUID id,
+            UUID checkoutSessionId,
+            UUID idempotencyKey,
+            String requestHash,
+            UUID correlationId,
+            Instant now) {
+        OrderSaga saga = new OrderSaga();
+        saga.id = id;
+        saga.checkoutSessionId = checkoutSessionId;
+        saga.idempotencyKey = idempotencyKey;
+        saga.requestHash = requestHash;
+        saga.status = SagaStatus.STARTED;
+        saga.currentStep = "ADMITTED";
+        saga.correlationId = correlationId;
+        saga.attemptCount = 0;
+        saga.createdAt = now;
+        saga.updatedAt = now;
+        return saga;
+    }
 }

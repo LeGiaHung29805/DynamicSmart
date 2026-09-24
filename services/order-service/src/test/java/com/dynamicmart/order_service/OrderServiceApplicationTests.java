@@ -4,6 +4,7 @@ import com.dynamicmart.order_service.repository.CheckoutSessionItemRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionVoucherRepository;
 import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
+import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -47,6 +48,11 @@ class OrderServiceApplicationTests {
 		@Bean
 		CheckoutShippingQuoteRepository checkoutShippingQuoteRepository() {
 			return Mockito.mock(CheckoutShippingQuoteRepository.class);
+		}
+
+		@Bean
+		OrderSagaRepository orderSagaRepository() {
+			return Mockito.mock(OrderSagaRepository.class);
 		}
 	}
 }
