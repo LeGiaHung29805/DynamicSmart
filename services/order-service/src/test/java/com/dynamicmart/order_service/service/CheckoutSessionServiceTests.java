@@ -28,6 +28,7 @@ import com.dynamicmart.order_service.repository.CheckoutSessionItemRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionVoucherRepository;
 import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
+import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -97,11 +98,40 @@ class CheckoutSessionServiceTests {
     }
 
     @Test
+    void rejectsUpdateAfterOrderCreationAdmission() {
+        Fixture fixture = fixture();
+        CheckoutSession session = activeSession();
+        when(fixture.sessions.findOwnedForUpdate(session.getId(), CUSTOMER_ID)).thenReturn(Optional.of(session));
+        when(fixture.sagas.existsByCheckoutSessionId(session.getId())).thenReturn(true);
+
+        OrderException exception = assertThrows(OrderException.class, () -> fixture.service.update(
+                CUSTOMER_ID, session.getId(),
+                new UpdateCheckoutSessionRequest(UUID.randomUUID(), null, null)));
+
+        assertEquals("ORDER_CREATION_IN_PROGRESS", exception.getCode());
+        verify(fixture.shippingQuotes, never()).findAllByCheckoutSessionIdAndStatus(any(), any());
+    }
+
+    @Test
+    void rejectsCancelAfterOrderCreationAdmission() {
+        Fixture fixture = fixture();
+        CheckoutSession session = activeSession();
+        when(fixture.sessions.findOwnedForUpdate(session.getId(), CUSTOMER_ID)).thenReturn(Optional.of(session));
+        when(fixture.sagas.existsByCheckoutSessionId(session.getId())).thenReturn(true);
+
+        OrderException exception = assertThrows(OrderException.class,
+                () -> fixture.service.cancel(CUSTOMER_ID, session.getId()));
+
+        assertEquals("ORDER_CREATION_IN_PROGRESS", exception.getCode());
+        assertEquals(CheckoutStatus.ACTIVE, session.getStatus());
+    }
+
+    @Test
     void expiresSessionBeforeRejectingAnUpdate() {
         Fixture fixture = fixture();
         CheckoutSession session = CheckoutSession.create(UUID.randomUUID(), CUSTOMER_ID, CheckoutSource.CART, CART_ID,
                 "a".repeat(64), NOW.minusSeconds(1), NOW.minus(Duration.ofMinutes(16)));
-        when(fixture.sessions.findByIdAndCustomerId(session.getId(), CUSTOMER_ID)).thenReturn(Optional.of(session));
+        when(fixture.sessions.findOwnedForUpdate(session.getId(), CUSTOMER_ID)).thenReturn(Optional.of(session));
 
         OrderException exception = assertThrows(OrderException.class, () -> fixture.service.update(CUSTOMER_ID, session.getId(),
                 new UpdateCheckoutSessionRequest(UUID.randomUUID(), null, null)));
@@ -118,7 +148,7 @@ class CheckoutSessionServiceTests {
                 UUID.randomUUID(), new UpdateCheckoutSessionRequest(null, PaymentTiming.NOT_REQUIRED, PaymentMethod.FREE)));
 
         assertEquals("INVALID_PAYMENT_SELECTION", exception.getCode());
-        verify(fixture.sessions, never()).findByIdAndCustomerId(any(), any());
+        verify(fixture.sessions, never()).findOwnedForUpdate(any(), any());
     }
 
     @Test
@@ -134,7 +164,7 @@ class CheckoutSessionServiceTests {
                 UUID.randomUUID(), session.getId(), UUID.randomUUID(), "b".repeat(64),
                 30_000, 0, 30_000, 53320, "GHN Standard", "2-3 ngày",
                 200, 20, 10, 5, 201, 301, "Hà Nội", "Phường A", NOW.plusSeconds(900), NOW);
-        when(fixture.sessions.findByIdAndCustomerId(session.getId(), CUSTOMER_ID)).thenReturn(Optional.of(session));
+        when(fixture.sessions.findOwnedForUpdate(session.getId(), CUSTOMER_ID)).thenReturn(Optional.of(session));
         when(fixture.shippingQuotes.findAllByCheckoutSessionIdAndStatus(
                 session.getId(), com.dynamicmart.order_service.entity.ShippingQuoteStatus.ACTIVE))
                 .thenReturn(List.of(quote));
@@ -174,10 +204,17 @@ class CheckoutSessionServiceTests {
         CheckoutSessionItemRepository items = Mockito.mock(CheckoutSessionItemRepository.class);
         CheckoutSessionVoucherRepository sessionVouchers = Mockito.mock(CheckoutSessionVoucherRepository.class);
         CheckoutShippingQuoteRepository shippingQuotes = Mockito.mock(CheckoutShippingQuoteRepository.class);
+        OrderSagaRepository sagas = Mockito.mock(OrderSagaRepository.class);
         CheckoutSelectionGateway gateway = Mockito.mock(CheckoutSelectionGateway.class);
-        CheckoutSessionService service = new CheckoutSessionService(sessions, items, sessionVouchers, shippingQuotes, gateway,
+        CheckoutSessionService service = new CheckoutSessionService(
+                sessions, items, sessionVouchers, shippingQuotes, sagas, gateway,
                 new CheckoutProperties(Duration.ofMinutes(15)), Clock.fixed(NOW, ZoneOffset.UTC));
-        return new Fixture(service, sessions, items, sessionVouchers, shippingQuotes, gateway);
+        return new Fixture(service, sessions, items, sessionVouchers, shippingQuotes, sagas, gateway);
+    }
+
+    private CheckoutSession activeSession() {
+        return CheckoutSession.create(UUID.randomUUID(), CUSTOMER_ID, CheckoutSource.CART, CART_ID,
+                "a".repeat(64), NOW.plus(Duration.ofMinutes(15)), NOW);
     }
 
     private TrustedCheckoutItem cartItem() {
@@ -209,6 +246,7 @@ class CheckoutSessionServiceTests {
             CheckoutSessionItemRepository items,
             CheckoutSessionVoucherRepository sessionVouchers,
             CheckoutShippingQuoteRepository shippingQuotes,
+            OrderSagaRepository sagas,
             CheckoutSelectionGateway gateway) {
     }
 }

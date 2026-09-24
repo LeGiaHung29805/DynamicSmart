@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrderSagaRepository extends JpaRepository<OrderSaga, UUID> {
     Optional<OrderSaga> findByCheckoutSessionId(UUID checkoutSessionId);
+    boolean existsByCheckoutSessionId(UUID checkoutSessionId);
     Optional<OrderSaga> findByIdempotencyKey(UUID idempotencyKey);
     Optional<OrderSaga> findByOrderId(UUID orderId);
     Optional<OrderSaga> findByCorrelationId(UUID correlationId);

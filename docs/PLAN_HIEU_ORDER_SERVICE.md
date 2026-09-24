@@ -107,8 +107,8 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
 - API Checkout Preview điều phối Address, Voucher, GHN quote và tính tiền nhưng không tạo reservation.
 - Preview gọi service ngoài transaction, sau đó khóa session để chống ghi snapshot stale; quote cũ bị invalidated.
 - Migration V3 và snapshot kích thước/trọng lượng phục vụ GHN package rule.
-- 57 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
-  Create Order admission/idempotency, state machine và context smoke test.
+- 68 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
+  Create Order admission/idempotency/revalidation, state machine và context smoke test.
 - Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
 
 Chưa có:
@@ -116,7 +116,7 @@ Chưa có:
 - API Create Order.
 - REST adapter thật sang Identity, Catalog và Cart (hiện chỉ có gateway interface/fallback an toàn).
 - Controller/API Order Customer và Admin.
-- Saga orchestrator và trạng thái Saga bền vững.
+- Saga orchestrator hoàn chỉnh; admission và trạng thái bắt đầu Saga đã được lưu bền vững.
 - Hoàn tất toàn bộ vòng đời `Idempotency-Key`; admission của Create Order đã được lưu bền vững trong Saga.
 - Outbox publisher.
 - RabbitMQ consumer/producer nghiệp vụ.
@@ -448,6 +448,15 @@ Tiêu chí hoàn thành:
 - Admission được commit trước mọi lời gọi reserve bên ngoài; chưa mở endpoint Create Order cho đến khi orchestrator có thể chạy/compensate an toàn.
 - 7 unit test admission đạt; Flyway V1→V4 và Hibernate validate đạt trên PostgreSQL thật.
 
+Đã triển khai bước đóng băng và revalidation trước reservation:
+
+- PATCH/DELETE Checkout Session dùng cùng pessimistic lock với admission và bị từ chối bằng `409 ORDER_CREATION_IN_PROGRESS` ngay khi Saga đã tồn tại; vì vậy selection không thể đổi sau khi Create Order bắt đầu.
+- `OrderCreationContextReader` tải Saga, Session, Preview, Quote, item và voucher snapshot trong một transaction đọc ngắn rồi trả về context bất biến.
+- `OrderCreationRevalidationService` gọi lại Cart/Buy Now, Address và Voucher ngoài transaction database; frontend không cung cấp giá, phí, địa chỉ chi tiết hoặc tổng tiền làm nguồn sự thật.
+- Revalidation so sánh variant/source version, giá và khuyến mại, số lượng, kích thước/trọng lượng, địa chỉ, quyền sở hữu voucher, phân bổ giảm giá, toàn bộ money breakdown, quote fingerprint, payable amount và package metrics.
+- Có 11 test mới cho việc đóng băng Checkout, đọc context và phát hiện selection/address/voucher/total/quote thay đổi; cộng với 7 test admission, phần M6 hiện có 18 test trực tiếp.
+- Toàn module đạt **68 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+
 ### M7. State machine và vòng đời Order
 
 **Trạng thái: Đang thực hiện**
@@ -689,11 +698,11 @@ Quy ước:
 |---|---|---|---|
 | M0 | Chốt REST/event contract | [-] | Payment/GHN có contract nền nhưng quote response còn thiếu fingerprint portable; Identity/Catalog/Cart và event chung còn chờ |
 | M1 | Nền service, security, cấu hình | [x] | Startup/health đạt; 3 JWT role test + 5 security HTTP test đạt |
-| M2 | Migration/entity/repository | [-] | Flyway V1→V3 + Hibernate validate đạt trên PostgreSQL sạch; còn repository constraint/locking test |
+| M2 | Migration/entity/repository | [-] | Flyway V1→V4 + Hibernate validate đạt trên PostgreSQL sạch; còn repository constraint/locking test |
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
 | M4 | Client interface và mock adapter | [-] | Payment/GHN adapter, Address/Voucher/selection gateway đã có; HTTP adapter còn chờ contract thật |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [-] | Admission/idempotency bền vững đã có; còn revalidation, reserve, snapshot, Payment và compensation |
+| M6 | Create Order, idempotency, Saga | [-] | Admission, đóng băng Checkout và revalidation server-authoritative đã có; còn reserve, snapshot, Payment và compensation |
 | M7 | State machine và Payment event | [-] | State machine + 9 unit test đạt; command service/consumer chưa triển khai |
 | M8 | API Customer/Admin | [ ] | Có thể làm ngay |
 | M9 | Outbox và RabbitMQ | [ ] | Cần convention RabbitMQ chung |
@@ -773,3 +782,6 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
 - `OrderCreationAdmissionService` khóa Checkout Session, kiểm tra ownership/TTL/Preview/payment/quote và replay đúng Saga khi retry cùng key.
 - Thêm 7 unit test cho admission; toàn module đạt **57 test, 0 failure, 0 error, 0 skipped**.
 - Thêm `DatabaseMigrationSmokeIT` opt-in; PostgreSQL 13 tạm chạy thành công Flyway V1→V4, Hibernate validate và kiểm tra schema idempotency; cụm tạm đã được dừng và xóa.
+- Đóng băng Checkout sau admission: PATCH/DELETE cùng khóa row và từ chối khi Saga đã tồn tại, loại bỏ race với Create Order.
+- Thêm `OrderCreationContextReader` để lấy context bất biến trong transaction ngắn và `OrderCreationRevalidationService` để tải lại selection, Address, Voucher rồi kiểm tra toàn bộ giá/tiền/quote/package ngoài transaction.
+- Thêm 11 test cho mutation guard, context reader và revalidation; toàn module đạt **68 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.

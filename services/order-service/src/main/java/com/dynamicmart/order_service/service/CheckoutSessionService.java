@@ -20,6 +20,7 @@ import com.dynamicmart.order_service.repository.CheckoutSessionItemRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionVoucherRepository;
 import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
+import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -38,6 +39,7 @@ public class CheckoutSessionService {
     private final CheckoutSessionItemRepository sessionItems;
     private final CheckoutSessionVoucherRepository sessionVouchers;
     private final CheckoutShippingQuoteRepository shippingQuotes;
+    private final OrderSagaRepository orderSagas;
     private final CheckoutSelectionGateway selectionGateway;
     private final CheckoutProperties properties;
     private final Clock clock;
@@ -47,6 +49,7 @@ public class CheckoutSessionService {
             CheckoutSessionItemRepository sessionItems,
             CheckoutSessionVoucherRepository sessionVouchers,
             CheckoutShippingQuoteRepository shippingQuotes,
+            OrderSagaRepository orderSagas,
             CheckoutSelectionGateway selectionGateway,
             CheckoutProperties properties,
             Clock clock) {
@@ -54,6 +57,7 @@ public class CheckoutSessionService {
         this.sessionItems = sessionItems;
         this.sessionVouchers = sessionVouchers;
         this.shippingQuotes = shippingQuotes;
+        this.orderSagas = orderSagas;
         this.selectionGateway = selectionGateway;
         this.properties = properties;
         this.clock = clock;
@@ -97,8 +101,10 @@ public class CheckoutSessionService {
             throw invalidSource("Cần gửi ít nhất một trường có thể cập nhật.");
         }
         validatePaymentSelection(request);
-        CheckoutSession session = findOwned(customerId, sessionId);
+        CheckoutSession session = sessions.findOwnedForUpdate(sessionId, customerId)
+                .orElseThrow(() -> notFound(sessionId));
         requireActive(session, Instant.now(clock));
+        requireCreationNotStarted(sessionId);
         if (request.addressId() != null) {
             if (!request.addressId().equals(session.getAddressId())) {
                 invalidatePreview(session, Instant.now(clock));
@@ -119,6 +125,7 @@ public class CheckoutSessionService {
     public CheckoutSessionResponse cancel(UUID customerId, UUID sessionId) {
         CheckoutSession session = sessions.findOwnedForUpdate(sessionId, customerId)
                 .orElseThrow(() -> notFound(sessionId));
+        requireCreationNotStarted(sessionId);
         requireActiveOrAlreadyCancelled(session, Instant.now(clock));
         if (session.getStatus() == CheckoutStatus.ACTIVE) {
             session.setStatus(CheckoutStatus.CANCELLED);
@@ -247,6 +254,13 @@ public class CheckoutSessionService {
         if (session.getPaymentTiming() == PaymentTiming.NOT_REQUIRED || session.getPaymentMethod() == PaymentMethod.FREE) {
             session.setPaymentTiming(null);
             session.setPaymentMethod(null);
+        }
+    }
+
+    private void requireCreationNotStarted(UUID sessionId) {
+        if (orderSagas.existsByCheckoutSessionId(sessionId)) {
+            throw new OrderException(HttpStatus.CONFLICT, "ORDER_CREATION_IN_PROGRESS",
+                    "Checkout Session đang được dùng để tạo Order và không thể thay đổi hoặc hủy.");
         }
     }
 
