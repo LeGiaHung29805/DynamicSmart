@@ -82,6 +82,23 @@ Consumer insert `event_id` trong cùng transaction với side effect. Nếu trù
 
 Khóa chính tổng hợp: `(operation, idempotency_key)`.
 
+### 1.3. Bản đồ database và bảng theo service
+
+Bảng dưới là mục lục schema đích để cả nhóm thấy nhanh ownership. Nó **không đồng nghĩa mọi migration đã được triển khai**; mỗi owner phải tạo Flyway migration trong service của mình. Chi tiết cột, khóa, index và quy tắc nghiệp vụ nằm ở các mục tiếp theo.
+
+| Database | Service sở hữu | Bảng nghiệp vụ chính |
+|---|---|---|
+| `identity_db` | Identity Service | `users`, `refresh_tokens`, `password_reset_tokens`, `user_management_audits`, `addresses` |
+| `catalog_db` | Catalog Service | `categories`, `attributes`, `attribute_options`, `category_attributes`, `products`, `product_variants`, `product_images`, `product_attribute_values`, `variant_attribute_values`, `inventory_items`, `inventory_reservations`, `inventory_reservation_items`, `inventory_operation_log`, `inventory_adjustments` |
+| `cart_db` | Cart & Promotion Service | `carts`, `cart_items`, `direct_price_promotions`, `direct_price_promotion_variants`, `vouchers`, `voucher_products`, `voucher_categories`, `customer_vouchers`, `voucher_reservations` |
+| `order_db` | Checkout & Order Service | `checkout_sessions`, `checkout_session_items`, `checkout_session_vouchers`, `checkout_shipping_quotes`, `orders`, `order_addresses`, `order_items`, `order_voucher_snapshots`, `order_shipping_snapshots`, `order_status_history`, `order_operation_log` |
+| `payment_db` | Payment Service | `payments`, `payment_attempts`, `payment_callback_audits`, `ghn_location_provinces`, `ghn_location_wards` |
+| `engagement_db` | Engagement Service | `wishlists`, `wishlist_items`, `reviews`, `review_images`, `product_questions`, `product_answers`, `notifications`, `chat_conversations`, `chat_messages`, `daily_sales_metrics`, `daily_product_metrics` |
+
+Mỗi database bổ sung `outbox_events`, `processed_events` và `idempotency_records` khi service tương ứng phát event, nhận event hoặc có command cần chống lặp. Không tạo một database kỹ thuật dùng chung và không tạo khóa ngoại giữa các database.
+
+Riêng `catalog_db` đã có schema P0 trong `services/catalog-service/src/main/resources/db/migration/V1__initial_schema.sql`; `V2__catalog_publication_and_indexes.sql` bổ sung thời điểm công khai, cờ nổi bật và index phục vụ search/filter. Mọi thay đổi tiếp theo phải tạo migration mới, không sửa file đã áp dụng ở môi trường dùng chung.
+
 ---
 
 ## 2. `identity_db` — Identity Service

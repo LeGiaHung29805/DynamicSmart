@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Heart, Menu, ShoppingBag, UserRound } from "lucide-react";
+import { Heart, Menu, ShoppingBag } from "lucide-react";
+import { AccountMenu } from "@/features/auth";
 
 export function StoreLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -21,7 +22,7 @@ export function StoreLayout({ children }: Readonly<{ children: React.ReactNode }
           <div className="flex items-center gap-1">
             <Link aria-label="Sản phẩm yêu thích" className="hidden size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-emerald-50 hover:text-brand sm:grid" href="/customer/account/wishlist"><Heart className="size-[1.15rem]" /></Link>
             <Link aria-label="Giỏ hàng" className="relative grid size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-emerald-50 hover:text-brand" href="/cart"><ShoppingBag className="size-[1.15rem]" /><span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-400 ring-2 ring-white" /></Link>
-            <Link aria-label="Đăng nhập" className="hidden size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-emerald-50 hover:text-brand sm:grid" href="/login"><UserRound className="size-[1.15rem]" /></Link>
+            <AccountMenu />
             <Link aria-label="Xem sản phẩm" className="ml-1 grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-brand md:hidden" href="/products"><Menu className="size-5" /></Link>
           </div>
         </div>

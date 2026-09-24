@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { isApiError } from "@/lib/api/error";
 import { register } from "../api/auth.api";
+import { safeReturnTo } from "../safeReturnTo";
 
 interface RegisterFormProps {
   returnTo: string;
@@ -44,7 +45,7 @@ export function RegisterForm({ returnTo }: Readonly<RegisterFormProps>) {
       setErrors({});
       await register({ fullName, email, password });
       showToast("Tạo tài khoản thành công. Chào mừng bạn đến với DynamicMart!", "success");
-      router.replace(returnTo);
+      router.replace(safeReturnTo(returnTo));
       router.refresh();
     } catch (error) {
       const message = isApiError(error) ? error.message : "Chưa thể tạo tài khoản. Vui lòng thử lại.";

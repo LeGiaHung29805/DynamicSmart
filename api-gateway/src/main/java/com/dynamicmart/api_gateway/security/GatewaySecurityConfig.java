@@ -30,6 +30,10 @@ public class GatewaySecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/api/v1/auth/**", "/api/v1/payments/vnpay/ipn").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/catalog/categories/**",
+                                "/api/v1/catalog/products/**",
+                                "/api/v1/catalog/variants/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/cod-confirmations", "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/*/callback-audits").hasRole("ADMIN")
                         .anyRequest().authenticated())
