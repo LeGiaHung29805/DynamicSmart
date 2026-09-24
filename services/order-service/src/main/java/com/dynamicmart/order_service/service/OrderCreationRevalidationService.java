@@ -187,6 +187,9 @@ public class OrderCreationRevalidationService {
         long shippingDiscount = 0;
         for (AppliedVoucher voucher : result.vouchers()) {
             if (voucher == null || voucher.voucherId() == null
+                    || isBlank(voucher.discountMethod()) || voucher.eligibleSubtotalVnd() < 0
+                    || (voucher.discountValue() != null && voucher.discountValue() < 0)
+                    || voucher.discountAmountVnd() < 0 || voucher.shippingDiscountVnd() < 0
                     || actual.putIfAbsent(voucher.voucherId(), voucher) != null) {
                 throw stale("CHECKOUT_VOUCHER_CHANGED", "Voucher revalidation bị trùng hoặc không hợp lệ.");
             }

@@ -27,6 +27,9 @@ public interface VoucherReservationGateway {
             UUID voucherId,
             String code,
             String scope,
+            String discountMethod,
+            Long discountValue,
+            long eligibleSubtotalVnd,
             long discountAmountVnd,
             long shippingDiscountVnd) {
     }

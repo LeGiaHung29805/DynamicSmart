@@ -14,6 +14,7 @@ import com.dynamicmart.order_service.exception.OrderException;
 import com.dynamicmart.order_service.repository.CheckoutSessionRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionVoucherRepository;
 import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
+import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import com.dynamicmart.order_service.service.CheckoutPricingService.PricingBreakdown;
 import com.dynamicmart.order_service.service.ShippingPackageCalculator.PackageMetrics;
 import java.time.Clock;
@@ -29,16 +30,19 @@ public class CheckoutPreviewPersistenceService {
     private final CheckoutSessionRepository sessions;
     private final CheckoutSessionVoucherRepository vouchers;
     private final CheckoutShippingQuoteRepository quotes;
+    private final OrderSagaRepository sagas;
     private final Clock clock;
 
     public CheckoutPreviewPersistenceService(
             CheckoutSessionRepository sessions,
             CheckoutSessionVoucherRepository vouchers,
             CheckoutShippingQuoteRepository quotes,
+            OrderSagaRepository sagas,
             Clock clock) {
         this.sessions = sessions;
         this.vouchers = vouchers;
         this.quotes = quotes;
+        this.sagas = sagas;
         this.clock = clock;
     }
 
@@ -48,6 +52,10 @@ public class CheckoutPreviewPersistenceService {
         CheckoutSession session = sessions.findOwnedForUpdate(commit.checkoutSessionId(), commit.customerId())
                 .orElseThrow(() -> new OrderException(HttpStatus.NOT_FOUND, "CHECKOUT_SESSION_NOT_FOUND",
                         "Không tìm thấy Checkout Session: " + commit.checkoutSessionId()));
+        if (sagas.existsByCheckoutSessionId(session.getId())) {
+            throw new OrderException(HttpStatus.CONFLICT, "ORDER_CREATION_IN_PROGRESS",
+                    "Checkout Session đang được dùng để tạo Order và không thể Preview lại.");
+        }
         requireStillCurrent(session, commit, now);
 
         CheckoutShippingQuote existingQuote = quotes.findByProviderAndQuoteId("GHN", commit.quote().quoteId())

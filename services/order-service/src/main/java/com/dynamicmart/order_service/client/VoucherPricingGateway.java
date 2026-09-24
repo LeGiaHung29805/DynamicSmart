@@ -34,6 +34,9 @@ public interface VoucherPricingGateway {
             UUID voucherId,
             String voucherCode,
             String scope,
+            String discountMethod,
+            Long discountValue,
+            long eligibleSubtotalVnd,
             long discountAmountVnd,
             long shippingDiscountVnd) {
     }

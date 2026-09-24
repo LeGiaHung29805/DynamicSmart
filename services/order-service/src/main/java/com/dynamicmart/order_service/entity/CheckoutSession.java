@@ -69,4 +69,10 @@ public class CheckoutSession {
         session.updatedAt = now;
         return session;
     }
+
+    public void complete(UUID orderId, Instant now) {
+        status = CheckoutStatus.COMPLETED;
+        completedOrderId = orderId;
+        updatedAt = now;
+    }
 }

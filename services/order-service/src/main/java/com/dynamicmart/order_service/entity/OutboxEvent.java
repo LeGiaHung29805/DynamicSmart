@@ -33,4 +33,28 @@ public class OutboxEvent {
     @Column(name = "available_at", nullable = false) private Instant availableAt;
     @Column(name = "published_at") private Instant publishedAt;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static OutboxEvent pending(
+            UUID id,
+            String aggregateType,
+            UUID aggregateId,
+            String eventType,
+            int eventVersion,
+            String payload,
+            UUID correlationId,
+            Instant now) {
+        OutboxEvent event = new OutboxEvent();
+        event.id = id;
+        event.aggregateType = aggregateType;
+        event.aggregateId = aggregateId;
+        event.eventType = eventType;
+        event.eventVersion = eventVersion;
+        event.payload = payload;
+        event.correlationId = correlationId;
+        event.status = OutboxEventStatus.PENDING;
+        event.attemptCount = 0;
+        event.availableAt = now;
+        event.createdAt = now;
+        return event;
+    }
 }

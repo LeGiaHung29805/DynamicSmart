@@ -44,4 +44,57 @@ public class OrderShippingSnapshot {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_response_redacted", columnDefinition = "jsonb") private String rawResponseRedacted;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static OrderShippingSnapshot create(
+            UUID id,
+            UUID orderId,
+            UUID quoteId,
+            UUID sourceCheckoutQuoteId,
+            String provider,
+            String inputFingerprint,
+            int serviceId,
+            String serviceName,
+            long feeVnd,
+            long shippingDiscountVnd,
+            long payableFeeVnd,
+            Instant eta,
+            String etaText,
+            Integer totalWeightGrams,
+            Integer packageLengthCm,
+            Integer packageWidthCm,
+            Integer packageHeightCm,
+            Integer toProvinceId,
+            Integer toWardId,
+            String toProvinceName,
+            String toWardName,
+            Instant quotedAt,
+            String rawResponseRedacted,
+            Instant now) {
+        OrderShippingSnapshot shipping = new OrderShippingSnapshot();
+        shipping.id = id;
+        shipping.orderId = orderId;
+        shipping.quoteId = quoteId;
+        shipping.sourceCheckoutQuoteId = sourceCheckoutQuoteId;
+        shipping.provider = provider;
+        shipping.inputFingerprint = inputFingerprint;
+        shipping.serviceId = serviceId;
+        shipping.serviceName = serviceName;
+        shipping.feeVnd = feeVnd;
+        shipping.shippingDiscountVnd = shippingDiscountVnd;
+        shipping.payableFeeVnd = payableFeeVnd;
+        shipping.eta = eta;
+        shipping.etaText = etaText;
+        shipping.totalWeightGrams = totalWeightGrams;
+        shipping.packageLengthCm = packageLengthCm;
+        shipping.packageWidthCm = packageWidthCm;
+        shipping.packageHeightCm = packageHeightCm;
+        shipping.toProvinceId = toProvinceId;
+        shipping.toWardId = toWardId;
+        shipping.toProvinceName = toProvinceName;
+        shipping.toWardName = toWardName;
+        shipping.quotedAt = quotedAt;
+        shipping.rawResponseRedacted = rawResponseRedacted;
+        shipping.createdAt = now;
+        return shipping;
+    }
 }

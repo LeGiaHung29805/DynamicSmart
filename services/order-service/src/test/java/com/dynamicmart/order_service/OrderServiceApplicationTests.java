@@ -4,7 +4,14 @@ import com.dynamicmart.order_service.repository.CheckoutSessionItemRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionVoucherRepository;
 import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
+import com.dynamicmart.order_service.repository.CustomerOrderRepository;
+import com.dynamicmart.order_service.repository.OrderAddressRepository;
+import com.dynamicmart.order_service.repository.OrderItemRepository;
 import com.dynamicmart.order_service.repository.OrderSagaRepository;
+import com.dynamicmart.order_service.repository.OrderShippingSnapshotRepository;
+import com.dynamicmart.order_service.repository.OrderStatusHistoryRepository;
+import com.dynamicmart.order_service.repository.OrderVoucherSnapshotRepository;
+import com.dynamicmart.order_service.repository.OutboxEventRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -53,6 +60,41 @@ class OrderServiceApplicationTests {
 		@Bean
 		OrderSagaRepository orderSagaRepository() {
 			return Mockito.mock(OrderSagaRepository.class);
+		}
+
+		@Bean
+		CustomerOrderRepository customerOrderRepository() {
+			return Mockito.mock(CustomerOrderRepository.class);
+		}
+
+		@Bean
+		OrderItemRepository orderItemRepository() {
+			return Mockito.mock(OrderItemRepository.class);
+		}
+
+		@Bean
+		OrderAddressRepository orderAddressRepository() {
+			return Mockito.mock(OrderAddressRepository.class);
+		}
+
+		@Bean
+		OrderVoucherSnapshotRepository orderVoucherSnapshotRepository() {
+			return Mockito.mock(OrderVoucherSnapshotRepository.class);
+		}
+
+		@Bean
+		OrderShippingSnapshotRepository orderShippingSnapshotRepository() {
+			return Mockito.mock(OrderShippingSnapshotRepository.class);
+		}
+
+		@Bean
+		OrderStatusHistoryRepository orderStatusHistoryRepository() {
+			return Mockito.mock(OrderStatusHistoryRepository.class);
+		}
+
+		@Bean
+		OutboxEventRepository outboxEventRepository() {
+			return Mockito.mock(OutboxEventRepository.class);
 		}
 	}
 }

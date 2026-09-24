@@ -90,8 +90,10 @@ class OrderCreationRevalidationServiceTests {
         Fixture fixture = readyFixture(context(money(185_000)));
         when(fixture.vouchers.preview(any())).thenReturn(new VoucherPreview(
                 List.of(
-                        new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SAVE15", "ORDER_DISCOUNT", 14_000, 0),
-                        new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP10", "SHIPPING_DISCOUNT", 0, 10_000)),
+                        new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SAVE15", "ORDER_DISCOUNT",
+                                "FIXED_AMOUNT", 14_000L, 180_000, 14_000, 0),
+                        new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP10", "SHIPPING_DISCOUNT",
+                                "FIXED_AMOUNT", 10_000L, 30_000, 0, 10_000)),
                 List.of(new LineDiscount(VARIANT_ID, 9_000, 5_000))));
 
         OrderException exception = assertThrows(OrderException.class,
@@ -114,9 +116,10 @@ class OrderCreationRevalidationServiceTests {
     void rejectsQuoteWhenPackageMetricsDoNotMatchItems() {
         CreationContext base = context(money(185_000));
         QuoteSnapshot badQuote = new QuoteSnapshot(
-                base.quote().checkoutQuoteId(), base.quote().providerQuoteId(), base.quote().inputFingerprint(),
+                base.quote().checkoutQuoteId(), base.quote().providerQuoteId(), base.quote().provider(),
+                base.quote().inputFingerprint(),
                 base.quote().feeVnd(), base.quote().shippingDiscountVnd(), base.quote().payableFeeVnd(),
-                base.quote().serviceId(), base.quote().serviceName(), base.quote().eta(), 999,
+                base.quote().serviceId(), base.quote().serviceName(), base.quote().eta(), base.quote().etaText(), 999,
                 base.quote().packageLengthCm(), base.quote().packageWidthCm(), base.quote().packageHeightCm(),
                 base.quote().provinceId(), base.quote().wardId(), base.quote().provinceName(),
                 base.quote().wardName(), base.quote().expiresAt());
@@ -155,8 +158,8 @@ class OrderCreationRevalidationServiceTests {
                         new VoucherSnapshot(MERCHANDISE_VOUCHER_ID, "SAVE15", "ORDER_DISCOUNT", 15_000, 0),
                         new VoucherSnapshot(SHIPPING_VOUCHER_ID, "SHIP10", "SHIPPING_DISCOUNT", 0, 10_000)),
                 new QuoteSnapshot(
-                        UUID.randomUUID(), UUID.randomUUID(), "a".repeat(64),
-                        30_000, 10_000, 20_000, 53321, "GHN Express", "1-2 ngày",
+                        UUID.randomUUID(), UUID.randomUUID(), "GHN", "a".repeat(64),
+                        30_000, 10_000, 20_000, 53321, "GHN Express", null, "1-2 ngày",
                         400, 20, 10, 10, 1, 2, "Hà Nội", "Phường A",
                         Instant.parse("2026-09-24T03:00:00Z")));
     }
@@ -189,8 +192,10 @@ class OrderCreationRevalidationServiceTests {
     private VoucherPreview voucherPreview() {
         return new VoucherPreview(
                 List.of(
-                        new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SAVE15", "ORDER_DISCOUNT", 15_000, 0),
-                        new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP10", "SHIPPING_DISCOUNT", 0, 10_000)),
+                        new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SAVE15", "ORDER_DISCOUNT",
+                                "FIXED_AMOUNT", 15_000L, 180_000, 15_000, 0),
+                        new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP10", "SHIPPING_DISCOUNT",
+                                "FIXED_AMOUNT", 10_000L, 30_000, 0, 10_000)),
                 List.of(new LineDiscount(VARIANT_ID, 10_000, 5_000)));
     }
 

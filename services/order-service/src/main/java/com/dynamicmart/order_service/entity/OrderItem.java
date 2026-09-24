@@ -33,4 +33,45 @@ public class OrderItem {
     @Column(name = "line_total_vnd", nullable = false) private long lineTotalVnd;
     @Column(name = "weight_grams", nullable = false) private int weightGrams;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static OrderItem create(
+            UUID id,
+            UUID orderId,
+            UUID productId,
+            UUID variantId,
+            String sku,
+            String productName,
+            String variantName,
+            String imageUrl,
+            long listPriceVnd,
+            UUID directSalePromotionId,
+            long directSaleDiscountVnd,
+            long unitPriceVnd,
+            int quantity,
+            long productDiscountVnd,
+            long orderDiscountVnd,
+            long lineTotalVnd,
+            int weightGrams,
+            Instant now) {
+        OrderItem item = new OrderItem();
+        item.id = id;
+        item.orderId = orderId;
+        item.productId = productId;
+        item.variantId = variantId;
+        item.sku = sku;
+        item.productName = productName;
+        item.variantName = variantName;
+        item.imageUrl = imageUrl;
+        item.listPriceVnd = listPriceVnd;
+        item.directSalePromotionId = directSalePromotionId;
+        item.directSaleDiscountVnd = directSaleDiscountVnd;
+        item.unitPriceVnd = unitPriceVnd;
+        item.quantity = quantity;
+        item.productDiscountVnd = productDiscountVnd;
+        item.orderDiscountVnd = orderDiscountVnd;
+        item.lineTotalVnd = lineTotalVnd;
+        item.weightGrams = weightGrams;
+        item.createdAt = now;
+        return item;
+    }
 }

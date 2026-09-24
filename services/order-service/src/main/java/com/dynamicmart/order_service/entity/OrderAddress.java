@@ -26,4 +26,31 @@ public class OrderAddress {
     @Column(name = "province_name", nullable = false, length = 150) private String provinceName;
     @Column(name = "ward_name", nullable = false, length = 150) private String wardName;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static OrderAddress create(
+            UUID id,
+            UUID orderId,
+            UUID sourceAddressId,
+            String recipientName,
+            String phone,
+            String addressLine,
+            int provinceId,
+            int wardId,
+            String provinceName,
+            String wardName,
+            Instant now) {
+        OrderAddress address = new OrderAddress();
+        address.id = id;
+        address.orderId = orderId;
+        address.sourceAddressId = sourceAddressId;
+        address.recipientName = recipientName;
+        address.phone = phone;
+        address.addressLine = addressLine;
+        address.provinceId = provinceId;
+        address.wardId = wardId;
+        address.provinceName = provinceName;
+        address.wardName = wardName;
+        address.createdAt = now;
+        return address;
+    }
 }

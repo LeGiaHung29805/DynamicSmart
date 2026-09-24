@@ -30,4 +30,21 @@ public class OrderStatusHistory {
     @Column(name = "correlation_id") private UUID correlationId;
     @Column(name = "source_event_id") private UUID sourceEventId;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static OrderStatusHistory initial(
+            UUID id,
+            UUID orderId,
+            OrderStatus status,
+            UUID correlationId,
+            Instant now) {
+        OrderStatusHistory history = new OrderStatusHistory();
+        history.id = id;
+        history.orderId = orderId;
+        history.toStatus = status;
+        history.actorType = OrderActorType.SYSTEM;
+        history.reason = "ORDER_CREATED";
+        history.correlationId = correlationId;
+        history.createdAt = now;
+        return history;
+    }
 }

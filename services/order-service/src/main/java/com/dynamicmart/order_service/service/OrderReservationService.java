@@ -75,6 +75,7 @@ public class OrderReservationService {
                 context.customerId(), context.checkoutSessionId(),
                 input.vouchers().stream().map(voucher -> new VoucherBenefit(
                         voucher.voucherId(), voucher.voucherCode(), voucher.scope(),
+                        voucher.discountMethod(), voucher.discountValue(), voucher.eligibleSubtotalVnd(),
                         voucher.discountAmountVnd(), voucher.shippingDiscountVnd())).toList(),
                 context.items().stream().map(item -> {
                     LineDiscount discount = discounts.get(item.variantId());

@@ -172,11 +172,12 @@ class OrderReservationServiceTests {
                         20_000, 0, withVoucher ? 210_000 : 220_000),
                 List.of(item), voucherSnapshots,
                 new QuoteSnapshot(
-                        UUID.randomUUID(), UUID.randomUUID(), "a".repeat(64), 20_000, 0, 20_000,
-                        1, "GHN", "1 ngày", 400, 20, 10, 10, 1, 2,
+                        UUID.randomUUID(), UUID.randomUUID(), "GHN", "a".repeat(64), 20_000, 0, 20_000,
+                        1, "GHN", null, "1 ngày", 400, 20, 10, 10, 1, 2,
                         "Hà Nội", "Phường A", Instant.parse("2026-09-24T05:00:00Z")));
         List<AppliedVoucher> vouchers = withVoucher
-                ? List.of(new AppliedVoucher(voucherId, "SAVE10", "ORDER_DISCOUNT", 10_000, 0))
+                ? List.of(new AppliedVoucher(voucherId, "SAVE10", "ORDER_DISCOUNT",
+                        "FIXED_AMOUNT", 10_000L, 200_000, 10_000, 0))
                 : List.of();
         List<LineDiscount> lines = withVoucher
                 ? List.of(new LineDiscount(variantId, 0, 10_000))

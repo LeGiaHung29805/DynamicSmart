@@ -19,6 +19,7 @@ import com.dynamicmart.order_service.exception.OrderException;
 import com.dynamicmart.order_service.repository.CheckoutSessionRepository;
 import com.dynamicmart.order_service.repository.CheckoutSessionVoucherRepository;
 import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
+import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import com.dynamicmart.order_service.service.CheckoutPreviewPersistenceService.PreviewCommit;
 import com.dynamicmart.order_service.service.CheckoutPricingService.PricingBreakdown;
 import com.dynamicmart.order_service.service.ShippingPackageCalculator.PackageMetrics;
@@ -95,13 +96,28 @@ class CheckoutPreviewPersistenceServiceTests {
         verify(fixture.vouchers, never()).deleteAllByCheckoutSessionId(any());
     }
 
+    @Test
+    void previewIsRejectedAfterOrderCreationAdmission() {
+        Fixture fixture = fixture();
+        when(fixture.sessions.findOwnedForUpdate(SESSION_ID, CUSTOMER_ID)).thenReturn(Optional.of(session()));
+        when(fixture.sagas.existsByCheckoutSessionId(SESSION_ID)).thenReturn(true);
+
+        OrderException exception = assertThrows(OrderException.class,
+                () -> fixture.service.persist(commit(pricing(185_000))));
+
+        assertEquals("ORDER_CREATION_IN_PROGRESS", exception.getCode());
+        verify(fixture.quotes, never()).save(any());
+        verify(fixture.vouchers, never()).deleteAllByCheckoutSessionId(any());
+    }
+
     private Fixture fixture() {
         CheckoutSessionRepository sessions = Mockito.mock(CheckoutSessionRepository.class);
         CheckoutSessionVoucherRepository vouchers = Mockito.mock(CheckoutSessionVoucherRepository.class);
         CheckoutShippingQuoteRepository quotes = Mockito.mock(CheckoutShippingQuoteRepository.class);
+        OrderSagaRepository sagas = Mockito.mock(OrderSagaRepository.class);
         CheckoutPreviewPersistenceService service = new CheckoutPreviewPersistenceService(
-                sessions, vouchers, quotes, Clock.fixed(NOW, ZoneOffset.UTC));
-        return new Fixture(service, sessions, vouchers, quotes);
+                sessions, vouchers, quotes, sagas, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new Fixture(service, sessions, vouchers, quotes, sagas);
     }
 
     private CheckoutSession session() {
@@ -142,6 +158,7 @@ class CheckoutPreviewPersistenceServiceTests {
             CheckoutPreviewPersistenceService service,
             CheckoutSessionRepository sessions,
             CheckoutSessionVoucherRepository vouchers,
-            CheckoutShippingQuoteRepository quotes) {
+            CheckoutShippingQuoteRepository quotes,
+            OrderSagaRepository sagas) {
     }
 }

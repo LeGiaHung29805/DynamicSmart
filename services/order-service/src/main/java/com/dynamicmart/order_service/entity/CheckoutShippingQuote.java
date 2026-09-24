@@ -130,4 +130,10 @@ public class CheckoutShippingQuote {
             updatedAt = now;
         }
     }
+
+    public void consume(Instant now) {
+        status = ShippingQuoteStatus.CONSUMED;
+        consumedAt = now;
+        updatedAt = now;
+    }
 }

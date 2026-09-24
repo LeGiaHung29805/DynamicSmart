@@ -53,6 +53,7 @@ class OrderCreationContextReaderTests {
         assertEquals(185_000, context.money().finalTotalVnd());
         assertEquals(1, context.items().size());
         assertEquals(1, context.vouchers().size());
+        assertEquals("GHN", context.quote().provider());
         assertEquals("b".repeat(64), context.quote().inputFingerprint());
     }
 

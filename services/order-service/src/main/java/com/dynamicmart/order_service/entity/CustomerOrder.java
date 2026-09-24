@@ -50,4 +50,45 @@ public class CustomerOrder {
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     @Version @Column(nullable = false) private long version;
+
+    public static CustomerOrder create(
+            UUID id,
+            String orderNumber,
+            UUID checkoutSessionId,
+            UUID customerId,
+            OrderStatus status,
+            PaymentTiming paymentTiming,
+            PaymentMethod paymentMethod,
+            long itemsListSubtotalVnd,
+            long directSaleDiscountVnd,
+            long itemsSubtotalVnd,
+            long productDiscountVnd,
+            long orderDiscountVnd,
+            long shippingFeeVnd,
+            long shippingDiscountVnd,
+            long finalTotalVnd,
+            Instant paymentDueAt,
+            Instant now) {
+        CustomerOrder order = new CustomerOrder();
+        order.id = id;
+        order.orderNumber = orderNumber;
+        order.checkoutSessionId = checkoutSessionId;
+        order.customerId = customerId;
+        order.status = status;
+        order.paymentTiming = paymentTiming;
+        order.paymentMethod = paymentMethod;
+        order.itemsListSubtotalVnd = itemsListSubtotalVnd;
+        order.directSaleDiscountVnd = directSaleDiscountVnd;
+        order.itemsSubtotalVnd = itemsSubtotalVnd;
+        order.productDiscountVnd = productDiscountVnd;
+        order.orderDiscountVnd = orderDiscountVnd;
+        order.shippingFeeVnd = shippingFeeVnd;
+        order.shippingDiscountVnd = shippingDiscountVnd;
+        order.finalTotalVnd = finalTotalVnd;
+        order.currency = "VND";
+        order.paymentDueAt = paymentDueAt;
+        order.createdAt = now;
+        order.updatedAt = now;
+        return order;
+    }
 }

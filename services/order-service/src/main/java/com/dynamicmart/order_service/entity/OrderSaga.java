@@ -61,4 +61,13 @@ public class OrderSaga {
         saga.updatedAt = now;
         return saga;
     }
+
+    public void markOrderCreated(UUID createdOrderId, Instant now) {
+        orderId = createdOrderId;
+        status = SagaStatus.ORDER_CREATED;
+        currentStep = "ORDER_SNAPSHOTS_PERSISTED";
+        lastErrorCode = null;
+        lastErrorMessage = null;
+        updatedAt = now;
+    }
 }

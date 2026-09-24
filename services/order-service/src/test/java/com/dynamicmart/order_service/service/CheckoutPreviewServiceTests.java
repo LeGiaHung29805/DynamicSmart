@@ -59,8 +59,10 @@ class CheckoutPreviewServiceTests {
         when(fixture.addresses.loadOwnedAddress(CUSTOMER_ID, ADDRESS_ID)).thenReturn(address());
         when(fixture.vouchers.preview(any())).thenReturn(new VoucherPreview(
                 List.of(
-                        new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SALE20", "ORDER_DISCOUNT", 20_000, 0),
-                        new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP5", "SHIPPING_DISCOUNT", 0, 5_000)),
+                        new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SALE20", "ORDER_DISCOUNT",
+                                "FIXED_AMOUNT", 20_000L, 180_000, 20_000, 0),
+                        new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP5", "SHIPPING_DISCOUNT",
+                                "FIXED_AMOUNT", 5_000L, 30_000, 0, 5_000)),
                 List.of(new LineDiscount(VARIANT_ID, 0, 20_000))));
         when(fixture.payments.createShippingQuote(any())).thenReturn(validQuote());
         when(fixture.persistence.persist(any())).thenReturn(new PersistedPreview(PaymentTiming.PREPAID, PaymentMethod.VNPAY));
@@ -112,7 +114,8 @@ class CheckoutPreviewServiceTests {
     void rejectsVoucherAllocationThatDoesNotMatchVoucherTotal() {
         Fixture fixture = readyFixture();
         when(fixture.vouchers.preview(any())).thenReturn(new VoucherPreview(
-                List.of(new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SALE20", "ORDER_DISCOUNT", 20_000, 0)),
+                List.of(new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SALE20", "ORDER_DISCOUNT",
+                        "FIXED_AMOUNT", 20_000L, 180_000, 20_000, 0)),
                 List.of(new LineDiscount(VARIANT_ID, 0, 10_000))));
 
         OrderException exception = assertThrows(OrderException.class, () -> fixture.service.preview(
