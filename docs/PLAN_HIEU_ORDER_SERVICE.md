@@ -107,8 +107,8 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
 - API Checkout Preview điều phối Address, Voucher, GHN quote và tính tiền nhưng không tạo reservation.
 - Preview gọi service ngoài transaction, sau đó khóa session để chống ghi snapshot stale; quote cũ bị invalidated.
 - Migration V3 và snapshot kích thước/trọng lượng phục vụ GHN package rule.
-- 68 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
-  Create Order admission/idempotency/revalidation, state machine và context smoke test.
+- 80 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
+  Create Order admission/idempotency/revalidation/reservation/compensation, state machine và context smoke test.
 - Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
 
 Chưa có:
@@ -457,6 +457,15 @@ Tiêu chí hoàn thành:
 - Có 11 test mới cho việc đóng băng Checkout, đọc context và phát hiện selection/address/voucher/total/quote thay đổi; cộng với 7 test admission, phần M6 hiện có 18 test trực tiếp.
 - Toàn module đạt **68 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
 
+Đã triển khai contract reservation và checkpoint Saga:
+
+- `VoucherReservationGateway` và `InventoryReservationGateway` định nghĩa reserve/release theo batch; mỗi request mang `sagaId`, `correlationId` và operation key ổn định để service sở hữu tài nguyên xử lý idempotent.
+- Fallback mặc định trả `503 RESERVATION_SOURCE_UNAVAILABLE`; chưa giả lập reserve thành công khi Cart/Catalog chưa cung cấp HTTP contract thật.
+- `OrderSagaCheckpointService` khóa pessimistic Saga và ghi từng mốc `VOUCHER_RESERVED`, `INVENTORY_RESERVED`, `COMPENSATING`, `COMPENSATED` trong transaction local ngắn, đồng thời chống retry trả reservation ID khác.
+- `OrderReservationService` không mở transaction database khi gọi service ngoài; khi lỗi sau reserve, release theo thứ tự ngược Inventory → Voucher và giữ Saga ở `COMPENSATING` nếu compensation cần retry.
+- Operation key được dẫn xuất tất định từ Saga + loại thao tác, nên retry/restart không tạo reservation hoặc release trùng nếu service đích tuân thủ contract idempotency.
+- Thêm 12 test cho checkpoint, replay/mismatch, happy path, lỗi từng bước, thứ tự compensation và compensation failure; toàn module đạt **80 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+
 ### M7. State machine và vòng đời Order
 
 **Trạng thái: Đang thực hiện**
@@ -702,7 +711,7 @@ Quy ước:
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
 | M4 | Client interface và mock adapter | [-] | Payment/GHN adapter, Address/Voucher/selection gateway đã có; HTTP adapter còn chờ contract thật |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [-] | Admission, đóng băng Checkout và revalidation server-authoritative đã có; còn reserve, snapshot, Payment và compensation |
+| M6 | Create Order, idempotency, Saga | [-] | Admission, đóng băng, revalidation, reservation contract/checkpoint và compensation nền đã có; còn HTTP adapter thật, snapshot Order, Payment và recovery runner |
 | M7 | State machine và Payment event | [-] | State machine + 9 unit test đạt; command service/consumer chưa triển khai |
 | M8 | API Customer/Admin | [ ] | Có thể làm ngay |
 | M9 | Outbox và RabbitMQ | [ ] | Cần convention RabbitMQ chung |
@@ -785,3 +794,6 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
 - Đóng băng Checkout sau admission: PATCH/DELETE cùng khóa row và từ chối khi Saga đã tồn tại, loại bỏ race với Create Order.
 - Thêm `OrderCreationContextReader` để lấy context bất biến trong transaction ngắn và `OrderCreationRevalidationService` để tải lại selection, Address, Voucher rồi kiểm tra toàn bộ giá/tiền/quote/package ngoài transaction.
 - Thêm 11 test cho mutation guard, context reader và revalidation; toàn module đạt **68 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+- Thêm contract batch reserve/release cho Voucher và Inventory với operation key tất định; fallback an toàn trả `503` cho đến khi service sở hữu tài nguyên chốt HTTP contract.
+- Thêm checkpoint Saga có pessimistic lock và `OrderReservationService` compensation theo thứ tự ngược, không giữ transaction DB trong lúc gọi service ngoài.
+- Thêm 12 test cho reservation/checkpoint/compensation; toàn module đạt **80 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
