@@ -15,6 +15,7 @@ public record PurchasableVariantResponse(
         Integer widthCm,
         Integer heightCm,
         String imageUrl,
-        boolean purchasable
+        boolean purchasable,
+        String unavailableReason
 ) {
 }

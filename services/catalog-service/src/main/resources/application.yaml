@@ -9,11 +9,27 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/catalog_db}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   flyway:
     enabled: true
     locations: classpath:db/migration
   jpa:
     open-in-view: false
+  cloud:
+    stream:
+      bindings:
+        catalogEvents-out-0:
+          destination: catalog.events
+          content-type: application/json
+      rabbit:
+        bindings:
+          catalogEvents-out-0:
+            producer:
+              delivery-mode: persistent
 
 server:
   port: ${SERVER_PORT:8082}
@@ -25,3 +41,7 @@ app:
       hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64:}
   internal:
     api-key: ${INTERNAL_API_KEY:}
+  inventory:
+    expiration-scan-ms: ${INVENTORY_EXPIRATION_SCAN_MS:30000}
+  outbox:
+    publisher-delay-ms: ${OUTBOX_PUBLISHER_DELAY_MS:1000}

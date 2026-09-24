@@ -2,12 +2,18 @@ package com.dynamicmart.catalog_service.repository;
 
 import com.dynamicmart.catalog_service.entity.Product;
 import com.dynamicmart.catalog_service.entity.ProductStatus;
+import jakarta.persistence.LockModeType;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
     boolean existsBySlugIgnoreCase(String slug);
@@ -15,4 +21,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     Optional<Product> findBySlugIgnoreCase(String slug);
     Page<Product> findAllByStatus(ProductStatus status, Pageable pageable);
     Page<Product> findAllByCategoryId(UUID categoryId, Pageable pageable);
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select product from Product product where product.id in :ids order by product.id")
+    List<Product> findAllByIdInForShare(@Param("ids") Collection<UUID> ids);
 }

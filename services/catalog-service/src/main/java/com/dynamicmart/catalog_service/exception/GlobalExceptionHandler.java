@@ -9,6 +9,9 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -34,7 +37,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class,
-            MethodArgumentTypeMismatchException.class})
+            MethodArgumentTypeMismatchException.class, MissingRequestHeaderException.class,
+            MissingServletRequestParameterException.class, HttpMessageNotReadableException.class})
     ResponseEntity<ApiErrorResponse> handleRequestValidation(Exception exception,
                                                               HttpServletRequest request) {
         return response(HttpStatus.BAD_REQUEST, "REQUEST_PARAMETER_INVALID",

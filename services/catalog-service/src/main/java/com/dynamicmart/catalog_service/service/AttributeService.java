@@ -7,6 +7,8 @@ import com.dynamicmart.catalog_service.dto.request.UpsertAttributeOptionRequest;
 import com.dynamicmart.catalog_service.dto.response.AttributeOptionResponse;
 import com.dynamicmart.catalog_service.dto.response.AttributeResponse;
 import com.dynamicmart.catalog_service.dto.response.CategoryAttributeResponse;
+import com.dynamicmart.catalog_service.dto.response.CatalogFilterDefinitionResponse;
+import com.dynamicmart.catalog_service.dto.response.CatalogFilterOptionResponse;
 import com.dynamicmart.catalog_service.entity.AttributeDataType;
 import com.dynamicmart.catalog_service.entity.AttributeDefinition;
 import com.dynamicmart.catalog_service.entity.AttributeOption;
@@ -176,6 +178,45 @@ public class AttributeService {
         return mappings.stream()
                 .map(mapping -> toCategoryAttributeResponse(mapping,
                         requireMappedAttribute(attributes, mapping.getAttributeId())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CatalogFilterDefinitionResponse> listPublicFilters(String categorySlug) {
+        var category = categoryRepository.findBySlugIgnoreCase(categorySlug)
+                .filter(value -> value.getStatus() == CatalogStatus.ACTIVE)
+                .orElseThrow(() -> new CatalogException(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND",
+                        "Không tìm thấy danh mục đang hoạt động."));
+        List<CategoryAttribute> mappings = categoryAttributeRepository
+                .findAllByCategoryIdOrderBySortOrderAsc(category.getId()).stream()
+                .filter(CategoryAttribute::isFilterable)
+                .toList();
+        Map<UUID, AttributeDefinition> definitions = new HashMap<>();
+        attributeRepository.findAllById(mappings.stream().map(CategoryAttribute::getAttributeId).toList())
+                .forEach(attribute -> definitions.put(attribute.getId(), attribute));
+        List<UUID> selectableIds = definitions.values().stream()
+                .filter(attribute -> attribute.getStatus() == CatalogStatus.ACTIVE)
+                .filter(attribute -> isSelectable(attribute.getDataType()))
+                .map(AttributeDefinition::getId)
+                .toList();
+        Map<UUID, List<AttributeOption>> options = new HashMap<>();
+        if (!selectableIds.isEmpty()) {
+            optionRepository.findAllByAttributeIdInOrderByAttributeIdAscSortOrderAscLabelAsc(selectableIds)
+                    .stream().filter(option -> option.getStatus() == CatalogStatus.ACTIVE)
+                    .forEach(option -> options.computeIfAbsent(option.getAttributeId(),
+                            ignored -> new ArrayList<>()).add(option));
+        }
+        return mappings.stream()
+                .filter(mapping -> definitions.containsKey(mapping.getAttributeId()))
+                .map(mapping -> Map.entry(mapping, definitions.get(mapping.getAttributeId())))
+                .filter(entry -> entry.getValue().getStatus() == CatalogStatus.ACTIVE)
+                .map(entry -> new CatalogFilterDefinitionResponse(entry.getValue().getId(),
+                        entry.getValue().getCode(), entry.getValue().getName(),
+                        entry.getValue().getDataType(), entry.getKey().getAppliesTo(),
+                        options.getOrDefault(entry.getValue().getId(), List.of()).stream()
+                                .map(option -> new CatalogFilterOptionResponse(option.getCode(),
+                                        option.getLabel()))
+                                .toList()))
                 .toList();
     }
 

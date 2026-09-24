@@ -9,5 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InventoryAdjustmentRepository extends JpaRepository<InventoryAdjustment, UUID> {
     Optional<InventoryAdjustment> findByOperationKey(UUID operationKey);
-    Page<InventoryAdjustment> findAllByVariantId(UUID variantId, Pageable pageable);
+    Page<InventoryAdjustment> findAllByVariantIdOrderByCreatedAtDesc(UUID variantId, Pageable pageable);
 }
