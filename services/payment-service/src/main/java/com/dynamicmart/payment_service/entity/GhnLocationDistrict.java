@@ -11,13 +11,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "ghn_location_wards")
+@Table(name = "ghn_location_districts")
 @Getter @Setter @NoArgsConstructor(access = AccessLevel.PUBLIC)
-public class GhnLocationWard {
+public class GhnLocationDistrict {
     @Id private int id;
     @Column(name = "province_id", nullable = false) private int provinceId;
-    @Column(name = "district_id") private Integer districtId;
-    @Column(name = "ghn_ward_code", length = 30) private String ghnWardCode;
     @Column(nullable = false, length = 150) private String name;
     @Column(name = "name_normalized", nullable = false, length = 150) private String nameNormalized;
     @Column(name = "ghn_updated_at") private Instant ghnUpdatedAt;

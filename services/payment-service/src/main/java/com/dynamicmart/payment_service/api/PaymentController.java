@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,12 +38,25 @@ public class PaymentController {
     @GetMapping("/{paymentId}")
     public PaymentResponse get(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID paymentId, @RequestParam(required = false) UUID customerId) { internalApi.require(apiKey); return paymentService.get(paymentId, customerId); }
 
+    /** Customer-facing authoritative state for the browser return page; TxnRef alone is never sufficient without JWT ownership. */
+    @GetMapping("/vnpay/return-status")
+    public PaymentResponse returnStatus(@RequestHeader("X-Authenticated-User-Id") UUID customerId, @RequestParam("vnp_TxnRef") String reference) {
+        return paymentService.getByVnPayReference(reference, customerId);
+    }
+
+    /** Admin read model. Gateway enforces ADMIN before forwarding this route. */
+    @GetMapping
+    public PaymentPageResponse list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        int safePage = Math.max(0, page); int safeSize = Math.max(1, Math.min(size, 100));
+        return paymentService.list(PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+    }
+
     @PostMapping("/{paymentId}/vnpay-attempt")
     public PaymentResponse newVnPayAttempt(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID paymentId) { internalApi.require(apiKey); return paymentService.createVnPayAttempt(paymentId); }
 
     /** Admin-only command; Gateway must inject/validate the admin identity before this reaches the service. */
     @PostMapping("/{paymentId}/cod-confirmations")
-    public PaymentResponse confirmCod(@PathVariable UUID paymentId, @Valid @RequestBody CodConfirmationRequest request) { return paymentService.confirmCod(paymentId, request); }
+    public PaymentResponse confirmCod(@RequestHeader("X-Authenticated-User-Id") UUID adminId, @PathVariable UUID paymentId, @Valid @RequestBody CodConfirmationRequest request) { return paymentService.confirmCod(paymentId, request, adminId); }
 
     @GetMapping("/{paymentId}/attempts")
     public List<PaymentAttemptResponse> attempts(@PathVariable UUID paymentId) { return paymentService.attempts(paymentId); }

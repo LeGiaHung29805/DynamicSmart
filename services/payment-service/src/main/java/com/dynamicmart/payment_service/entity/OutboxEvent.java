@@ -27,5 +27,6 @@ public class OutboxEvent {
     @Column(nullable = false) private String status;
     @Column(name = "attempt_count", nullable = false) private int attemptCount;
     @Column(name = "available_at", nullable = false) private Instant availableAt;
+    @Column(name = "published_at") private Instant publishedAt;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
 }
