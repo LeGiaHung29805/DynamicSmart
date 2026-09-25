@@ -35,7 +35,7 @@ public class GatewaySecurityConfig {
                                 "/api/v1/catalog/products/**",
                                 "/api/v1/catalog/variants/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/cod-confirmations", "/api/v1/locations/sync").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/*/callback-audits").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments", "/api/v1/payments/*/callback-audits", "/api/v1/payments/*/attempts").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .build();

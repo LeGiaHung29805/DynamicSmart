@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
@@ -26,7 +29,17 @@ public class GatewayRoutes {
         return route("order-service").route(path("/api/v1/orders/**").or(path("/api/v1/checkout/**")), http()).before(uri(target)).build();
     }
     @Bean RouterFunction<ServerResponse> paymentRoute(@Value("${app.routes.payment-service-url}") String target) {
-        return route("payment-service").route(path("/api/v1/payments/**").or(path("/api/v1/shipping/**")).or(path("/api/v1/locations/**")), http()).before(uri(target)).build();
+        return route("payment-service").route(path("/api/v1/payments/**").or(path("/api/v1/shipping/**")).or(path("/api/v1/locations/**")), http()).before(this::authenticatedIdentity).before(uri(target)).build();
+    }
+
+    private ServerRequest authenticatedIdentity(ServerRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return ServerRequest.from(request).headers(headers -> {
+            headers.remove("X-Authenticated-User-Id");
+            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+                headers.set("X-Authenticated-User-Id", authentication.getName());
+            }
+        }).build();
     }
     @Bean RouterFunction<ServerResponse> engagementRoute(@Value("${app.routes.engagement-service-url}") String target) {
         return route("engagement-service").route(path("/api/v1/reviews/**").or(path("/api/v1/reports/**")), http()).before(uri(target)).build();
