@@ -24,3 +24,6 @@ app:
       access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
       refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
     refresh-cookie-secure: ${AUTH_REFRESH_COOKIE_SECURE:false}
+  clients:
+    payment-service-url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+    internal-api-key: ${INTERNAL_API_KEY:local-internal-key}

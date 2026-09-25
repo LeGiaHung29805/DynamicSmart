@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -24,20 +25,24 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class GatewaySecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter converter) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter converter,
+                                            SessionValidationFilter sessionValidationFilter) throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> { })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/api/v1/auth/**", "/api/v1/payments/vnpay/ipn").permitAll()
+                        .requestMatchers("/api/v1/auth/internal/**").denyAll()
+                        .requestMatchers("/actuator/health", "/api/v1/auth/**", "/api/v1/payments/vnpay/ipn", "/api/v1/cart/promotions/prices/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/catalog/categories/**",
                                 "/api/v1/catalog/products/**",
                                 "/api/v1/catalog/variants/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/cod-confirmations", "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments", "/api/v1/payments/*/callback-audits", "/api/v1/payments/*/attempts").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/users/**", "/api/v1/cart/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
+                .addFilterAfter(sessionValidationFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
 
