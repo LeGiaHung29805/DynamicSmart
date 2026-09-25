@@ -89,7 +89,7 @@ Quy tắc nghiệp vụ:
 
 ## Ràng buộc dữ liệu và tích hợp cần thực hiện
 
-- Lần xác nhận thu COD thành công phải lưu số tiền thực thu, mã biên nhận, quản trị viên xác nhận và thời điểm xác nhận; số tiền phải đúng bằng số tiền cần thu.
+- Lần xác nhận thu COD thành công phải lưu số tiền thực thu, mã biên nhận, quản trị viên xác nhận và thời điểm xác nhận; số tiền phải đúng bằng số tiền cần thu. Danh tính quản trị viên lấy từ JWT đã được Gateway xác thực, không nhận `confirmedBy` do trình duyệt tự khai.
 - Trạng thái thanh toán, thời điểm thanh toán và cách thanh toán phải thuộc các giá trị cho phép; giao diện không được sửa trực tiếp số tiền hay trường lịch sử.
 - Báo giá GHN phải kiểm tra phí không âm, cân nặng dương và kích thước hợp lệ. Khi tạo đơn, Hiếu lưu lại mã báo giá, dấu vết kiểm tra, kích thước kiện, dịch vụ và thời gian dự kiến.
 - Kiểm thử thêm: COD thiếu người xác nhận/biên nhận/sai số tiền bị từ chối; thông báo thanh toán COD trùng chỉ tạo một kết quả thành công.

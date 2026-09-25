@@ -787,6 +787,10 @@ Chỉ tạo cho Order có `final_total_vnd > 0`; đơn `NOT_REQUIRED + FREE` kh�
 | `status` | `varchar(20)` | Prepaid: `PENDING`, `PAID`, `FAILED`, `EXPIRED`; postpaid: chỉ `PENDING`, `PAID`. |
 | `paid_at` | `timestamptz null` | Khi hệ thống xác thực đã thu tiền. |
 | `expires_at` | `timestamptz null` | TTL prepaid; postpaid QR TTL ở attempt. |
+| `correlation_id` | `uuid NOT NULL` | Nối Payment/Outbox với checkout saga đã tạo Order. |
+| `cod_receipt_no` | `varchar(100) null` | Biên nhận thu COD; chỉ có sau xác nhận thành công. |
+| `cod_confirmed_by` | `uuid null` | Logical admin ID xác nhận thu COD. |
+| `cod_confirmed_at` | `timestamptz null` | Thời điểm xác nhận thu COD. |
 | `created_at`, `updated_at` | `timestamptz` | Audit. |
 
 `PREPAID + VNPAY` tạo Payment/Attempt URL ngay sau Order. `POSTPAID` tạo Payment `PENDING` lúc Order; chỉ `POSTPAID + VNPAY` phát `PaymentDue` khi Order vào `HANDOVER_PENDING`, Payment Service nhận event này để mở VNPay Attempt. VNPay URL/QR trả sau `FAILED`/`EXPIRED` chỉ làm Attempt kết thúc, Payment vẫn `PENDING` để có thể tạo Attempt mới. COD không dùng `PaymentDue` và không tạo Attempt thành công cho đến khi admin xác nhận thu tiền tại bàn giao.
@@ -854,6 +858,8 @@ Index `(status, name)` cho endpoint list/search. Không nhận province do front
 ### 6.5. `ghn_location_wards`
 
 Cache Phường/Xã phụ thuộc một Tỉnh/Thành phố trong catalog GHN hai cấp.
+
+Adapter được phép cache thêm `ghn_location_districts` và lưu `district_id`/`ghn_ward_code` trên Ward để đáp ứng contract kỹ thuật của GHN. Đây là metadata nội bộ của Payment Service: không thêm District vào Address, API chọn địa chỉ hay Order snapshot.
 
 | Cột | Kiểu/ràng buộc | Tác dụng |
 |---|---|---|
