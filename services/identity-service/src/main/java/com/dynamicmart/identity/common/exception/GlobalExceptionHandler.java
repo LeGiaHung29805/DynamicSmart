@@ -2,6 +2,7 @@ package com.dynamicmart.identity.common.exception;
 
 import com.dynamicmart.identity.auth.application.AuthException;
 import com.dynamicmart.identity.common.api.ApiErrorResponse;
+import com.dynamicmart.identity.exception.IdentityException;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
     @ExceptionHandler(AuthException.class)
     ResponseEntity<ApiErrorResponse> handleAuth(AuthException exception) {
+        return ResponseEntity.status(exception.getStatus()).body(new ApiErrorResponse(
+                exception.getCode(), exception.getMessage(), List.of(), Instant.now()));
+    }
+
+    @ExceptionHandler(IdentityException.class)
+    ResponseEntity<ApiErrorResponse> handleIdentity(IdentityException exception) {
         return ResponseEntity.status(exception.getStatus()).body(new ApiErrorResponse(
                 exception.getCode(), exception.getMessage(), List.of(), Instant.now()));
     }

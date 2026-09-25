@@ -24,4 +24,14 @@ public class CartItem {
     @Column(name = "is_selected", nullable = false) private boolean selected;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+
+    public CartItem(UUID cartId, UUID productId, UUID variantId, int quantity, Instant now) {
+        this.id = UUID.randomUUID(); this.cartId = cartId; this.productId = productId; this.variantId = variantId;
+        this.quantity = quantity; this.version = 0; this.selected = true; this.createdAt = now; this.updatedAt = now;
+    }
+    public void change(int quantity, Boolean selected, Instant now) {
+        if (quantity > 0) this.quantity = quantity;
+        if (selected != null) this.selected = selected;
+        this.version++; this.updatedAt = now;
+    }
 }

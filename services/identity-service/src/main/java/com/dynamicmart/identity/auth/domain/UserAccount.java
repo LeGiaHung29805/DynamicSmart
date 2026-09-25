@@ -50,8 +50,34 @@ public class UserAccount {
     public String getEmail() { return email; }
     public String getPasswordHash() { return passwordHash; }
     public String getFullName() { return fullName; }
+    public String getPhone() { return phone; }
     public UserRole getRole() { return role; }
     public UserStatus getStatus() { return status; }
     public int getAuthVersion() { return authVersion; }
+    public Instant getLastLoginAt() { return lastLoginAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
     public void markLoggedIn(Instant now) { this.lastLoginAt = now; this.updatedAt = now; }
+
+    public void updateProfile(String fullName, String phone, Instant now) {
+        this.fullName = fullName;
+        this.phone = phone;
+        this.updatedAt = now;
+    }
+
+    public void changeStatus(UserStatus status, Instant now) {
+        if (this.status != status) {
+            this.status = status;
+            this.authVersion++;
+            this.updatedAt = now;
+        }
+    }
+
+    public void changeRole(UserRole role, Instant now) {
+        if (this.role != role) {
+            this.role = role;
+            this.authVersion++;
+            this.updatedAt = now;
+        }
+    }
 }
