@@ -177,6 +177,9 @@ Customer chọn một trong các tổ hợp hợp lệ sau:
 | Thời điểm thanh toán | Phương thức | Ý nghĩa |
 |---|---|---|
 | `PREPAID` (trả trước) | `VNPAY` | Thanh toán VNPay trước khi hệ thống fulfillment (xử lý/giao đơn). |
+| `PREPAID` (trả trước) | `ZALOPAY` | Thanh toán qua ZaloPay; chỉ callback có HMAC hợp lệ mới xác nhận thành công. |
+| `PREPAID` (trả trước) | `PAYOS` | Thanh toán qua link PayOS; chỉ webhook có checksum hợp lệ mới xác nhận thành công. |
+| `PREPAID` (trả trước) | `BANK_QR` | Chuyển khoản VietQR và tự động đối soát bằng webhook SePay. |
 | `POSTPAID` (trả sau) | `VNPAY` | Thanh toán VNPay khi shipper/admin sẵn sàng bàn giao hàng tại địa chỉ snapshot. |
 | `POSTPAID` (trả sau) | `COD` | Thu tiền mặt khi giao hàng. |
 | `NOT_REQUIRED` (không cần thanh toán) | `FREE` (đơn 0đ) | Backend tự gán khi tổng tiền cuối là 0đ. |

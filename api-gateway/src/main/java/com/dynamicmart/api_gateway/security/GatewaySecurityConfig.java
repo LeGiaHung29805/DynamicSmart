@@ -32,7 +32,22 @@ public class GatewaySecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/internal/**").denyAll()
-                        .requestMatchers("/actuator/health", "/api/v1/auth/**", "/api/v1/payments/vnpay/ipn", "/api/v1/cart/promotions/prices/**").permitAll()
+                        .requestMatchers("/actuator/health", "/api/v1/auth/**",
+                                "/api/v1/payments/vnpay/ipn",
+                                "/api/v1/payments/zalopay/callback",
+                                "/api/v1/payments/payos/webhook",
+                                "/api/v1/payments/sepay/webhook",
+                                "/api/v1/cart/promotions/prices/**").permitAll()
+                        // Dịch vụ đích xác thực lại các route nội bộ bằng X-Internal-Api-Key.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/payments/order-context",
+                                "/api/v1/payments/*/vnpay-attempt",
+                                "/api/v1/payments/*/attempts",
+                                "/api/v1/shipping/quotes",
+                                "/api/v1/shipping/quotes/*/validate").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/locations/validate",
+                                "/api/v1/payments/orders/*").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/catalog/categories/**",
                                 "/api/v1/catalog/products/**",

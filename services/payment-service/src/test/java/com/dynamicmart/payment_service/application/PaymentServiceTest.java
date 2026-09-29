@@ -19,6 +19,9 @@ import tools.jackson.databind.ObjectMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -29,7 +32,7 @@ class PaymentServiceTest {
     private PaymentRepository payments;
     private PaymentAttemptRepository attempts;
     private OutboxEventRepository outbox;
-    private VnPayGateway vnPay;
+    private PaymentGatewayRouter gateways;
     private PaymentService service;
 
     @BeforeEach
@@ -37,8 +40,8 @@ class PaymentServiceTest {
         payments = mock(PaymentRepository.class);
         attempts = mock(PaymentAttemptRepository.class);
         outbox = mock(OutboxEventRepository.class);
-        vnPay = mock(VnPayGateway.class);
-        service = new PaymentService(payments, attempts, outbox, vnPay, new ObjectMapper());
+        gateways = mock(PaymentGatewayRouter.class);
+        service = new PaymentService(payments, attempts, outbox, gateways, new ObjectMapper());
     }
 
     @Test
@@ -57,7 +60,7 @@ class PaymentServiceTest {
         Payment payment = payment("POSTPAID", "COD", "PENDING");
         UUID adminId = UUID.randomUUID();
         var request = new CodConfirmationRequest(payment.getAmountVnd(), "COD-RECEIPT-1");
-        when(payments.findById(payment.getId())).thenReturn(Optional.of(payment));
+        when(payments.findByIdForUpdate(payment.getId())).thenReturn(Optional.of(payment));
         when(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId())).thenReturn(List.of());
 
         var first = service.confirmCod(payment.getId(), request, adminId);
@@ -74,7 +77,7 @@ class PaymentServiceTest {
     void rejectsDifferentCodConfirmationAfterPaymentWasPaid() {
         Payment payment = payment("POSTPAID", "COD", "PAID");
         payment.setCodReceiptNo("ORIGINAL"); payment.setCodConfirmedBy(UUID.randomUUID());
-        when(payments.findById(payment.getId())).thenReturn(Optional.of(payment));
+        when(payments.findByIdForUpdate(payment.getId())).thenReturn(Optional.of(payment));
 
         PaymentException error = assertThrows(PaymentException.class, () -> service.confirmCod(payment.getId(),
                 new CodConfirmationRequest(payment.getAmountVnd(), "OTHER"), UUID.randomUUID()));
@@ -86,8 +89,8 @@ class PaymentServiceTest {
     void postpaidVnPayFailureEndsOnlyAttempt() {
         Payment payment = payment("POSTPAID", "VNPAY", "PENDING");
         PaymentAttempt attempt = attempt(payment);
-        when(attempts.findByProviderReference("REF-1")).thenReturn(Optional.of(attempt));
-        when(payments.findById(payment.getId())).thenReturn(Optional.of(payment));
+        when(attempts.findByProviderReferenceForUpdate("REF-1")).thenReturn(Optional.of(attempt));
+        when(payments.findByIdForUpdate(payment.getId())).thenReturn(Optional.of(payment));
 
         var outcome = service.applyVnPayFailure("REF-1", payment.getAmountVnd());
 
@@ -107,6 +110,52 @@ class PaymentServiceTest {
                 () -> service.getByVnPayReference("REF-1", UUID.randomUUID()));
 
         assertEquals("PAYMENT_OWNERSHIP_DENIED", error.getCode());
+    }
+
+    @Test
+    void createsPrepaidZaloPayAttemptThroughProviderRouter() {
+        UUID orderId = UUID.randomUUID();
+        var request = new OrderPaymentContextRequest(orderId, UUID.randomUUID(), 100_000L,
+                OrderPaymentContextRequest.PaymentTiming.PREPAID, OrderPaymentContextRequest.PaymentMethod.ZALOPAY, UUID.randomUUID());
+        when(payments.findByOrderId(orderId)).thenReturn(Optional.empty());
+        when(attempts.findByPaymentIdOrderByAttemptNoDesc(any())).thenReturn(List.of());
+        when(gateways.create(eq("ZALOPAY"), any(), eq(orderId), eq(request.customerId()), anyLong(), anyInt(), any()))
+                .thenReturn(new PaymentGatewayRouter.CreatedPayment("ZP-REF", "https://zalopay.test/pay"));
+
+        var response = service.createForOrder(request);
+
+        assertEquals("ZALOPAY", response.method());
+        assertEquals("https://zalopay.test/pay", response.redirectUrl());
+        verify(attempts).save(any(PaymentAttempt.class));
+    }
+
+    @Test
+    void orderServiceCanReadLatestPostpaidVnPayAttemptByOrder() {
+        Payment payment = payment("POSTPAID", "VNPAY", "PENDING");
+        PaymentAttempt attempt = attempt(payment);
+        attempt.setRedirectUrl("https://sandbox.vnpayment.vn/payment/demo");
+        when(payments.findByOrderId(payment.getOrderId())).thenReturn(Optional.of(payment));
+        when(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId())).thenReturn(List.of(attempt));
+
+        var response = service.getByOrderId(payment.getOrderId());
+
+        assertEquals(payment.getId(), response.id());
+        assertEquals(attempt.getRedirectUrl(), response.redirectUrl());
+    }
+
+    @Test
+    void rejectsProviderTransactionAlreadyUsedByAnotherPayment() {
+        Payment payment = payment("PREPAID", "VNPAY", "PENDING");
+        PaymentAttempt attempt = attempt(payment);
+        when(attempts.findByProviderReferenceForUpdate("REF-1")).thenReturn(Optional.of(attempt));
+        when(payments.findByIdForUpdate(payment.getId())).thenReturn(Optional.of(payment));
+        when(payments.existsByProviderTransactionRefAndIdNot("VNPAY-TXN-1", payment.getId())).thenReturn(true);
+
+        var outcome = service.applyVnPaySuccess("REF-1", "VNPAY-TXN-1", payment.getAmountVnd());
+
+        assertEquals(PaymentService.CallbackOutcome.DUPLICATE, outcome);
+        assertEquals("PENDING", payment.getStatus());
+        verify(outbox, never()).save(any());
     }
 
     private Payment payment(String timing, String method, String status) {

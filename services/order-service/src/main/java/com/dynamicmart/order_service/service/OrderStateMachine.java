@@ -112,7 +112,7 @@ public class OrderStateMachine {
                 "COD không hỗ trợ thanh toán trả trước.");
         require(timing == PaymentTiming.PREPAID || timing == PaymentTiming.POSTPAID,
                 "Thời điểm thanh toán không hợp lệ.");
-        require(method == PaymentMethod.VNPAY || method == PaymentMethod.COD,
+        require(method.isOnline() || method == PaymentMethod.COD,
                 "Phương thức thanh toán không hợp lệ.");
     }
 

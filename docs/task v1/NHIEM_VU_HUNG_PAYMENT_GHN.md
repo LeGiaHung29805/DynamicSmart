@@ -26,6 +26,13 @@ Quy tắc nghiệp vụ:
 - Postpaid QR hết hạn hoặc thất bại chỉ kết thúc lần tạo QR đó; Payment của cả đơn vẫn `PENDING` để tạo QR mới khi Order còn Handover Pending, không hủy Order và không phát `PaymentFailed`/`PaymentExpired` cho Order.
 - Từ chối `PREPAID + COD`; đơn 0 đồng dùng `NOT_REQUIRED + FREE`, không tạo Payment/URL ngoài.
 
+### UC-12B — Cổng thanh toán mở rộng
+
+- Hỗ trợ thêm `ZALOPAY`, `PAYOS` và `BANK_QR` đối soát qua SePay mà không thay đổi nguyên tắc Payment/Attempt/Outbox.
+- ZaloPay chỉ xác nhận callback có HMAC Key2 hợp lệ; PayOS chỉ xác nhận webhook có checksum hợp lệ; SePay chỉ nhận raw-body HMAC còn hạn và giao dịch vào đúng mã/số tiền.
+- Return URL của mọi cổng chỉ dùng để hiển thị; callback/webhook hợp lệ mới được chuyển Payment sang `PAID`.
+- Credential chỉ lấy từ biến môi trường, không trả về frontend, audit hoặc log.
+
 ### UC-21 — Danh mục địa chỉ GHN và báo giá phí giao hàng — P0
 
 Hưng phải triển khai thật, không chỉ viết tài liệu:
