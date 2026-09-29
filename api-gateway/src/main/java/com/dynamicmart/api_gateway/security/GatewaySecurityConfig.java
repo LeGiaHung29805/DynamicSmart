@@ -29,7 +29,22 @@ public class GatewaySecurityConfig {
                 .cors(cors -> { })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/api/v1/auth/**", "/api/v1/payments/vnpay/ipn").permitAll()
+                        .requestMatchers("/actuator/health", "/api/v1/auth/**",
+                                "/api/v1/payments/vnpay/ipn",
+                                "/api/v1/payments/zalopay/callback",
+                                "/api/v1/payments/payos/webhook",
+                                "/api/v1/payments/sepay/webhook").permitAll()
+                        // Service-to-service routes are authenticated again by the target service with X-Internal-Api-Key.
+                        // Browsers cannot send that header through CORS and never receive the shared secret.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/payments/order-context",
+                                "/api/v1/payments/*/vnpay-attempt",
+                                "/api/v1/payments/*/attempts",
+                                "/api/v1/shipping/quotes",
+                                "/api/v1/shipping/quotes/*/validate").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/locations/validate",
+                                "/api/v1/payments/orders/*").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/catalog/categories/**",
                                 "/api/v1/catalog/products/**",

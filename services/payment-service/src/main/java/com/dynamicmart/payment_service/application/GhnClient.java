@@ -4,13 +4,17 @@ import com.dynamicmart.payment_service.api.PaymentException;
 import com.dynamicmart.payment_service.api.ShippingItemRequest;
 import com.dynamicmart.payment_service.config.GhnProperties;
 import tools.jackson.databind.JsonNode;
+import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /** Thin GHN boundary. Secrets remain in environment variables and never cross an API response or log. */
 @Component
@@ -20,15 +24,24 @@ public class GhnClient {
     private final RestClient restClient;
 
     public GhnClient(GhnProperties properties, RestClient.Builder builder) {
-        this.properties = properties; this.restClient = builder.build();
+        this.properties = properties;
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(10));
+        this.restClient = builder.requestFactory(requestFactory).build();
     }
 
     public Rate quote(int districtId, String wardCode, List<ShippingItemRequest> items) {
         requireQuoteConfigured();
-        int weight = items.stream().mapToInt(i -> Math.multiplyExact(i.quantity(), i.weightGrams())).sum();
+        long totalWeight = items.stream().mapToLong(i -> (long) i.quantity() * i.weightGrams()).sum();
         int length = items.stream().mapToInt(i -> i.lengthCm()).max().orElseThrow();
         int width = items.stream().mapToInt(i -> i.widthCm()).max().orElseThrow();
-        int height = items.stream().mapToInt(i -> Math.multiplyExact(i.quantity(), i.heightCm())).sum();
+        long totalHeight = items.stream().mapToLong(i -> (long) i.quantity() * i.heightCm()).sum();
+        if (totalWeight > Integer.MAX_VALUE || totalHeight > Integer.MAX_VALUE) {
+            throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_PACKAGE_SIZE_INVALID", "Khối lượng hoặc kích thước kiện hàng vượt giới hạn hỗ trợ.");
+        }
+        int weight = Math.toIntExact(totalWeight);
+        int height = Math.toIntExact(totalHeight);
         Map<String, Object> request = Map.of("from_district_id", properties.fromDistrictId(), "from_ward_code", properties.fromWardCode(), "to_district_id", districtId, "to_ward_code", wardCode,
                 "service_type_id", 2, "weight", weight, "length", length, "width", width, "height", height);
         try {
@@ -48,8 +61,12 @@ public class GhnClient {
     private JsonNode get(String path, Map<String, Object> query) {
         requireCatalogConfigured();
         try {
-            var request = restClient.get().uri(builder -> { builder.path(properties.baseUrl() + path); query.forEach(builder::queryParam); return builder.build(); }).header("Token", properties.token());
-            return request.retrieve().body(JsonNode.class);
+            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(properties.baseUrl()).path(path);
+            query.forEach(uriBuilder::queryParam);
+            URI uri = uriBuilder.build().encode().toUri();
+            JsonNode response = restClient.get().uri(uri).header("Token", properties.token()).retrieve().body(JsonNode.class);
+            if (response == null || !response.path("data").isArray()) throw unavailable();
+            return response;
         } catch (RestClientException exception) { throw unavailable(); }
     }
     private void requireCatalogConfigured() { if (properties.baseUrl() == null || properties.baseUrl().isBlank() || properties.token() == null || properties.token().isBlank()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "GHN chưa được cấu hình cho môi trường này."); }

@@ -9,5 +9,5 @@ public record OrderPaymentContextRequest(
         @NotNull UUID orderId, @NotNull UUID customerId, @NotNull @Positive Long amountVnd,
         @NotNull PaymentTiming timing, @NotNull PaymentMethod method, @NotNull UUID correlationId) {
     public enum PaymentTiming { PREPAID, POSTPAID }
-    public enum PaymentMethod { VNPAY, COD }
+    public enum PaymentMethod { VNPAY, ZALOPAY, PAYOS, BANK_QR, COD }
 }

@@ -29,13 +29,13 @@ public class PaymentService {
     private final PaymentRepository payments;
     private final PaymentAttemptRepository attempts;
     private final OutboxEventRepository outbox;
-    private final VnPayGateway vnPay;
+    private final PaymentGatewayRouter gateways;
     private final ObjectMapper objectMapper;
 
     public enum CallbackOutcome { APPLIED, DUPLICATE, LATE_AUDIT }
 
-    public PaymentService(PaymentRepository payments, PaymentAttemptRepository attempts, OutboxEventRepository outbox, VnPayGateway vnPay, ObjectMapper objectMapper) {
-        this.payments = payments; this.attempts = attempts; this.outbox = outbox; this.vnPay = vnPay; this.objectMapper = objectMapper;
+    public PaymentService(PaymentRepository payments, PaymentAttemptRepository attempts, OutboxEventRepository outbox, PaymentGatewayRouter gateways, ObjectMapper objectMapper) {
+        this.payments = payments; this.attempts = attempts; this.outbox = outbox; this.gateways = gateways; this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -47,8 +47,8 @@ public class PaymentService {
             throw new PaymentException(HttpStatus.CONFLICT, "ORDER_PAYMENT_CONTEXT_CONFLICT", "Ngữ cảnh thanh toán của đơn đã tồn tại nhưng không khớp.");
         }
         if (existing.isEmpty()) payments.save(payment);
-        if (request.timing() == OrderPaymentContextRequest.PaymentTiming.PREPAID && request.method() == OrderPaymentContextRequest.PaymentMethod.VNPAY && "PENDING".equals(payment.getStatus())) {
-            PaymentAttempt attempt = attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).stream().findFirst().orElseGet(() -> createVnPayAttempt(payment));
+        if (request.timing() == OrderPaymentContextRequest.PaymentTiming.PREPAID && request.method() != OrderPaymentContextRequest.PaymentMethod.COD && "PENDING".equals(payment.getStatus())) {
+            PaymentAttempt attempt = attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).stream().findFirst().orElseGet(() -> createOnlineAttempt(payment));
             return response(payment, attempt.getRedirectUrl());
         }
         return response(payment, null);
@@ -56,8 +56,8 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponse createVnPayAttempt(UUID paymentId) {
-        Payment payment = requirePayment(paymentId);
-        if (!"VNPAY".equals(payment.getMethod())) throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_METHOD_NOT_VNPAY", "Khoản thanh toán này không dùng VNPay.");
+        Payment payment = requirePaymentForUpdate(paymentId);
+        if ("COD".equals(payment.getMethod())) throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_METHOD_NOT_ONLINE", "Khoản thanh toán COD không tạo đường dẫn online.");
         if (!"PENDING".equals(payment.getStatus())) throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_NOT_PENDING", "Chỉ có thể tạo đường dẫn VNPay cho khoản đang chờ thanh toán.");
         if ("PREPAID".equals(payment.getTiming()) && payment.getExpiresAt().isBefore(Instant.now())) {
             expirePrepaid(payment); throw new PaymentException(HttpStatus.GONE, "PAYMENT_EXPIRED", "Khoản thanh toán trả trước đã hết hạn.");
@@ -67,19 +67,19 @@ public class PaymentService {
         if (latest != null && ("CREATED".equals(latest.getStatus()) || "REDIRECTED".equals(latest.getStatus()))) {
             latest.setStatus("EXPIRED"); latest.setUpdatedAt(Instant.now()); attempts.save(latest);
         }
-        return response(payment, createVnPayAttempt(payment).getRedirectUrl());
+        return response(payment, createOnlineAttempt(payment).getRedirectUrl());
     }
 
     @Transactional
     public PaymentResponse createVnPayAttemptForOrder(UUID orderId) {
         Payment payment = payments.findByOrderId(orderId).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_FOR_ORDER_NOT_FOUND", "Không tìm thấy Payment cho PaymentDue."));
-        if (!"POSTPAID".equals(payment.getTiming()) || !"VNPAY".equals(payment.getMethod())) throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_DUE_NOT_APPLICABLE", "PaymentDue chỉ áp dụng cho VNPay trả sau.");
+        if (!"POSTPAID".equals(payment.getTiming()) || "COD".equals(payment.getMethod())) throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_DUE_NOT_APPLICABLE", "PaymentDue chỉ áp dụng cho phương thức online trả sau.");
         return createVnPayAttempt(payment.getId());
     }
 
     @Transactional
     public PaymentResponse confirmCod(UUID paymentId, CodConfirmationRequest request, UUID confirmedBy) {
-        Payment payment = requirePayment(paymentId);
+        Payment payment = requirePaymentForUpdate(paymentId);
         if (!"COD".equals(payment.getMethod()) || !"POSTPAID".equals(payment.getTiming())) throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_NOT_COD", "Chỉ có thể xác nhận thu tiền cho COD trả sau.");
         if ("PAID".equals(payment.getStatus())) {
             if (payment.getAmountVnd() == request.collectedAmountVnd() && request.receiptNo().equals(payment.getCodReceiptNo()) && confirmedBy.equals(payment.getCodConfirmedBy())) return response(payment, null);
@@ -100,6 +100,13 @@ public class PaymentService {
         Payment payment = requirePayment(paymentId);
         if (customerId != null && !payment.getCustomerId().equals(customerId)) throw new PaymentException(HttpStatus.FORBIDDEN, "PAYMENT_OWNERSHIP_DENIED", "Bạn không có quyền xem khoản thanh toán này.");
         String redirect = attempts.findByPaymentIdOrderByAttemptNoDesc(paymentId).stream().findFirst().map(PaymentAttempt::getRedirectUrl).orElse(null);
+        return response(payment, redirect);
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentResponse getByOrderId(UUID orderId) {
+        Payment payment = payments.findByOrderId(orderId).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_FOR_ORDER_NOT_FOUND", "Không tìm thấy Payment của đơn hàng."));
+        String redirect = attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).stream().findFirst().map(PaymentAttempt::getRedirectUrl).orElse(null);
         return response(payment, redirect);
     }
 
@@ -125,11 +132,13 @@ public class PaymentService {
 
     @Transactional
     public CallbackOutcome applyVnPaySuccess(String reference, String transactionReference, long amountVnd) {
-        PaymentAttempt attempt = attempts.findByProviderReference(reference).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_REFERENCE_NOT_FOUND", "Không tìm thấy mã thanh toán VNPay."));
-        Payment payment = requirePayment(attempt.getPaymentId());
+        PaymentAttempt attempt = requireAttemptForUpdate(reference);
+        Payment payment = requirePaymentForUpdate(attempt.getPaymentId());
         if (attempt.getAmountVnd() != amountVnd || payment.getAmountVnd() != amountVnd) return CallbackOutcome.DUPLICATE;
         if ("PAID".equals(payment.getStatus())) return CallbackOutcome.DUPLICATE;
         if (!"PENDING".equals(payment.getStatus())) return CallbackOutcome.LATE_AUDIT;
+        if (transactionReference == null || transactionReference.isBlank()) return CallbackOutcome.DUPLICATE;
+        if (payments.existsByProviderTransactionRefAndIdNot(transactionReference, payment.getId())) return CallbackOutcome.DUPLICATE;
         Instant now = Instant.now();
         if (attempt.getExpiresAt() != null && attempt.getExpiresAt().isBefore(now)) {
             attempt.setStatus("EXPIRED"); attempt.setUpdatedAt(now); attempts.save(attempt);
@@ -144,8 +153,8 @@ public class PaymentService {
     /** A failed provider response only ends a prepaid payment. Postpaid VNPay stays PENDING for a new QR/URL. */
     @Transactional
     public CallbackOutcome applyVnPayFailure(String reference, long amountVnd) {
-        PaymentAttempt attempt = attempts.findByProviderReference(reference).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_REFERENCE_NOT_FOUND", "Không tìm thấy mã thanh toán VNPay."));
-        Payment payment = requirePayment(attempt.getPaymentId());
+        PaymentAttempt attempt = requireAttemptForUpdate(reference);
+        Payment payment = requirePaymentForUpdate(attempt.getPaymentId());
         if (attempt.getAmountVnd() != amountVnd || payment.getAmountVnd() != amountVnd) return CallbackOutcome.DUPLICATE;
         if (!"PENDING".equals(payment.getStatus())) return "PREPAID".equals(payment.getTiming()) ? CallbackOutcome.LATE_AUDIT : CallbackOutcome.DUPLICATE;
         if ("FAILED".equals(attempt.getStatus()) || "EXPIRED".equals(attempt.getStatus())) return CallbackOutcome.DUPLICATE;
@@ -156,23 +165,23 @@ public class PaymentService {
 
     @Transactional
     public void expireDuePrepaidPayments() {
-        payments.findByStatusAndTimingAndExpiresAtBefore("PENDING", "PREPAID", Instant.now()).forEach(this::expirePrepaid);
+        payments.findDueForUpdate("PENDING", "PREPAID", Instant.now()).forEach(this::expirePrepaid);
     }
 
     private Payment newPayment(OrderPaymentContextRequest request) {
         Instant now = Instant.now(); Payment payment = new Payment();
         payment.setId(UUID.randomUUID()); payment.setOrderId(request.orderId()); payment.setCustomerId(request.customerId()); payment.setAmountVnd(request.amountVnd()); payment.setTiming(request.timing().name()); payment.setMethod(request.method().name()); payment.setStatus("PENDING"); payment.setCorrelationId(request.correlationId());
-        if (request.timing() == OrderPaymentContextRequest.PaymentTiming.PREPAID && request.method() == OrderPaymentContextRequest.PaymentMethod.VNPAY) payment.setExpiresAt(now.plus(VNPAY_TTL));
+        if (request.timing() == OrderPaymentContextRequest.PaymentTiming.PREPAID && request.method() != OrderPaymentContextRequest.PaymentMethod.COD) payment.setExpiresAt(now.plus(VNPAY_TTL));
         payment.setCreatedAt(now); payment.setUpdatedAt(now); return payment;
     }
 
-    private PaymentAttempt createVnPayAttempt(Payment payment) {
+    private PaymentAttempt createOnlineAttempt(Payment payment) {
         Instant now = Instant.now(); int attemptNo = attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).size() + 1;
-        String reference = "DM" + payment.getId().toString().replace("-", "").substring(0, 20).toUpperCase() + attemptNo;
-        PaymentAttempt attempt = new PaymentAttempt(); attempt.setId(UUID.randomUUID()); attempt.setPaymentId(payment.getId()); attempt.setAttemptNo(attemptNo); attempt.setProvider("VNPAY"); attempt.setProviderReference(reference); attempt.setAmountVnd(payment.getAmountVnd()); attempt.setStatus("CREATED");
         Instant expires = now.plus(VNPAY_TTL);
         if (payment.getExpiresAt() != null && payment.getExpiresAt().isBefore(expires)) expires = payment.getExpiresAt();
-        attempt.setExpiresAt(expires); attempt.setRedirectUrl(vnPay.createRedirectUrl(reference, payment.getAmountVnd(), "Thanh toan don " + payment.getOrderId(), expires)); attempt.setCreatedAt(now); attempt.setUpdatedAt(now); attempts.save(attempt); return attempt;
+        PaymentGatewayRouter.CreatedPayment created = gateways.create(payment.getMethod(), payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmountVnd(), attemptNo, expires);
+        PaymentAttempt attempt = new PaymentAttempt(); attempt.setId(UUID.randomUUID()); attempt.setPaymentId(payment.getId()); attempt.setAttemptNo(attemptNo); attempt.setProvider(payment.getMethod()); attempt.setProviderReference(created.reference()); attempt.setAmountVnd(payment.getAmountVnd()); attempt.setStatus("CREATED");
+        attempt.setExpiresAt(expires); attempt.setRedirectUrl(created.redirectUrl()); attempt.setCreatedAt(now); attempt.setUpdatedAt(now); attempts.save(attempt); return attempt;
     }
 
     private void expirePrepaid(Payment payment) {
@@ -196,6 +205,8 @@ public class PaymentService {
 
     private String payload(Payment payment) { try { return objectMapper.writeValueAsString(java.util.Map.of("paymentId", payment.getId(), "orderId", payment.getOrderId(), "amountVnd", payment.getAmountVnd(), "timing", payment.getTiming(), "method", payment.getMethod(), "status", payment.getStatus())); } catch (JacksonException exception) { throw new IllegalStateException(exception); } }
     private Payment requirePayment(UUID id) { return payments.findById(id).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Không tìm thấy khoản thanh toán.")); }
+    private Payment requirePaymentForUpdate(UUID id) { return payments.findByIdForUpdate(id).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Không tìm thấy khoản thanh toán.")); }
+    private PaymentAttempt requireAttemptForUpdate(String reference) { return attempts.findByProviderReferenceForUpdate(reference).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_REFERENCE_NOT_FOUND", "Không tìm thấy mã thanh toán VNPay.")); }
     private PaymentResponse response(Payment payment, String redirectUrl) { return new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getAmountVnd(), payment.getTiming(), payment.getMethod(), payment.getStatus(), redirectUrl, payment.getExpiresAt(), payment.getPaidAt(), payment.getCodReceiptNo(), payment.getCodConfirmedBy(), payment.getCodConfirmedAt()); }
     private void validateCombination(OrderPaymentContextRequest request) { if (request.method() == OrderPaymentContextRequest.PaymentMethod.COD && request.timing() != OrderPaymentContextRequest.PaymentTiming.POSTPAID) throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "PREPAID_COD_FORBIDDEN", "COD chỉ hỗ trợ thanh toán trả sau."); }
 }
