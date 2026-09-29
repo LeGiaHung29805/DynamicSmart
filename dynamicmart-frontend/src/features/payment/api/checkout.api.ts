@@ -8,5 +8,5 @@ export type OrderResult = { orderId: string; orderNumber: string; status: string
 
 export const checkoutApi = {
   preview: (selection: CheckoutSelection) => apiClient.post<CheckoutPreview>("/api/v1/cart/checkout/preview", selection),
-  createOrder: (selection: CheckoutSelection & { quoteId: string; paymentTiming: string; paymentMethod: string }, idempotencyKey: string) => apiClient.post<OrderResult>("/api/v1/checkout/orders", selection, { headers: { "Idempotency-Key": idempotencyKey } }),
+  createOrder: (selection: CheckoutSelection & { cartId: string; quoteId: string; paymentTiming: string; paymentMethod: string }, idempotencyKey: string) => apiClient.post<OrderResult>("/api/v1/checkout/orders", selection, { headers: { "Idempotency-Key": idempotencyKey } }),
 };

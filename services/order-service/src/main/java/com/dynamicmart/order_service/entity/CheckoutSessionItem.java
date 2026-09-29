@@ -6,13 +6,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Table(name = "checkout_session_items")
-@Getter @Setter @NoArgsConstructor
+@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CheckoutSessionItem {
     @Id private UUID id;
     @Column(name = "checkout_session_id", nullable = false) private UUID checkoutSessionId;
@@ -30,5 +31,52 @@ public class CheckoutSessionItem {
     @Column(name = "unit_price_vnd", nullable = false) private long unitPriceVnd;
     @Column(nullable = false) private int quantity;
     @Column(name = "weight_grams", nullable = false) private int weightGrams;
+    @Column(name = "length_cm") private Integer lengthCm;
+    @Column(name = "width_cm") private Integer widthCm;
+    @Column(name = "height_cm") private Integer heightCm;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static CheckoutSessionItem create(
+            UUID id,
+            UUID checkoutSessionId,
+            UUID sourceCartItemId,
+            Long sourceCartItemVersion,
+            UUID productId,
+            UUID variantId,
+            String sku,
+            String productName,
+            String variantName,
+            String imageUrl,
+            long listPriceVnd,
+            UUID directSalePromotionId,
+            long directSaleDiscountVnd,
+            int quantity,
+            int weightGrams,
+            int lengthCm,
+            int widthCm,
+            int heightCm,
+            Instant now) {
+        CheckoutSessionItem item = new CheckoutSessionItem();
+        item.id = id;
+        item.checkoutSessionId = checkoutSessionId;
+        item.sourceCartItemId = sourceCartItemId;
+        item.sourceCartItemVersion = sourceCartItemVersion;
+        item.productId = productId;
+        item.variantId = variantId;
+        item.sku = sku;
+        item.productName = productName;
+        item.variantName = variantName;
+        item.imageUrl = imageUrl;
+        item.listPriceVnd = listPriceVnd;
+        item.directSalePromotionId = directSalePromotionId;
+        item.directSaleDiscountVnd = directSaleDiscountVnd;
+        item.unitPriceVnd = Math.subtractExact(listPriceVnd, directSaleDiscountVnd);
+        item.quantity = quantity;
+        item.weightGrams = weightGrams;
+        item.lengthCm = lengthCm;
+        item.widthCm = widthCm;
+        item.heightCm = heightCm;
+        item.createdAt = now;
+        return item;
+    }
 }

@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 public interface VoucherReservationRepository extends JpaRepository<VoucherReservation, UUID> {
     Optional<VoucherReservation> findByCheckoutSessionIdAndVoucherId(UUID checkoutSessionId, UUID voucherId);
     List<VoucherReservation> findAllByStatusAndReservedUntilLessThanEqual(String status, Instant now);
+    List<VoucherReservation> findAllByCheckoutSessionId(UUID checkoutSessionId);
     List<VoucherReservation> findAllByOrderByCreatedAtDesc();
     long countByVoucherIdAndCustomerIdAndStatusIn(UUID voucherId, UUID customerId, List<String> statuses);
     @Query("select count(r) from VoucherReservation r where r.voucherId = :voucherId and r.status in ('RESERVED','CONSUMED')")

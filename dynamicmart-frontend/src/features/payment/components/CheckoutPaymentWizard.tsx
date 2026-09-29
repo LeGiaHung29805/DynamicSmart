@@ -46,7 +46,7 @@ export function CheckoutPaymentWizard() {
     if (!preview || submitting) return; setSubmitting(true); setMessage("Đang tạo đơn hàng…");
     const paymentTiming = payment === "VNPAY_PREPAID" ? "PREPAID" : "POSTPAID"; const paymentMethod = payment === "COD" ? "COD" : "VNPAY";
     idempotencyKey.current ??= crypto.randomUUID();
-    try { const result = await checkoutApi.createOrder({ addressId, merchandiseVoucherId: merchandiseVoucherId || undefined, shippingVoucherId: shippingVoucherId || undefined, quoteId: preview.shippingQuote.quoteId, paymentTiming, paymentMethod }, idempotencyKey.current); setOrder(result); setMessage(""); if (result.redirectUrl) window.location.assign(result.redirectUrl); }
+    try { const result = await checkoutApi.createOrder({ cartId: preview.cartId, addressId, merchandiseVoucherId: merchandiseVoucherId || undefined, shippingVoucherId: shippingVoucherId || undefined, quoteId: preview.shippingQuote.quoteId, paymentTiming, paymentMethod }, idempotencyKey.current); setOrder(result); setMessage(""); if (result.redirectUrl) window.location.assign(result.redirectUrl); }
     catch { setMessage("Không thể tạo đơn. Dữ liệu có thể đã thay đổi; hãy quay lại kiểm tra."); }
     finally { setSubmitting(false); }
   };

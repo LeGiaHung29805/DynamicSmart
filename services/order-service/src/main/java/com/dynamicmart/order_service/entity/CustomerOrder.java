@@ -2,25 +2,34 @@ package com.dynamicmart.order_service.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "orders")
-@Getter @Setter @NoArgsConstructor
+@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CustomerOrder {
     @Id private UUID id;
     @Column(name = "order_number", nullable = false, length = 32) private String orderNumber;
     @Column(name = "checkout_session_id", nullable = false) private UUID checkoutSessionId;
     @Column(name = "customer_id", nullable = false) private UUID customerId;
-    @Column(nullable = false, length = 40) private String status;
-    @Column(name = "payment_timing", nullable = false, length = 20) private String paymentTiming;
-    @Column(name = "payment_method", nullable = false, length = 20) private String paymentMethod;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40) private OrderStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_timing", nullable = false, length = 20) private PaymentTiming paymentTiming;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 20) private PaymentMethod paymentMethod;
     @Column(name = "items_list_subtotal_vnd", nullable = false) private long itemsListSubtotalVnd;
     @Column(name = "direct_sale_discount_vnd", nullable = false) private long directSaleDiscountVnd;
     @Column(name = "items_subtotal_vnd", nullable = false) private long itemsSubtotalVnd;
@@ -29,7 +38,8 @@ public class CustomerOrder {
     @Column(name = "shipping_fee_vnd", nullable = false) private long shippingFeeVnd;
     @Column(name = "shipping_discount_vnd", nullable = false) private long shippingDiscountVnd;
     @Column(name = "final_total_vnd", nullable = false) private long finalTotalVnd;
-    @Column(nullable = false, length = 3) private String currency;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(nullable = false, length = 3, columnDefinition = "char(3)") private String currency;
     @Column(name = "payment_due_at") private Instant paymentDueAt;
     @Column(name = "payment_succeeded_at") private Instant paymentSucceededAt;
     @Column(name = "shipment_delivered_at") private Instant shipmentDeliveredAt;
@@ -39,4 +49,46 @@ public class CustomerOrder {
     @Column(name = "completed_at") private Instant completedAt;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+    @Version @Column(nullable = false) private long version;
+
+    public static CustomerOrder create(
+            UUID id,
+            String orderNumber,
+            UUID checkoutSessionId,
+            UUID customerId,
+            OrderStatus status,
+            PaymentTiming paymentTiming,
+            PaymentMethod paymentMethod,
+            long itemsListSubtotalVnd,
+            long directSaleDiscountVnd,
+            long itemsSubtotalVnd,
+            long productDiscountVnd,
+            long orderDiscountVnd,
+            long shippingFeeVnd,
+            long shippingDiscountVnd,
+            long finalTotalVnd,
+            Instant paymentDueAt,
+            Instant now) {
+        CustomerOrder order = new CustomerOrder();
+        order.id = id;
+        order.orderNumber = orderNumber;
+        order.checkoutSessionId = checkoutSessionId;
+        order.customerId = customerId;
+        order.status = status;
+        order.paymentTiming = paymentTiming;
+        order.paymentMethod = paymentMethod;
+        order.itemsListSubtotalVnd = itemsListSubtotalVnd;
+        order.directSaleDiscountVnd = directSaleDiscountVnd;
+        order.itemsSubtotalVnd = itemsSubtotalVnd;
+        order.productDiscountVnd = productDiscountVnd;
+        order.orderDiscountVnd = orderDiscountVnd;
+        order.shippingFeeVnd = shippingFeeVnd;
+        order.shippingDiscountVnd = shippingDiscountVnd;
+        order.finalTotalVnd = finalTotalVnd;
+        order.currency = "VND";
+        order.paymentDueAt = paymentDueAt;
+        order.createdAt = now;
+        order.updatedAt = now;
+        return order;
+    }
 }
