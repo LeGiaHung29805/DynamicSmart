@@ -27,6 +27,13 @@ public class AddressService {
                 .stream().map(IdentityMapper::address).toList();
     }
 
+    @Transactional(readOnly = true)
+    public AddressResponse getActive(UUID userId, UUID addressId) {
+        Address address = requireOwned(userId, addressId);
+        if (address.getStatus() != AddressStatus.ACTIVE) throw inactive();
+        return IdentityMapper.address(address);
+    }
+
     @Transactional
     public AddressResponse create(UUID userId, AddressRequest request) {
         var location = locations.validateAndResolve(request.provinceId(), request.wardId());
@@ -45,9 +52,10 @@ public class AddressService {
         if (address.getStatus() != AddressStatus.ACTIVE) throw inactive();
         var location = locations.validateAndResolve(request.provinceId(), request.wardId());
         Instant now = Instant.now();
-        if (request.defaultAddress()) clearDefault(userId, addressId, now);
+        boolean makeDefault = request.defaultAddress() || address.isDefaultAddress();
+        if (makeDefault) clearDefault(userId, addressId, now);
         address.update(request.recipientName().trim(), request.phone().trim(), request.addressLine().trim(),
-                request.provinceId(), request.wardId(), location.provinceName(), location.wardName(), request.defaultAddress(), now);
+                request.provinceId(), request.wardId(), location.provinceName(), location.wardName(), makeDefault, now);
         return IdentityMapper.address(address);
     }
 
@@ -60,7 +68,13 @@ public class AddressService {
     }
 
     @Transactional
-    public void deactivate(UUID userId, UUID addressId) { requireOwned(userId, addressId).deactivate(Instant.now()); }
+    public void deactivate(UUID userId, UUID addressId) {
+        Address address = requireOwned(userId, addressId); boolean wasDefault = address.isDefaultAddress(); Instant now = Instant.now();
+        address.deactivate(now);
+        if (wasDefault) addresses.findAllByUserIdAndStatusOrderByDefaultAddressDescUpdatedAtDesc(userId, AddressStatus.ACTIVE)
+                .stream().filter(value -> !value.getId().equals(addressId)).findFirst()
+                .ifPresent(value -> value.setDefaultAddress(true, now));
+    }
 
     private void clearDefault(UUID userId, UUID except, Instant now) {
         addresses.findAllByUserIdAndStatusOrderByDefaultAddressDescUpdatedAtDesc(userId, AddressStatus.ACTIVE).stream()
