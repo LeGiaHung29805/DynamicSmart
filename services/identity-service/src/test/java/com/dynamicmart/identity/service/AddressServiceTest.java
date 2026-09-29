@@ -5,6 +5,8 @@ import static org.mockito.Mockito.*;
 
 import com.dynamicmart.identity.client.LocationClient;
 import com.dynamicmart.identity.dto.request.AddressRequest;
+import com.dynamicmart.identity.entity.Address;
+import com.dynamicmart.identity.entity.AddressStatus;
 import com.dynamicmart.identity.exception.IdentityException;
 import com.dynamicmart.identity.repository.AddressRepository;
 import java.util.List;
@@ -34,5 +36,29 @@ class AddressServiceTest {
         when(locations.validateAndResolve(1, 999)).thenThrow(new IdentityException(HttpStatus.UNPROCESSABLE_ENTITY, "ADDRESS_LOCATION_INVALID", "Địa giới đã chọn không hợp lệ."));
         assertThatThrownBy(() -> service.create(user, request)).isInstanceOf(IdentityException.class).hasMessageContaining("Địa giới");
         verify(addresses, never()).save(any());
+    }
+
+    @Test
+    void inactiveAddressCannotBeSelectedForCheckout() {
+        UUID user = UUID.randomUUID(), id = UUID.randomUUID();
+        Address address = new Address(id, user, "Thảo", "0900000000", "12 Nguyễn Huệ", 1, 2, "Hà Nội", "Ba Đình", true, java.time.Instant.now());
+        address.deactivate(java.time.Instant.now());
+        when(addresses.findByIdAndUserId(id, user)).thenReturn(Optional.of(address));
+
+        assertThatThrownBy(() -> service.getActive(user, id)).isInstanceOf(IdentityException.class).hasMessageContaining("ngừng sử dụng");
+    }
+
+    @Test
+    void deactivatingDefaultAddressPromotesAnotherActiveAddress() {
+        UUID user = UUID.randomUUID(); java.time.Instant now = java.time.Instant.now();
+        Address current = new Address(UUID.randomUUID(), user, "Thảo", "0900000000", "A", 1, 2, "P", "W", true, now);
+        Address fallback = new Address(UUID.randomUUID(), user, "Khác", "0900000001", "B", 1, 3, "P", "W2", false, now);
+        when(addresses.findByIdAndUserId(current.getId(), user)).thenReturn(Optional.of(current));
+        when(addresses.findAllByUserIdAndStatusOrderByDefaultAddressDescUpdatedAtDesc(user, AddressStatus.ACTIVE)).thenReturn(List.of(current, fallback));
+
+        service.deactivate(user, current.getId());
+
+        org.assertj.core.api.Assertions.assertThat(current.getStatus()).isEqualTo(AddressStatus.INACTIVE);
+        org.assertj.core.api.Assertions.assertThat(fallback.isDefaultAddress()).isTrue();
     }
 }

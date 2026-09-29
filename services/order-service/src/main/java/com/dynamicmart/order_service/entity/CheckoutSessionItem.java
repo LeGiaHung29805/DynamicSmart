@@ -6,14 +6,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Table(name = "checkout_session_items")
-@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @Setter @NoArgsConstructor
 public class CheckoutSessionItem {
     @Id private UUID id;
     @Column(name = "checkout_session_id", nullable = false) private UUID checkoutSessionId;

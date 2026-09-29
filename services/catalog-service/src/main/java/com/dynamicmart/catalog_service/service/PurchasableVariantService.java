@@ -117,14 +117,14 @@ public class PurchasableVariantService {
         Integer height = variant.getHeightCm() == null ? product.getDefaultHeightCm() : variant.getHeightCm();
         String imageUrl = primaryImage(imagesByProduct.getOrDefault(product.getId(), List.of()),
                 variant.getId());
-        return new PurchasableVariantResponse(product.getId(), variant.getId(), product.getName(),
+        return new PurchasableVariantResponse(product.getId(), product.getCategoryId(), variant.getId(), product.getName(),
                 variant.getName(), variant.getSku(), prices.getOrDefault(variant.getId(),
                 VariantPriceResponse.listPrice(variant.getPriceVnd())), available,
                 variant.getWeightGrams(), length, width, height, imageUrl, reason == null, reason);
     }
 
     private PurchasableVariantResponse unavailable(UUID variantId, String reason) {
-        return new PurchasableVariantResponse(null, variantId, null, null, null, null,
+        return new PurchasableVariantResponse(null, null, variantId, null, null, null, null,
                 0, 0, null, null, null, null, false, reason);
     }
 

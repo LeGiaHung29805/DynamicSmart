@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record PurchasableVariantResponse(
         UUID productId,
+        UUID categoryId,
         UUID variantId,
         String productName,
         String variantName,

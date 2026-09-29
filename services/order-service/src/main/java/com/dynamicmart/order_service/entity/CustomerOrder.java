@@ -6,14 +6,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Table(name = "orders")
-@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @Setter @NoArgsConstructor
 public class CustomerOrder {
     @Id private UUID id;
     @Column(name = "order_number", nullable = false, length = 32) private String orderNumber;
