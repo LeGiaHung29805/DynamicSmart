@@ -146,6 +146,26 @@ public class VoucherService {
         return response(voucher, evaluation.customerVoucherId(), evaluation.eligible(), evaluation.reason(), evaluation.discount());
     }
 
+    @Transactional(readOnly = true)
+    public VoucherResponse previewForItems(UUID customerId, UUID voucherId, String code, long orderSubtotal,
+                                           long shippingFee, List<DiscountableItem> items) {
+        Voucher voucher = locate(voucherId, code);
+        long eligibleSubtotal = switch (voucher.getScope()) {
+            case "PRODUCT_DISCOUNT", "PRODUCT_LIST_DISCOUNT" -> items.stream()
+                    .filter(item -> voucher.getProductIds().contains(item.productId())).mapToLong(DiscountableItem::lineTotalVnd).sum();
+            case "CATEGORY_DISCOUNT" -> items.stream()
+                    .filter(item -> voucher.getCategoryIds().contains(item.categoryId())).mapToLong(DiscountableItem::lineTotalVnd).sum();
+            default -> orderSubtotal;
+        };
+        Set<UUID> productIds = items.stream().map(DiscountableItem::productId).collect(java.util.stream.Collectors.toSet());
+        Set<UUID> categoryIds = items.stream().map(DiscountableItem::categoryId).collect(java.util.stream.Collectors.toSet());
+        Evaluation evaluation = evaluate(voucher, customerId, code == null ? voucher.getCode() : code,
+                orderSubtotal, eligibleSubtotal, shippingFee, productIds, categoryIds, false);
+        return response(voucher, evaluation.customerVoucherId(), evaluation.eligible(), evaluation.reason(), evaluation.discount());
+    }
+
+    public record DiscountableItem(UUID productId, UUID categoryId, long lineTotalVnd) { }
+
     @Transactional
     public ReservationResponse reserve(ReserveVoucherRequest request) {
         require(request.voucherId());
