@@ -5,7 +5,7 @@ export type AdminPayment = {
   orderId: string;
   amountVnd: number;
   timing: "PREPAID" | "POSTPAID";
-  method: "VNPAY" | "COD";
+  method: "VNPAY" | "ZALOPAY" | "PAYOS" | "BANK_QR" | "COD";
   status: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
   expiresAt?: string;
   paidAt?: string;
