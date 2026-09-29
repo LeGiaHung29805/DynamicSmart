@@ -107,17 +107,18 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
 - API Checkout Preview điều phối Address, Voucher, GHN quote và tính tiền nhưng không tạo reservation.
 - Preview gọi service ngoài transaction, sau đó khóa session để chống ghi snapshot stale; quote cũ bị invalidated.
 - Migration V3 và snapshot kích thước/trọng lượng phục vụ GHN package rule.
-- 86 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
-  Create Order admission/idempotency/revalidation/reservation/snapshot/compensation, state machine và context smoke test.
+- 108 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
+  Create Order API/orchestration/idempotency/revalidation/reservation/snapshot/compensation, Payment creation/checkpoint,
+  state machine và context smoke test.
 - Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
 
 Chưa có:
 
-- API Create Order.
 - REST adapter thật sang Identity, Catalog và Cart (hiện chỉ có gateway interface/fallback an toàn).
 - Controller/API Order Customer và Admin.
 - Saga orchestrator hoàn chỉnh; admission và trạng thái bắt đầu Saga đã được lưu bền vững.
-- Hoàn tất toàn bộ vòng đời `Idempotency-Key`; admission của Create Order đã được lưu bền vững trong Saga.
+- Hoàn tất toàn bộ vòng đời `Idempotency-Key` qua reservation commit/consume và recovery; Create Order hiện replay được
+  Saga/Order/Payment checkpoint đã commit.
 - Outbox publisher.
 - RabbitMQ consumer/producer nghiệp vụ.
 - Repository constraint/locking test, controller test và integration test.
@@ -317,7 +318,7 @@ Nghiệp vụ:
 Tiêu chí hoàn thành:
 
 - Tạo CART/BUY_NOW đã được kiểm thử với mock gateway; vẫn cần HTTP adapter thật.
-- Session hết hạn không thể update/hủy và sẽ chuyển `EXPIRED`; Create Order chưa tồn tại (M6).
+- Session hết hạn không thể update/hủy và sẽ chuyển `EXPIRED`; Create Order API đã có ở M6.
 - Hủy lặp không xóa snapshot hoặc gọi Cart/Catalog.
 - Ownership được enforced trong service theo `sessionId + customerId`; còn cần controller/security test cho truy cập chéo thực tế.
 
@@ -475,6 +476,28 @@ Tiêu chí hoàn thành:
 - Trạng thái ban đầu dùng chung `OrderStateMachine`: prepaid là `PENDING_PAYMENT`, postpaid/đơn miễn phí là `CONFIRMED`.
 - Retry sau khi transaction đã commit trả lại Order hiện có và không ghi snapshot/Outbox lần hai.
 - Thêm 6 test cho Preview freeze, happy path snapshot, initial status, replay, reservation mismatch và stale quote; toàn module đạt **86 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+
+Đã triển khai Create Order orchestrator và API:
+
+- Mở `POST /api/v1/checkout/sessions/{sessionId}/orders`; `Idempotency-Key` là UUID bắt buộc, Customer lấy từ JWT và endpoint không nhận giá/fee/address detail từ frontend.
+- `OrderCreationOrchestrator` ghép admission → replay lookup → revalidation → Voucher/Inventory reservation → remote shipping quote consume → local Order persistence mà không giữ transaction DB qua lời gọi HTTP.
+- `ShippingQuoteConsumptionService` gửi customer + fingerprint authoritative sang Payment và so khớp quote ID, fingerprint, fee/discount/payable, service và expiry trước khi cho phép tạo Order.
+- Lỗi consume quote sau reservation kích hoạt compensation; lỗi local persistence giữ reservation/checkpoint để cùng idempotency key retry thay vì release tài nguyên khi trạng thái commit còn chưa chắc chắn.
+- Retry từ `STARTED`, `VOUCHER_RESERVED` hoặc `INVENTORY_RESERVED` chạy lại bằng operation key ổn định; retry khi Order đã commit trả `200` và không lặp remote call, request mới trả `201`.
+- Thêm 12 test cho controller/header/status code, orchestrator happy path/replay/failure boundary, quote consume contract và resume từ reservation checkpoint; toàn module đạt **98 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+
+Đã nối Payment creation và checkpoint sau `ORDER_CREATED`:
+
+- Migration V5 thêm `payment_id` cùng unique index có điều kiện vào `order_sagas`, cho phép Saga lưu định danh Payment bền vững và chống hai Saga trỏ đến cùng Payment.
+- `OrderPaymentCreationService` gọi `PaymentClient.createPayment` sau khi transaction tạo Order đã commit; không giữ transaction database trong lúc gọi Payment.
+- Response của Payment được kiểm tra chặt `paymentId`, `orderId`, amount, payment timing, payment method và status trước khi chấp nhận.
+- `OrderPaymentCheckpointService` khóa Saga và Order, sau đó ghi nguyên tử `payment_id`, Saga `PAYMENT_REQUESTED`, bước `PAYMENT_CONTEXT_CREATED` và `paymentDueAt` của Order.
+- Retry tại `PAYMENT_REQUESTED` trả checkpoint đã lưu và không gọi Payment lần nữa. Contract tích hợp vẫn yêu cầu Payment tạo context idempotent theo `orderId` để bao phủ trường hợp remote đã tạo thành công nhưng Order chưa kịp lưu checkpoint.
+- Đơn có tổng tiền bằng 0 không gọi Payment; Saga ghi bước `PAYMENT_NOT_REQUIRED` nhưng giữ `ORDER_CREATED` để còn thực hiện commit/consume reservation.
+- Nếu Payment lỗi sau khi Order đã commit, không compensation Order/reservation và giữ Saga ở `ORDER_CREATED`; retry cùng `Idempotency-Key` sẽ thử tạo Payment lại an toàn.
+- Create Order response trả thêm `paymentId` và `paymentDueAt` để client tiếp tục luồng thanh toán.
+- Thêm 10 test cho Payment creation/validation/retry/free-order/checkpoint và failure boundary trong orchestrator; toàn module đạt **108 test, 0 failure, 0 error, 0 skipped** qua `clean verify` và đóng gói JAR thành công.
+- Smoke test Flyway V1→V5 trên PostgreSQL thật chưa chạy lại trong lượt này vì Docker Desktop không hoạt động; test opt-in đã được cập nhật để kiểm tra cột/index V5 và cần chạy khi PostgreSQL sẵn sàng.
 
 ### M7. State machine và vòng đời Order
 
@@ -717,11 +740,11 @@ Quy ước:
 |---|---|---|---|
 | M0 | Chốt REST/event contract | [-] | Payment/GHN có contract nền nhưng quote response còn thiếu fingerprint portable; Identity/Catalog/Cart và event chung còn chờ |
 | M1 | Nền service, security, cấu hình | [x] | Startup/health đạt; 3 JWT role test + 5 security HTTP test đạt |
-| M2 | Migration/entity/repository | [-] | Flyway V1→V4 + Hibernate validate đạt trên PostgreSQL sạch; còn repository constraint/locking test |
+| M2 | Migration/entity/repository | [-] | Flyway V1→V4 + Hibernate validate đã đạt trên PostgreSQL sạch; V5 đã có và smoke test đã cập nhật nhưng đang chờ PostgreSQL/Docker để chạy lại; còn repository constraint/locking test |
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
 | M4 | Client interface và mock adapter | [-] | Payment/GHN adapter, Address/Voucher/selection gateway đã có; HTTP adapter còn chờ contract thật |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [-] | Admission, đóng băng, revalidation, reservation/checkpoint, compensation và Order snapshot + Outbox đã có; còn orchestrator/API, remote quote consume, Payment, HTTP adapter thật và recovery runner |
+| M6 | Create Order, idempotency, Saga | [-] | Create Order API/orchestrator, remote quote consume, reservation/checkpoint/compensation, Order snapshot + Outbox và Payment creation/checkpoint đã có; còn reservation commit/consume, HTTP adapter thật và recovery runner |
 | M7 | State machine và Payment event | [-] | State machine + 9 unit test đạt; command service/consumer chưa triển khai |
 | M8 | API Customer/Admin | [ ] | Có thể làm ngay |
 | M9 | Outbox và RabbitMQ | [ ] | Cần convention RabbitMQ chung |
@@ -810,3 +833,10 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
 - Chặn cả Preview sau admission; bổ sung metadata Voucher cần thiết cho snapshot lịch sử.
 - Thêm transaction tạo Order, toàn bộ snapshot, initial history và `OrderCreated` Outbox; transaction cũng consume local quote, complete Checkout và checkpoint Saga `ORDER_CREATED`.
 - Thêm 6 test cho snapshot/replay/constraint logic; toàn module đạt **86 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+- Mở Create Order API với `Idempotency-Key`, ghép orchestration đầy đủ đến `ORDER_CREATED` và consume remote shipping quote trước local persistence.
+- Cho phép retry an toàn từ checkpoint reservation; Order đã commit được replay trực tiếp, lỗi quote được compensation còn lỗi persistence giữ tài nguyên cho retry.
+- Thêm 12 test cho API/orchestrator/quote consume/resume; toàn module đạt **98 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+- Nối `PaymentClient.createPayment` ngay sau checkpoint `ORDER_CREATED`, kiểm tra đầy đủ contract response rồi lưu nguyên tử `payment_id`, `PAYMENT_REQUESTED` và `paymentDueAt`.
+- Retry đã có Payment checkpoint không gọi remote lần nữa; đơn miễn phí ghi `PAYMENT_NOT_REQUIRED`; lỗi Payment sau khi Order commit giữ reservation và `ORDER_CREATED` để retry thay vì compensation sai.
+- Migration V5 thêm Payment checkpoint cho Saga; `DatabaseMigrationSmokeIT` đã kiểm tra thêm cột và unique index nhưng chưa thể chạy PostgreSQL smoke vì Docker Desktop không hoạt động.
+- Thêm 10 test Payment creation/checkpoint và failure boundary; toàn module đạt **108 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.

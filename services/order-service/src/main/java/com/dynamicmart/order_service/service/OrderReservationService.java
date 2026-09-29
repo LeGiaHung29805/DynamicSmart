@@ -64,6 +64,18 @@ public class OrderReservationService {
         }
     }
 
+    public void compensateAfterFailure(
+            ValidatedOrderInput input,
+            ReservationResult reservations,
+            RuntimeException failure) {
+        if (input == null || input.context() == null || reservations == null || failure == null) {
+            throw new IllegalArgumentException("Validated input, reservations và failure là bắt buộc.");
+        }
+        compensate(
+                input.context(), reservations.voucherReservationId(),
+                reservations.inventoryReservationId(), failure);
+    }
+
     private ReserveVoucherRequest voucherRequest(ValidatedOrderInput input) {
         CreationContext context = input.context();
         Map<UUID, LineDiscount> discounts = input.lineDiscounts().stream()

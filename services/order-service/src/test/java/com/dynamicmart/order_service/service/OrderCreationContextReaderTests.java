@@ -61,7 +61,7 @@ class OrderCreationContextReaderTests {
     void rejectsSagaThatAlreadyPassedRevalidationBoundary() {
         Fixture fixture = fixture();
         OrderSaga saga = saga();
-        saga.setStatus(SagaStatus.VOUCHER_RESERVED);
+        saga.setStatus(SagaStatus.COMPENSATING);
         when(fixture.sagas.findById(SAGA_ID)).thenReturn(Optional.of(saga));
         when(fixture.sessions.findByIdAndCustomerId(SESSION_ID, CUSTOMER_ID))
                 .thenReturn(Optional.of(readySession()));
@@ -70,6 +70,24 @@ class OrderCreationContextReaderTests {
                 () -> fixture.reader.load(CUSTOMER_ID, SAGA_ID));
 
         assertEquals("ORDER_SAGA_NOT_REVALIDATABLE", exception.getCode());
+    }
+
+    @Test
+    void allowsRevalidationToResumeFromDurableReservationCheckpoint() {
+        Fixture fixture = fixture();
+        OrderSaga saga = saga();
+        saga.setStatus(SagaStatus.VOUCHER_RESERVED);
+        when(fixture.sagas.findById(SAGA_ID)).thenReturn(Optional.of(saga));
+        when(fixture.sessions.findByIdAndCustomerId(SESSION_ID, CUSTOMER_ID))
+                .thenReturn(Optional.of(readySession()));
+        when(fixture.quotes.findFirstByCheckoutSessionIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+                SESSION_ID, ShippingQuoteStatus.ACTIVE, NOW)).thenReturn(Optional.of(quote()));
+        when(fixture.items.findAllByCheckoutSessionId(SESSION_ID)).thenReturn(List.of(item()));
+        when(fixture.vouchers.findAllByCheckoutSessionId(SESSION_ID)).thenReturn(List.of(voucher()));
+
+        var context = fixture.reader.load(CUSTOMER_ID, SAGA_ID);
+
+        assertEquals(SAGA_ID, context.sagaId());
     }
 
     @Test
