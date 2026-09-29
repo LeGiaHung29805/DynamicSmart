@@ -32,6 +32,7 @@ public class OrderSaga {
     @Column(name = "current_step", nullable = false, length = 80) private String currentStep;
     @Column(name = "voucher_reservation_id") private UUID voucherReservationId;
     @Column(name = "inventory_reservation_id") private UUID inventoryReservationId;
+    @Column(name = "payment_id") private UUID paymentId;
     @Column(name = "correlation_id", nullable = false) private UUID correlationId;
     @Column(name = "last_error_code", length = 100) private String lastErrorCode;
     @Column(name = "last_error_message", length = 1000) private String lastErrorMessage;
@@ -66,6 +67,22 @@ public class OrderSaga {
         orderId = createdOrderId;
         status = SagaStatus.ORDER_CREATED;
         currentStep = "ORDER_SNAPSHOTS_PERSISTED";
+        lastErrorCode = null;
+        lastErrorMessage = null;
+        updatedAt = now;
+    }
+
+    public void markPaymentRequested(UUID createdPaymentId, Instant now) {
+        paymentId = createdPaymentId;
+        status = SagaStatus.PAYMENT_REQUESTED;
+        currentStep = "PAYMENT_CONTEXT_CREATED";
+        lastErrorCode = null;
+        lastErrorMessage = null;
+        updatedAt = now;
+    }
+
+    public void markPaymentNotRequired(Instant now) {
+        currentStep = "PAYMENT_NOT_REQUIRED";
         lastErrorCode = null;
         lastErrorMessage = null;
         updatedAt = now;

@@ -19,7 +19,7 @@ class DatabaseMigrationSmokeIT {
     @Autowired private JdbcTemplate jdbc;
 
     @Test
-    void flywayAndHibernateValidateSagaIdempotencySchema() {
+    void flywayAndHibernateValidateSagaIdempotencyAndPaymentSchema() {
         Integer columns = jdbc.queryForObject("""
                 select count(*)
                 from information_schema.columns
@@ -35,8 +35,24 @@ class DatabaseMigrationSmokeIT {
                   and tablename = 'order_sagas'
                   and indexname = 'uq_order_sagas_idempotency_key'
                 """, Integer.class);
+        Integer paymentColumn = jdbc.queryForObject("""
+                select count(*)
+                from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'order_sagas'
+                  and column_name = 'payment_id'
+                """, Integer.class);
+        Integer paymentIndex = jdbc.queryForObject("""
+                select count(*)
+                from pg_indexes
+                where schemaname = 'public'
+                  and tablename = 'order_sagas'
+                  and indexname = 'uq_order_sagas_payment_id'
+                """, Integer.class);
 
         assertEquals(2, columns);
         assertEquals(1, uniqueIndex);
+        assertEquals(1, paymentColumn);
+        assertEquals(1, paymentIndex);
     }
 }
