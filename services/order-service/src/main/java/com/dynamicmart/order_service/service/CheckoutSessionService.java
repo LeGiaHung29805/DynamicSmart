@@ -201,9 +201,9 @@ public class CheckoutSessionService {
         if (request.paymentTiming() == PaymentTiming.NOT_REQUIRED || request.paymentMethod() == PaymentMethod.FREE) {
             throw invalidPaymentSelection("Chỉ backend được gán NOT_REQUIRED + FREE cho đơn có tổng tiền bằng 0.");
         }
-        boolean validPair = (request.paymentTiming() == PaymentTiming.PREPAID && request.paymentMethod() == PaymentMethod.VNPAY)
+        boolean validPair = (request.paymentTiming() == PaymentTiming.PREPAID && request.paymentMethod().isOnline())
                 || (request.paymentTiming() == PaymentTiming.POSTPAID
-                && (request.paymentMethod() == PaymentMethod.VNPAY || request.paymentMethod() == PaymentMethod.COD));
+                && (request.paymentMethod().isOnline() || request.paymentMethod() == PaymentMethod.COD));
         if (!validPair) {
             throw invalidPaymentSelection("Cặp paymentTiming/paymentMethod không hợp lệ.");
         }

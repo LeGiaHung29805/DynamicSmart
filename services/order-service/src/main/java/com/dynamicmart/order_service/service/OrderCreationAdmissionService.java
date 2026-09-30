@@ -122,9 +122,9 @@ public class OrderCreationAdmissionService {
             return;
         }
         boolean free = finalTotal == 0 && timing == PaymentTiming.NOT_REQUIRED && method == PaymentMethod.FREE;
-        boolean paid = finalTotal > 0 && ((timing == PaymentTiming.PREPAID && method == PaymentMethod.VNPAY)
+        boolean paid = finalTotal > 0 && ((timing == PaymentTiming.PREPAID && method.isOnline())
                 || (timing == PaymentTiming.POSTPAID
-                && (method == PaymentMethod.VNPAY || method == PaymentMethod.COD)));
+                && (method.isOnline() || method == PaymentMethod.COD)));
         if (!free && !paid) {
             throw invalid("INVALID_PAYMENT_SELECTION",
                     "Phương thức thanh toán không phù hợp với tổng tiền Checkout.");

@@ -85,6 +85,7 @@ public class OrderReservationService {
         return new ReserveVoucherRequest(
                 operationKey(context.sagaId(), "VOUCHER_RESERVE"), context.sagaId(), context.correlationId(),
                 context.customerId(), context.checkoutSessionId(),
+                context.quote().feeVnd(), context.quote().expiresAt(),
                 input.vouchers().stream().map(voucher -> new VoucherBenefit(
                         voucher.voucherId(), voucher.voucherCode(), voucher.scope(),
                         voucher.discountMethod(), voucher.discountValue(), voucher.eligibleSubtotalVnd(),
@@ -103,6 +104,7 @@ public class OrderReservationService {
         return new ReserveInventoryRequest(
                 operationKey(context.sagaId(), "INVENTORY_RESERVE"), context.sagaId(), context.correlationId(),
                 context.customerId(), context.checkoutSessionId(),
+                context.quote().expiresAt(),
                 context.items().stream().map(item ->
                         new InventoryLine(item.productId(), item.variantId(), item.quantity())).toList());
     }

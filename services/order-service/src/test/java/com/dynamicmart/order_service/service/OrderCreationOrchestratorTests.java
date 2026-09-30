@@ -48,6 +48,8 @@ class OrderCreationOrchestratorTests {
         verify(fixture.quoteConsumption).consume(fixture.input);
         verify(fixture.persistence).persist(fixture.input, fixture.reserved);
         verify(fixture.paymentCreation).ensurePayment(any());
+        verify(fixture.reservationFinalization)
+                .finalizeIfConfirmed(SAGA_ID, fixture.persisted.orderId());
     }
 
     @Test
@@ -73,6 +75,7 @@ class OrderCreationOrchestratorTests {
         verify(fixture.quoteConsumption, never()).consume(any());
         verify(fixture.persistence, never()).persist(any(), any());
         verify(fixture.paymentCreation).ensurePayment(any());
+        verify(fixture.reservationFinalization).finalizeIfConfirmed(SAGA_ID, orderId);
     }
 
     @Test
@@ -88,6 +91,7 @@ class OrderCreationOrchestratorTests {
         verify(fixture.reservations).compensateAfterFailure(fixture.input, fixture.reserved, failure);
         verify(fixture.persistence, never()).persist(any(), any());
         verify(fixture.paymentCreation, never()).ensurePayment(any());
+        verify(fixture.reservationFinalization, never()).finalizeIfConfirmed(any(), any());
     }
 
     @Test
@@ -102,6 +106,7 @@ class OrderCreationOrchestratorTests {
         assertEquals(failure, thrown);
         verify(fixture.reservations, never()).compensateAfterFailure(any(), any(), any());
         verify(fixture.paymentCreation, never()).ensurePayment(any());
+        verify(fixture.reservationFinalization, never()).finalizeIfConfirmed(any(), any());
     }
 
     @Test
@@ -117,6 +122,23 @@ class OrderCreationOrchestratorTests {
         assertEquals(failure, thrown);
         verify(fixture.persistence).persist(fixture.input, fixture.reserved);
         verify(fixture.reservations, never()).compensateAfterFailure(any(), any(), any());
+        verify(fixture.reservationFinalization, never()).finalizeIfConfirmed(any(), any());
+    }
+
+    @Test
+    void finalizationFailureAfterPaymentCheckpointDoesNotReleaseCommittedReservations() {
+        Fixture fixture = fixture(false);
+        OrderException failure = new OrderException(
+                HttpStatus.SERVICE_UNAVAILABLE, "INVENTORY_COMMIT_UNAVAILABLE", "down");
+        Mockito.doThrow(failure).when(fixture.reservationFinalization)
+                .finalizeIfConfirmed(SAGA_ID, fixture.persisted.orderId());
+
+        OrderException thrown = assertThrows(OrderException.class,
+                () -> fixture.service.create(CUSTOMER_ID, SESSION_ID, IDEMPOTENCY_KEY));
+
+        assertEquals(failure, thrown);
+        verify(fixture.paymentCreation).ensurePayment(any());
+        verify(fixture.reservations, never()).compensateAfterFailure(any(), any(), any());
     }
 
     private Fixture fixture(boolean replay) {
@@ -126,6 +148,8 @@ class OrderCreationOrchestratorTests {
         ShippingQuoteConsumptionService quoteConsumption = Mockito.mock(ShippingQuoteConsumptionService.class);
         OrderCreationPersistenceService persistence = Mockito.mock(OrderCreationPersistenceService.class);
         OrderPaymentCreationService paymentCreation = Mockito.mock(OrderPaymentCreationService.class);
+        OrderReservationFinalizationService reservationFinalization =
+                Mockito.mock(OrderReservationFinalizationService.class);
         OrderSagaRepository sagas = Mockito.mock(OrderSagaRepository.class);
         CustomerOrderRepository orders = Mockito.mock(CustomerOrderRepository.class);
         ValidatedOrderInput input = Mockito.mock(ValidatedOrderInput.class);
@@ -150,10 +174,10 @@ class OrderCreationOrchestratorTests {
                 .thenReturn(new PaymentCheckpoint(UUID.randomUUID(), Instant.now().plusSeconds(900), false));
         return new Fixture(
                 input, reserved, persisted, revalidation, reservations, quoteConsumption, persistence,
-                paymentCreation, sagas, orders,
+                paymentCreation, reservationFinalization, sagas, orders,
                 new OrderCreationOrchestrator(
                         admissions, revalidation, reservations, quoteConsumption, persistence,
-                        paymentCreation, sagas, orders));
+                        paymentCreation, reservationFinalization, sagas, orders));
     }
 
     private record Fixture(
@@ -165,6 +189,7 @@ class OrderCreationOrchestratorTests {
             ShippingQuoteConsumptionService quoteConsumption,
             OrderCreationPersistenceService persistence,
             OrderPaymentCreationService paymentCreation,
+            OrderReservationFinalizationService reservationFinalization,
             OrderSagaRepository sagas,
             CustomerOrderRepository orders,
             OrderCreationOrchestrator service) {

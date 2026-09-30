@@ -168,7 +168,7 @@ public class OrderCreationRevalidationService {
             return VoucherPreview.empty();
         }
         return voucherPricing.preview(new VoucherPreviewRequest(
-                context.customerId(), merchandiseVoucherId, shippingVoucherId,
+                context.customerId(), merchandiseVoucherId, shippingVoucherId, context.quote().feeVnd(),
                 context.items().stream().map(item -> new VoucherItem(
                         item.productId(), item.variantId(), item.quantity(), item.unitPriceVnd())).toList()));
     }

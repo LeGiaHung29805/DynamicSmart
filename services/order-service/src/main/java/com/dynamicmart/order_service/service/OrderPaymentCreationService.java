@@ -31,7 +31,12 @@ public class OrderPaymentCreationService {
             }
             return new PaymentCheckpoint(command.existingPaymentId(), command.existingPaymentDueAt(), false);
         }
-        if (command.sagaStatus() == SagaStatus.COMPLETED) {
+        if (command.sagaStatus() == SagaStatus.COMPLETED
+                || command.sagaStatus() == SagaStatus.FINALIZING_RESERVATIONS
+                || command.sagaStatus() == SagaStatus.INVENTORY_COMMITTED) {
+            if (command.finalTotalVnd() > 0 && command.existingPaymentId() == null) {
+                throw conflict("PAYMENT_CHECKPOINT_INCOMPLETE", "Saga đang hoàn tất reservation nhưng thiếu paymentId.");
+            }
             return new PaymentCheckpoint(
                     command.existingPaymentId(), command.existingPaymentDueAt(), command.finalTotalVnd() == 0);
         }

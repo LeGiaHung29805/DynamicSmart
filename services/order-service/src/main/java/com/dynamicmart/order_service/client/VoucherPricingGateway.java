@@ -10,6 +10,7 @@ public interface VoucherPricingGateway {
             UUID customerId,
             UUID merchandiseVoucherId,
             UUID shippingVoucherId,
+            long shippingFeeVnd,
             List<VoucherItem> items) {
         public VoucherPreviewRequest {
             items = List.copyOf(items);

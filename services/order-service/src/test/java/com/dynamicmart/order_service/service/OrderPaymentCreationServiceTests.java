@@ -89,6 +89,18 @@ class OrderPaymentCreationServiceTests {
         assertEquals("PAYMENT_CHECKPOINT_INCOMPLETE", exception.getCode());
     }
 
+    @Test
+    void reservationFinalizationCheckpointMakesPaymentRetryRemoteCallFree() {
+        Fixture fixture = fixture();
+
+        var result = fixture.service.ensurePayment(command(
+                125_000, SagaStatus.FINALIZING_RESERVATIONS, PAYMENT_ID,
+                "INVENTORY_COMMIT_RETRY_REQUIRED"));
+
+        assertEquals(PAYMENT_ID, result.paymentId());
+        verify(fixture.payments, never()).createPayment(any());
+    }
+
     private Fixture fixture() {
         PaymentClient payments = Mockito.mock(PaymentClient.class);
         OrderPaymentCheckpointService checkpoints = Mockito.mock(OrderPaymentCheckpointService.class);

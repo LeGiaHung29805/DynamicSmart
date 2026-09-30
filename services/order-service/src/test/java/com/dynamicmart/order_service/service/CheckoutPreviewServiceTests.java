@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,7 +65,8 @@ class CheckoutPreviewServiceTests {
                         new AppliedVoucher(SHIPPING_VOUCHER_ID, "SHIP5", "SHIPPING_DISCOUNT",
                                 "FIXED_AMOUNT", 5_000L, 30_000, 0, 5_000)),
                 List.of(new LineDiscount(VARIANT_ID, 0, 20_000))));
-        when(fixture.payments.createShippingQuote(any())).thenReturn(validQuote());
+        when(fixture.payments.createShippingQuote(any()))
+                .thenReturn(validQuoteWithoutDiscount(), validQuote());
         when(fixture.persistence.persist(any())).thenReturn(new PersistedPreview(PaymentTiming.PREPAID, PaymentMethod.VNPAY));
 
         var response = fixture.service.preview(CUSTOMER_ID, SESSION_ID,
@@ -76,8 +78,9 @@ class CheckoutPreviewServiceTests {
         assertEquals(25_000, response.shipping().payableFeeVnd());
         ArgumentCaptor<PaymentClient.ShippingQuoteRequest> quoteRequest =
                 ArgumentCaptor.forClass(PaymentClient.ShippingQuoteRequest.class);
-        verify(fixture.payments).createShippingQuote(quoteRequest.capture());
-        assertEquals(5_000, quoteRequest.getValue().shippingDiscountVnd());
+        verify(fixture.payments, times(2)).createShippingQuote(quoteRequest.capture());
+        assertEquals(0, quoteRequest.getAllValues().get(0).shippingDiscountVnd());
+        assertEquals(5_000, quoteRequest.getAllValues().get(1).shippingDiscountVnd());
         assertEquals(20, quoteRequest.getValue().items().get(0).lengthCm());
         ArgumentCaptor<PreviewCommit> commit = ArgumentCaptor.forClass(PreviewCommit.class);
         verify(fixture.persistence).persist(commit.capture());
@@ -113,6 +116,7 @@ class CheckoutPreviewServiceTests {
     @Test
     void rejectsVoucherAllocationThatDoesNotMatchVoucherTotal() {
         Fixture fixture = readyFixture();
+        when(fixture.payments.createShippingQuote(any())).thenReturn(validQuoteWithoutDiscount());
         when(fixture.vouchers.preview(any())).thenReturn(new VoucherPreview(
                 List.of(new AppliedVoucher(MERCHANDISE_VOUCHER_ID, "SALE20", "ORDER_DISCOUNT",
                         "FIXED_AMOUNT", 20_000L, 180_000, 20_000, 0)),
@@ -122,7 +126,7 @@ class CheckoutPreviewServiceTests {
                 CUSTOMER_ID, SESSION_ID, new CheckoutPreviewRequest(MERCHANDISE_VOUCHER_ID, null, null)));
 
         assertEquals("INVALID_VOUCHER_PREVIEW", exception.getCode());
-        verify(fixture.payments, never()).createShippingQuote(any());
+        verify(fixture.payments).createShippingQuote(any());
     }
 
     private Fixture readyFixture() {

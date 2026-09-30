@@ -85,19 +85,24 @@ public class CheckoutPreviewService {
 
         AddressSnapshot address = addresses.loadOwnedAddress(customerId, session.getAddressId());
         validateAddress(session, address);
-        VoucherPreview voucherResult = loadVoucherPreview(customerId, request, items);
-        Map<UUID, LineDiscount> discounts = validateVoucherResult(request, voucherResult, items);
-
-        long shippingDiscount = voucherResult.vouchers().stream()
-                .mapToLong(AppliedVoucher::shippingDiscountVnd)
-                .sum();
         PaymentClient.ShippingQuoteResponse quote = payments.createShippingQuote(new ShippingQuoteRequest(
                 customerId,
                 address.provinceId(),
                 address.wardId(),
                 items.stream().map(this::toShippingItem).toList(),
-                shippingDiscount,
+                0,
                 normalizeServiceCode(request.serviceCode())));
+        validateQuote(quote, 0);
+        VoucherPreview voucherResult = loadVoucherPreview(customerId, request, items, quote.feeVnd());
+        Map<UUID, LineDiscount> discounts = validateVoucherResult(request, voucherResult, items);
+
+        long shippingDiscount = voucherResult.vouchers().stream().mapToLong(AppliedVoucher::shippingDiscountVnd).sum();
+        if (shippingDiscount > 0) {
+            quote = payments.createShippingQuote(new ShippingQuoteRequest(
+                    customerId, address.provinceId(), address.wardId(),
+                    items.stream().map(this::toShippingItem).toList(), shippingDiscount,
+                    normalizeServiceCode(request.serviceCode())));
+        }
         validateQuote(quote, shippingDiscount);
 
         PricingBreakdown breakdown = pricing.calculate(new PricingRequest(
@@ -135,7 +140,7 @@ public class CheckoutPreviewService {
     }
 
     private VoucherPreview loadVoucherPreview(
-            UUID customerId, CheckoutPreviewRequest request, List<CheckoutSessionItem> items) {
+            UUID customerId, CheckoutPreviewRequest request, List<CheckoutSessionItem> items, long shippingFeeVnd) {
         if (request.merchandiseVoucherId() == null && request.shippingVoucherId() == null) {
             return VoucherPreview.empty();
         }
@@ -143,6 +148,7 @@ public class CheckoutPreviewService {
                 customerId,
                 request.merchandiseVoucherId(),
                 request.shippingVoucherId(),
+                shippingFeeVnd,
                 items.stream().map(item -> new VoucherItem(
                         item.getProductId(), item.getVariantId(), item.getQuantity(), item.getUnitPriceVnd())).toList()));
     }

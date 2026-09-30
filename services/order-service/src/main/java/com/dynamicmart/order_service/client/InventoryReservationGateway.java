@@ -2,10 +2,13 @@ package com.dynamicmart.order_service.client;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 
 /** Idempotent reservation boundary implemented by Catalog/Inventory Service. */
 public interface InventoryReservationGateway {
     Reservation reserve(ReserveInventoryRequest request);
+
+    void commit(CommitInventoryRequest request);
 
     void release(ReleaseInventoryRequest request);
 
@@ -15,6 +18,7 @@ public interface InventoryReservationGateway {
             UUID correlationId,
             UUID customerId,
             UUID checkoutSessionId,
+            Instant reservedUntil,
             List<InventoryLine> lines) {
         public ReserveInventoryRequest {
             lines = List.copyOf(lines);
@@ -25,6 +29,14 @@ public interface InventoryReservationGateway {
     }
 
     record Reservation(UUID reservationId) {
+    }
+
+    record CommitInventoryRequest(
+            UUID operationKey,
+            UUID sagaId,
+            UUID correlationId,
+            UUID orderId,
+            UUID reservationId) {
     }
 
     record ReleaseInventoryRequest(

@@ -27,6 +27,7 @@ public class OrderCreationOrchestrator {
     private final ShippingQuoteConsumptionService quoteConsumption;
     private final OrderCreationPersistenceService persistence;
     private final OrderPaymentCreationService paymentCreation;
+    private final OrderReservationFinalizationService reservationFinalization;
     private final OrderSagaRepository sagas;
     private final CustomerOrderRepository orders;
 
@@ -37,6 +38,7 @@ public class OrderCreationOrchestrator {
             ShippingQuoteConsumptionService quoteConsumption,
             OrderCreationPersistenceService persistence,
             OrderPaymentCreationService paymentCreation,
+            OrderReservationFinalizationService reservationFinalization,
             OrderSagaRepository sagas,
             CustomerOrderRepository orders) {
         this.admissions = admissions;
@@ -45,6 +47,7 @@ public class OrderCreationOrchestrator {
         this.quoteConsumption = quoteConsumption;
         this.persistence = persistence;
         this.paymentCreation = paymentCreation;
+        this.reservationFinalization = reservationFinalization;
         this.sagas = sagas;
         this.orders = orders;
     }
@@ -54,6 +57,7 @@ public class OrderCreationOrchestrator {
         CommittedOrder committed = findCommittedOrder(customerId, admission);
         if (committed != null) {
             PaymentCheckpoint payment = paymentCreation.ensurePayment(paymentCommand(committed.order(), committed.saga()));
+            reservationFinalization.finalizeIfConfirmed(committed.saga().getId(), committed.order().getId());
             return new CreationResult(
                     committed.order().getId(), committed.order().getOrderNumber(), committed.order().getStatus(),
                     committed.saga().getId(), payment.paymentId(), payment.paymentDueAt(), true);
@@ -74,6 +78,7 @@ public class OrderCreationOrchestrator {
                 "ORDER_SNAPSHOTS_PERSISTED", null, null, persisted.orderId(), input.context().customerId(),
                 input.pricing().finalTotalVnd(), input.context().paymentTiming(), input.context().paymentMethod(),
                 input.context().correlationId()));
+        reservationFinalization.finalizeIfConfirmed(admission.sagaId(), persisted.orderId());
         return new CreationResult(
                 persisted.orderId(), persisted.orderNumber(), persisted.status(), admission.sagaId(),
                 payment.paymentId(), payment.paymentDueAt(), admission.replay() || persisted.replay());
