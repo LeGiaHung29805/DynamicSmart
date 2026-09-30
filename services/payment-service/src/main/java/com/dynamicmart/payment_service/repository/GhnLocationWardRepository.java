@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GhnLocationWardRepository extends JpaRepository<GhnLocationWard, Integer> {
     List<GhnLocationWard> findByProvinceIdAndActiveTrueOrderByNameAsc(int provinceId);
+    List<GhnLocationWard> findByDistrictIdAndActiveTrueOrderByNameAsc(int districtId);
 }

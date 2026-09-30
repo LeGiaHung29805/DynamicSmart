@@ -12,3 +12,19 @@ spring:
     locations: classpath:db/migration
   application:
     name: cart-service
+
+server:
+  port: ${SERVER_PORT:8083}
+
+app:
+  clients:
+    catalog-service-url: ${CATALOG_SERVICE_BASE_URL:http://localhost:8082}
+    identity-service-url: ${IDENTITY_SERVICE_BASE_URL:http://localhost:8081}
+    payment-service-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8085}
+  voucher:
+    expiry-scan-ms: ${VOUCHER_EXPIRY_SCAN_MS:30000}
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:dynamicmart-identity-service}
+      hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}
+    internal-api-key: ${INTERNAL_API_KEY}

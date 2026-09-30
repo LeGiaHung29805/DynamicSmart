@@ -4,4 +4,4 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record PaymentAttemptResponse(UUID id, int attemptNo, String provider, String reference, long amountVnd,
-                                     String status, String redirectUrl, Instant expiresAt, Instant createdAt) { }
+                                     String status, Instant expiresAt, Instant createdAt) { }

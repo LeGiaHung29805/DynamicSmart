@@ -1,56 +1,51 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, ShieldCheck, Star } from "lucide-react";
-import { formatVnd } from "@/components/common/Price";
-import { PageHeader } from "@/components/common/PageHeader";
+import { ArrowLeft, MessageSquareText } from "lucide-react";
+import { ErrorState } from "@/components/common/PageState";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
-import { ProductCard, categories } from "@/features/home";
-import { demoProducts } from "@/features/catalog";
-
-export function generateStaticParams() {
-  return demoProducts.map((product) => ({ id: product.id }));
-}
+import { getProductDetail, getProducts } from "@/features/catalog/api/catalog.api";
+import { CatalogProductCard } from "@/features/catalog/components/CatalogProductCard";
+import { ProductDetailExperience, ProductSpecifications } from "@/features/catalog/components/ProductDetailExperience";
+import { isApiError } from "@/lib/api/error";
 
 export async function generateMetadata({ params }: Readonly<{ params: Promise<{ id: string }> }>): Promise<Metadata> {
-  const { id } = await params;
-  const product = demoProducts.find((item) => item.id === id);
-  return { title: product?.name ?? "Sản phẩm không tồn tại" };
+  try {
+    const { id } = await params;
+    const product = await getProductDetail(id);
+    return { title: product.name, description: product.shortDescription ?? undefined };
+  } catch {
+    return { title: "Chi tiết sản phẩm" };
+  }
 }
 
-export default async function ProductDetailPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
-  const { id } = await params;
-  const product = demoProducts.find((item) => item.id === id);
-  if (!product) notFound();
-
-  const categoryName = categories.find((item) => item.href.endsWith(`category=${product.category}`))?.name ?? "Sản phẩm";
-  const related = demoProducts.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 4);
-  const suggestions = related.length ? related : demoProducts.filter((item) => item.id !== product.id).slice(0, 4);
+export default async function ProductDetailPage({ params, searchParams }: Readonly<{
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ variant?: string; quantity?: string; resumeUntil?: string }>;
+}>) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  let product;
+  try {
+    product = await getProductDetail(id);
+  } catch (error) {
+    if (isApiError(error) && error.status === 404) notFound();
+  }
+  if (!product) {
+    return <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><ErrorState description="Không thể tải thông tin sản phẩm. Hãy kiểm tra Catalog API rồi thử lại." title="Chi tiết sản phẩm chưa sẵn sàng" /></div>;
+  }
+  const related = await getProducts({ categoryId: product.category.id, size: 5 }).catch(() => null);
+  const suggestions = related?.content.filter((item) => item.id !== product.id).slice(0, 4) ?? [];
+  const initialQuantity = Math.max(Number.parseInt(query.quantity ?? "1", 10) || 1, 1);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-9 px-4 py-9 sm:px-6 lg:px-8 lg:py-14">
+    <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-9 sm:px-6 lg:px-8 lg:py-14">
       <Link className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-brand" href="/products"><ArrowLeft className="size-4" /> Tất cả sản phẩm</Link>
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:gap-12">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-slate-100 shadow-xl shadow-slate-950/5 sm:aspect-square lg:aspect-[4/5]">
-          <Image alt={product.name} className="object-cover" fill priority sizes="(max-width: 1024px) 100vw, 52vw" src={product.image} />
-          <span className="absolute top-5 left-5 rounded-full bg-white/95 px-4 py-2 text-xs font-black text-slate-800 shadow-sm">{product.badge}</span>
-        </div>
-        <div className="space-y-7 lg:py-4">
-          <PageHeader eyebrow={`${product.brand} · ${categoryName}`} title={product.name} description="Sản phẩm minh họa để thống nhất giao diện chi tiết; thông tin và tồn kho thật sẽ được lấy từ Catalog API." />
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500"><span className="inline-flex items-center gap-1.5 font-bold text-amber-500"><Star className="size-4 fill-current" />{product.rating}</span><span>Đã bán {product.sold}</span><span>Mã: {product.id}</span></div>
-          <div className="flex flex-wrap items-end gap-3 border-y border-slate-200 py-6"><span className="text-3xl font-black tracking-tight text-emerald-800">{formatVnd(product.price)}</span>{product.oldPrice > product.price ? <del className="pb-1 text-sm text-slate-400">{formatVnd(product.oldPrice)}</del> : null}</div>
-          <SurfacePanel className="space-y-4">
-            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-brand" /><p className="text-sm leading-6 text-slate-600">Khung này sẵn sàng cho biến thể, số lượng, tồn kho và thông tin giao hàng khi API sản phẩm được nối vào.</p></div>
-            <button className="w-full cursor-not-allowed rounded-xl bg-slate-200 px-5 py-3 text-sm font-bold text-slate-500" disabled type="button">Thêm vào giỏ hàng · đang chờ Cart API</button>
-          </SurfacePanel>
-          <Link className="inline-flex items-center gap-2 text-sm font-bold text-brand hover:underline" href="/products">Tiếp tục khám phá <ArrowRight className="size-4" /></Link>
-        </div>
+      <ProductDetailExperience initialQuantity={initialQuantity} initialVariantId={query.variant} product={product} />
+      <div className="grid gap-6 border-t border-slate-200 pt-9 lg:grid-cols-[1.3fr_.7fr]">
+        <section className="space-y-5"><div><p className="text-xs font-black tracking-[0.18em] text-brand uppercase">Thông tin sản phẩm</p><h2 className="mt-2 text-2xl font-black text-slate-950">Mô tả & thông số</h2></div>{product.description ? <p className="whitespace-pre-line text-sm leading-7 text-slate-600">{product.description}</p> : null}<ProductSpecifications attributes={product.attributes} /></section>
+        <SurfacePanel className="h-fit"><MessageSquareText className="size-6 text-brand" /><h2 className="mt-4 text-lg font-black">Đánh giá sản phẩm</h2><p className="mt-2 text-sm leading-6 text-slate-500">Đánh giá đã duyệt sẽ hiển thị tại đây khi Engagement API của Tùng được nối vào contract chung.</p></SurfacePanel>
       </div>
-      <div className="space-y-5 border-t border-slate-200 pt-9">
-        <h2 className="text-2xl font-black tracking-tight text-slate-950">Gợi ý dành cho bạn</h2>
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">{suggestions.map((item) => <ProductCard key={item.id} product={item} />)}</div>
-      </div>
+      {suggestions.length ? <section className="space-y-5 border-t border-slate-200 pt-9"><h2 className="text-2xl font-black tracking-tight text-slate-950">Sản phẩm cùng danh mục</h2><div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">{suggestions.map((item) => <CatalogProductCard key={item.id} product={item} />)}</div></section> : null}
     </div>
   );
 }

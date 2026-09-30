@@ -1,0 +1,3 @@
+export type CartLine = { id: string; productName: string; variantName: string; image: string; quantity: number; version: number; selected: boolean; available: boolean; listPrice: number; salePrice: number };
+export type CartItemDto = { id: string; productId: string; variantId: string; productName?: string; variantName?: string; imageUrl?: string; quantity: number; version: number; selected: boolean; purchasable: boolean; availableQuantity: number; unavailableReason?: string; listPriceVnd: number; salePriceVnd: number; updatedAt: string };
+export type CartDto = { id: string; customerId: string; items: CartItemDto[]; updatedAt: string };

@@ -12,50 +12,99 @@
 
 ## 2. Cấu trúc thư mục chuẩn
 
+Đây là **cấu trúc đích của toàn frontend**, không phải yêu cầu một người tạo trước toàn bộ route của các domain khác. Chỉ thêm page/feature khi owner tương ứng triển khai để tránh placeholder rỗng và xung đột merge.
+
 ```text
-src/
-├── app/                              # Route, layout, metadata; không chứa business logic lớn
-│   ├── (public)/                     # Login/Register/Quên mật khẩu
-│   ├── page.tsx                       # Trang chủ `/` mặc định
-│   ├── products/                      # Danh sách/chi tiết sản phẩm
-│   ├── cart/                          # Giỏ hàng
-│   ├── checkout/                      # Thanh toán/đặt hàng
-│   ├── customer/account/             # Hồ sơ, địa chỉ, đơn, voucher
-│   ├── admin/                        # Khu vực quản trị
-│   ├── layout.tsx
-│   ├── providers.tsx
-│   ├── loading.tsx
-│   ├── error.tsx
-│   └── not-found.tsx
-├── features/                         # Module theo domain; chủ sở hữu rõ ràng
-│   ├── auth/
-│   ├── catalog/
-│   ├── customer/
-│   ├── cart/
-│   ├── promotion/
-│   ├── checkout/
-│   ├── order/
-│   ├── payment/
-│   ├── shipping/
-│   ├── engagement/
-│   └── reporting/
-├── components/
-│   ├── ui/                           # Button, Input, Modal, Table... không chứa nghiệp vụ
-│   ├── common/                       # Price, EmptyState, Loading, StatusBadge...
-│   └── layouts/                      # Header, Footer, Customer/Admin layout
-├── lib/
-│   ├── api/                          # Hạ tầng fetch, auth/session, error, config
-│   ├── validation/
-│   ├── constants/
-│   └── utils/
-├── contracts/
-│   ├── api/                          # Kiểu request/response dùng chung đã chốt
-│   └── generated/                    # Sinh từ OpenAPI; cấm sửa tay
-├── hooks/                            # Hook thực sự dùng toàn app
-├── mocks/                            # Fixture/MSW khi backend chưa sẵn sàng
-├── styles/
-└── types/                            # Kiểu toàn cục thật sự, không phải type domain
+dynamicmart-frontend/
+├── public/                              # Ảnh, icon, font tĩnh
+├── src/
+│   ├── app/                             # Route bằng Next.js App Router
+│   │   ├── (public)/                    # Không cần đăng nhập
+│   │   │   ├── login/page.tsx
+│   │   │   ├── register/page.tsx
+│   │   │   ├── forgot-password/page.tsx
+│   │   │   └── reset-password/page.tsx
+│   │   ├── (storefront)/                # Giao diện mua sắm khách hàng
+│   │   │   ├── page.tsx                 # `/`
+│   │   │   ├── products/
+│   │   │   │   ├── page.tsx             # `/products`
+│   │   │   │   └── [slug]/page.tsx      # `/products/{slug}`
+│   │   │   ├── cart/page.tsx            # `/cart`
+│   │   │   ├── checkout/
+│   │   │   │   ├── page.tsx             # `/checkout`
+│   │   │   │   └── [sessionId]/page.tsx # `/checkout/{sessionId}`
+│   │   │   └── payment/result/page.tsx  # Kết quả quay về từ VNPay
+│   │   ├── (customer)/                   # Bắt buộc đăng nhập Customer
+│   │   │   └── account/
+│   │   │       ├── layout.tsx            # Sidebar tài khoản
+│   │   │       ├── profile/page.tsx
+│   │   │       ├── addresses/page.tsx
+│   │   │       ├── orders/
+│   │   │       │   ├── page.tsx
+│   │   │       │   └── [orderId]/page.tsx
+│   │   │       ├── vouchers/page.tsx
+│   │   │       └── wishlist/page.tsx
+│   │   ├── admin/                        # Bắt buộc role ADMIN
+│   │   │   ├── layout.tsx                # AdminSidebar và route guard UX
+│   │   │   ├── page.tsx                  # Dashboard admin
+│   │   │   ├── users/page.tsx
+│   │   │   ├── catalog/
+│   │   │   │   ├── products/page.tsx
+│   │   │   │   ├── categories/page.tsx
+│   │   │   │   ├── attributes/page.tsx
+│   │   │   │   └── inventory/page.tsx
+│   │   │   ├── promotions/
+│   │   │   │   ├── vouchers/page.tsx
+│   │   │   │   └── direct-sales/page.tsx
+│   │   │   ├── orders/page.tsx
+│   │   │   ├── payments/page.tsx
+│   │   │   ├── engagement/
+│   │   │   │   ├── reviews/page.tsx
+│   │   │   │   └── questions/page.tsx
+│   │   │   └── reports/page.tsx
+│   │   ├── layout.tsx                   # Root HTML và metadata
+│   │   ├── providers.tsx                # Toast, session, Query Client...
+│   │   ├── loading.tsx                  # Loading toàn cục
+│   │   ├── error.tsx                    # Lỗi toàn cục
+│   │   ├── not-found.tsx                # Trang 404
+│   │   └── globals.css
+│   ├── features/                        # Mỗi nghiệp vụ một vùng độc lập
+│   │   ├── auth/
+│   │   ├── catalog/
+│   │   ├── cart/
+│   │   ├── customer/                    # Profile, address
+│   │   ├── promotion/                   # Voucher, direct sale
+│   │   ├── checkout/
+│   │   ├── order/
+│   │   ├── payment/
+│   │   ├── shipping/                    # Địa giới và quote GHN
+│   │   ├── engagement/                  # Review, wishlist, Q&A
+│   │   └── reporting/
+│   ├── components/
+│   │   ├── ui/                          # Button, Input, Dialog, Select...
+│   │   ├── common/                      # Price, EmptyState, Pagination...
+│   │   └── layouts/                     # Header, Footer, StoreLayout...
+│   ├── contracts/
+│   │   ├── api/                         # Request/response dùng chung
+│   │   └── generated/                   # Sinh từ OpenAPI; không sửa tay
+│   ├── lib/
+│   │   ├── api/                         # API client duy nhất
+│   │   ├── auth/                        # Access token trong memory, session
+│   │   ├── validation/                  # Rule kiểm tra dùng chung
+│   │   ├── constants/
+│   │   └── utils/
+│   ├── hooks/                           # Hook dùng chung toàn dự án
+│   ├── types/                           # Kiểu UI toàn cục; không trùng API contract
+│   ├── mocks/                           # Dữ liệu/API giả khi backend chưa xong
+│   └── styles/                          # Style/module dùng chung nếu cần
+├── .env.example
+├── .env.local                           # Không commit
+├── next.config.ts
+├── package.json
+└── tsconfig.json
 ```
+
+Tên trong ngoặc như `(public)`, `(storefront)` và `(customer)` là **route group**, không xuất hiện trong URL. Source hiện có thể đang dùng tên tương đương như `(auth)` hoặc `(store)`; chỉ đổi tên bằng một commit refactor riêng sau khi các owner cùng chốt, vì việc đổi tên không thay đổi URL nhưng dễ gây xung đột Git. Tuyệt đối không đặt hai `page.tsx` từ hai route group khác nhau cùng ánh xạ tới một URL.
 
 Không tạo `services/`, `helpers/`, `utils/` hoặc `components/` chung chung ở root để nhét mọi thứ vào. Một hàm/component thuộc nghiệp vụ nào thì ở `features/<nghiep-vu>/`.
 

@@ -20,7 +20,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { brands, categories, heroSlides } from "../data";
+import { brands, categories as fallbackCategories, heroSlides } from "../data";
+
+export interface HomeCategoryItem {
+  icon: keyof typeof categoryIcons;
+  name: string;
+  caption: string;
+  href: string;
+  color: string;
+}
 
 const categoryIcons: Record<string, LucideIcon> = {
   shirt: Shirt,
@@ -170,14 +178,14 @@ export function HeroCarousel() {
   );
 }
 
-export function CategoryCarousel() {
+export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ items?: readonly HomeCategoryItem[] }>) {
   const itemsPerPage = useItemsPerPage();
-  const total = Math.ceil(categories.length / itemsPerPage);
+  const total = Math.max(1, Math.ceil(items.length / itemsPerPage));
   const { index, next, previous, setIndex, setPaused } = useAutoplay(total, 5200);
   const safeIndex = Math.min(index, total - 1);
   const visibleItems = useMemo(
-    () => categories.slice(safeIndex * itemsPerPage, safeIndex * itemsPerPage + itemsPerPage),
-    [itemsPerPage, safeIndex],
+    () => items.slice(safeIndex * itemsPerPage, safeIndex * itemsPerPage + itemsPerPage),
+    [items, itemsPerPage, safeIndex],
   );
 
   useEffect(() => setIndex(0), [itemsPerPage, setIndex]);

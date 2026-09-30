@@ -3,4 +3,7 @@ export { RegisterForm } from "./components/RegisterForm";
 export { AuthPageLayout } from "./components/AuthPageLayout";
 export { AuthPageContent } from "./components/AuthPageContent";
 export { SessionBootstrap } from "./components/SessionBootstrap";
+export { AccountMenu } from "./components/AccountMenu";
+export { ForgotPasswordForm } from "./components/ForgotPasswordForm";
+export { ResetPasswordForm } from "./components/ResetPasswordForm";
 export { safeReturnTo } from "./safeReturnTo";

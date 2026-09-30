@@ -20,4 +20,10 @@ public class Cart {
     @Column(nullable = false, length = 20) private String status;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+
+    public Cart(UUID customerId, Instant now) {
+        this.id = UUID.randomUUID(); this.customerId = customerId; this.status = "ACTIVE";
+        this.createdAt = now; this.updatedAt = now;
+    }
+    public void touch(Instant now) { this.updatedAt = now; }
 }

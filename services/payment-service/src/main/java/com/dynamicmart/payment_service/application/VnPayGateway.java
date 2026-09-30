@@ -6,6 +6,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.http.HttpStatus;
@@ -17,13 +20,18 @@ public class VnPayGateway {
 
     public VnPayGateway(VnPayProperties properties) { this.properties = properties; }
 
-    public String createRedirectUrl(String reference, long amountVnd, String orderInfo) {
+    public String createRedirectUrl(String reference, long amountVnd, String orderInfo, Instant expiresAt) {
         requireConfigured();
         Map<String, String> fields = new TreeMap<>();
         fields.put("vnp_Amount", Long.toString(Math.multiplyExact(amountVnd, 100)));
         fields.put("vnp_Command", "pay");
         fields.put("vnp_CurrCode", "VND");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
+        fields.put("vnp_CreateDate", formatter.format(Instant.now()));
+        fields.put("vnp_ExpireDate", formatter.format(expiresAt));
+        fields.put("vnp_Locale", "vn");
         fields.put("vnp_OrderInfo", orderInfo);
+        fields.put("vnp_OrderType", "other");
         fields.put("vnp_ReturnUrl", properties.returnUrl());
         fields.put("vnp_TmnCode", properties.tmnCode());
         fields.put("vnp_TxnRef", reference);

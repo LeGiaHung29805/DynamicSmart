@@ -1,47 +1,49 @@
 package com.dynamicmart.payment_service.application;
 
 import com.dynamicmart.payment_service.api.LocationSyncResponse;
-import com.dynamicmart.payment_service.entity.GhnLocationProvince;
-import com.dynamicmart.payment_service.entity.GhnLocationWard;
-import com.dynamicmart.payment_service.repository.GhnLocationProvinceRepository;
-import com.dynamicmart.payment_service.repository.GhnLocationWardRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import java.time.Instant;
+import tools.jackson.databind.JsonNode;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class GhnLocationSyncService {
     private final GhnClient ghn;
-    private final GhnLocationProvinceRepository provinces;
-    private final GhnLocationWardRepository wards;
+    private final GhnLocationCatalogWriter writer;
 
-    public GhnLocationSyncService(GhnClient ghn, GhnLocationProvinceRepository provinces, GhnLocationWardRepository wards) {
-        this.ghn = ghn; this.provinces = provinces; this.wards = wards;
+    public GhnLocationSyncService(GhnClient ghn, GhnLocationCatalogWriter writer) {
+        this.ghn = ghn; this.writer = writer;
     }
 
-    /** Upserts the current GHN catalog. Existing records are retained for order history and can be deactivated separately. */
-    @Transactional
+    /** Fetches the complete provider catalog before opening the local database transaction. */
     public LocationSyncResponse sync() {
-        int provinceCount = 0; int wardCount = 0; Instant now = Instant.now();
+        List<ProvinceData> provinces = new ArrayList<>(); List<DistrictData> districts = new ArrayList<>(); List<WardData> wards = new ArrayList<>();
         for (JsonNode source : data(ghn.provinces())) {
             int provinceId = integer(source, "ProvinceID", "province_id", "id"); String provinceName = text(source, "ProvinceName", "province_name", "name");
             if (provinceId <= 0 || provinceName.isBlank()) continue;
-            GhnLocationProvince province = provinces.findById(provinceId).orElseGet(GhnLocationProvince::new);
-            province.setId(provinceId); province.setName(provinceName); province.setNameNormalized(normalize(provinceName)); province.setGhnUpdatedAt(now); province.setSyncedAt(now); province.setActive(true); provinces.save(province); provinceCount++;
-            for (JsonNode wardSource : data(ghn.wards(provinceId))) {
-                int wardId = integer(wardSource, "WardCode", "ward_id", "id"); String wardName = text(wardSource, "WardName", "ward_name", "name");
-                if (wardId <= 0 || wardName.isBlank()) continue;
-                GhnLocationWard ward = wards.findById(wardId).orElseGet(GhnLocationWard::new);
-                ward.setId(wardId); ward.setProvinceId(provinceId); ward.setName(wardName); ward.setNameNormalized(normalize(wardName)); ward.setGhnUpdatedAt(now); ward.setSyncedAt(now); ward.setActive(true); wards.save(ward); wardCount++;
+            provinces.add(new ProvinceData(provinceId, provinceName, normalize(provinceName)));
+            for (JsonNode districtSource : data(ghn.districts(provinceId))) {
+                int districtId = integer(districtSource, "DistrictID", "district_id", "id"); String districtName = text(districtSource, "DistrictName", "district_name", "name");
+                if (districtId <= 0 || districtName.isBlank()) continue;
+                districts.add(new DistrictData(districtId, provinceId, districtName, normalize(districtName)));
+                for (JsonNode wardSource : data(ghn.wards(districtId))) {
+                    String wardCode = text(wardSource, "WardCode", "ward_code", "id"); String wardName = text(wardSource, "WardName", "ward_name", "name");
+                    if (wardCode.isBlank() || wardName.isBlank()) continue;
+                    wards.add(new WardData(localWardId(wardCode), provinceId, districtId, wardCode, wardName, normalize(wardName)));
+                }
             }
         }
-        return new LocationSyncResponse(provinceCount, wardCount);
+        return writer.replaceActiveCatalog(provinces, districts, wards);
     }
 
-    private Iterable<JsonNode> data(JsonNode response) { JsonNode data = response == null ? null : response.path("data"); return data != null && data.isArray() ? data : java.util.List.of(); }
+    private Iterable<JsonNode> data(JsonNode response) { JsonNode value = response == null ? null : response.path("data"); return value != null && value.isArray() ? value : List.of(); }
     private int integer(JsonNode source, String... fields) { for (String field : fields) { String value = source.path(field).asText(""); try { return Integer.parseInt(value); } catch (NumberFormatException ignored) { } } return -1; }
+    private int localWardId(String wardCode) { try { return Integer.parseInt(wardCode); } catch (NumberFormatException ignored) { return Math.max(1, Math.floorMod(wardCode.hashCode(), Integer.MAX_VALUE)); } }
     private String text(JsonNode source, String... fields) { for (String field : fields) { String value = source.path(field).asText("").trim(); if (!value.isBlank()) return value; } return ""; }
     private String normalize(String value) { return value.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " "); }
+
+    public record ProvinceData(int id, String name, String normalizedName) { }
+    public record DistrictData(int id, int provinceId, String name, String normalizedName) { }
+    public record WardData(int id, int provinceId, int districtId, String wardCode, String name, String normalizedName) { }
 }

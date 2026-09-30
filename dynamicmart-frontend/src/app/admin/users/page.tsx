@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AdminSectionPage } from "@/features/admin";
+import { AdminUsersPage as AdminUsersFeature } from "@/features/customer";
 
 export const metadata: Metadata = { title: "Quản lý người dùng" };
 
 export default function AdminUsersPage() {
-  return <AdminSectionPage section="users" />;
+  return <AdminUsersFeature />;
 }

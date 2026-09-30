@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Search, Sparkles } from "lucide-react";
-import { ProductCard } from "./components/ProductCard";
-import { BrandCarousel, CategoryCarousel, HeroCarousel } from "./components/HomeCarousels";
-import { bestSellers, newArrivals } from "./data";
+import { CatalogProductCard } from "@/features/catalog/components/CatalogProductCard";
+import { getCategories, getProducts } from "@/features/catalog/api/catalog.api";
+import type { CategoryTree, ProductSummary } from "@/features/catalog/types";
+import { BrandCarousel, CategoryCarousel, HeroCarousel, type HomeCategoryItem } from "./components/HomeCarousels";
 
 function SectionTitle({
   eyebrow,
@@ -35,7 +36,67 @@ function SectionTitle({
 //   { icon: BadgeCheck, title: "Thanh toán an toàn", detail: "Bảo mật mọi giao dịch" },
 // ];
 
-export function HomePage() {
+const categoryPresentation: Pick<HomeCategoryItem, "icon" | "color">[] = [
+  { icon: "shirt", color: "from-sky-100 to-blue-50 text-sky-700" },
+  { icon: "sparkles", color: "from-rose-100 to-pink-50 text-rose-700" },
+  { icon: "watch", color: "from-amber-100 to-orange-50 text-amber-700" },
+  { icon: "footprints", color: "from-violet-100 to-purple-50 text-violet-700" },
+  { icon: "shoppingBag", color: "from-emerald-100 to-teal-50 text-emerald-700" },
+  { icon: "gift", color: "from-red-100 to-orange-50 text-red-700" },
+  { icon: "gem", color: "from-fuchsia-100 to-pink-50 text-fuchsia-700" },
+  { icon: "headphones", color: "from-cyan-100 to-sky-50 text-cyan-700" },
+  { icon: "house", color: "from-lime-100 to-green-50 text-lime-700" },
+  { icon: "dumbbell", color: "from-indigo-100 to-blue-50 text-indigo-700" },
+];
+
+function flattenCategories(categories: CategoryTree[]): CategoryTree[] {
+  return categories.flatMap((category) => [category, ...flattenCategories(category.children)]);
+}
+
+function presentCategories(categories: CategoryTree[]): HomeCategoryItem[] {
+  return flattenCategories(categories).slice(0, 10).map((category, index) => ({
+    ...categoryPresentation[index % categoryPresentation.length],
+    name: category.name,
+    caption: category.description?.trim() || "Khám phá sản phẩm",
+    href: `/products?category=${encodeURIComponent(category.slug)}`,
+  }));
+}
+
+function CatalogUnavailable() {
+  return (
+    <div className="rounded-3xl border border-amber-200 bg-amber-50 px-6 py-8 text-center">
+      <p className="font-black text-amber-950">Catalog đang tạm thời chưa sẵn sàng</p>
+      <p className="mt-2 text-sm text-amber-800">Hãy khởi động Gateway và catalog-service rồi tải lại trang.</p>
+    </div>
+  );
+}
+
+async function loadHomeCatalog(): Promise<{
+  categories: HomeCategoryItem[];
+  featured: ProductSummary[];
+  bestSellers: ProductSummary[];
+  newArrivals: ProductSummary[];
+} | null> {
+  try {
+    const [categories, featured, bestSellers, newArrivals] = await Promise.all([
+      getCategories(),
+      getProducts({ featured: true, sort: "NEWEST", page: 0, size: 4 }),
+      getProducts({ sort: "BEST_SELLER", page: 0, size: 4 }),
+      getProducts({ sort: "NEWEST", page: 0, size: 4 }),
+    ]);
+    return {
+      categories: presentCategories(categories),
+      featured: featured.content,
+      bestSellers: bestSellers.content,
+      newArrivals: newArrivals.content,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function HomePage() {
+  const catalog = await loadHomeCatalog();
   return (
     <div className="overflow-hidden bg-[#f7f8f6]">
       <div className="border-b border-emerald-900/20 bg-emerald-950 text-emerald-50">
@@ -71,7 +132,12 @@ export function HomePage() {
       </div> */}
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 py-16 sm:px-6 lg:gap-28 lg:px-8 lg:py-24">
-        <section><CategoryCarousel /></section>
+        <section>{catalog?.categories.length ? <CategoryCarousel items={catalog.categories} /> : <CatalogUnavailable />}</section>
+
+        <section>
+          <SectionTitle description="Tuyển chọn nổi bật do đội ngũ DynamicMart đề xuất cho mùa này." eyebrow="Đề xuất hôm nay" href="/products" title="Sản phẩm nổi bật" />
+          {catalog?.featured.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.featured.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
+        </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
           <Link className="group relative min-h-80 overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-white shadow-sm sm:p-10" href="/products?category=thoi-trang-nu">
@@ -96,7 +162,7 @@ export function HomePage() {
 
         <section id="best-seller">
           <SectionTitle description="Những lựa chọn được cộng đồng DynamicMart yêu thích nhất trong tuần." eyebrow="Được săn đón" href="/products?sort=best-selling" title="Best seller tuần này" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{bestSellers.map((product) => <ProductCard key={product.id} product={product} />)}</div>
+          {catalog?.bestSellers.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.bestSellers.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
           <Link className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 sm:hidden" href="/products?sort=best-selling">Xem tất cả <ArrowRight className="size-4" /></Link>
         </section>
 
@@ -112,7 +178,7 @@ export function HomePage() {
 
         <section>
           <SectionTitle description="Những thiết kế vừa cập bến — số lượng giới hạn cho mùa mới." eyebrow="Vừa lên kệ" href="/products?sort=newest" title="Sản phẩm mới về" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{newArrivals.map((product) => <ProductCard key={product.id} product={product} />)}</div>
+          {catalog?.newArrivals.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.newArrivals.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
         </section>
       </div>
     </div>

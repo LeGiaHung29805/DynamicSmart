@@ -30,4 +30,15 @@ public class VoucherReservation {
     @Column(name = "release_reason", length = 80) private String releaseReason;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+
+    public VoucherReservation(UUID voucherId, UUID customerId, UUID customerVoucherId, UUID checkoutSessionId,
+                              long discountAmountVnd, long shippingDiscountVnd, Instant reservedUntil, Instant now) {
+        this.id = UUID.randomUUID(); this.voucherId = voucherId; this.customerId = customerId;
+        this.customerVoucherId = customerVoucherId; this.checkoutSessionId = checkoutSessionId; this.status = "RESERVED";
+        this.discountAmountVnd = discountAmountVnd; this.shippingDiscountVnd = shippingDiscountVnd;
+        this.reservedUntil = reservedUntil; this.createdAt = now; this.updatedAt = now;
+    }
+    public void consume(UUID orderId, Instant now) { if ("RESERVED".equals(status)) { this.status = "CONSUMED"; this.orderId = orderId; this.consumedAt = now; this.updatedAt = now; } }
+    public void release(String reason, Instant now) { if ("RESERVED".equals(status)) { this.status = "RELEASED"; this.releaseReason = reason; this.releasedAt = now; this.updatedAt = now; } }
+    public void expire(Instant now) { if ("RESERVED".equals(status) && !now.isBefore(reservedUntil)) { this.status = "EXPIRED"; this.releasedAt = now; this.releaseReason = "RESERVATION_EXPIRED"; this.updatedAt = now; } }
 }

@@ -18,6 +18,7 @@ public class ShippingQuote {
     @Id private UUID id;
     @Column(name = "customer_id", nullable = false) private UUID customerId;
     @Column(name = "province_id", nullable = false) private int provinceId;
+    @Column(name = "district_id") private Integer districtId;
     @Column(name = "ward_id", nullable = false) private int wardId;
     @Column(name = "items_fingerprint", nullable = false, length = 64) private String itemsFingerprint;
     @Column(name = "request_fingerprint", nullable = false, length = 64) private String requestFingerprint;

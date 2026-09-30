@@ -20,6 +20,7 @@ app:
     payment-service-url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
     engagement-service-url: ${ENGAGEMENT_SERVICE_URL:http://localhost:8086}
   security:
+    internal-api-key: ${INTERNAL_API_KEY}
     jwt:
       issuer: ${JWT_ISSUER:dynamicmart-identity-service}
       hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}

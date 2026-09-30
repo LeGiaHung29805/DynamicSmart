@@ -26,6 +26,13 @@ Quy tắc nghiệp vụ:
 - Postpaid QR hết hạn hoặc thất bại chỉ kết thúc lần tạo QR đó; Payment của cả đơn vẫn `PENDING` để tạo QR mới khi Order còn Handover Pending, không hủy Order và không phát `PaymentFailed`/`PaymentExpired` cho Order.
 - Từ chối `PREPAID + COD`; đơn 0 đồng dùng `NOT_REQUIRED + FREE`, không tạo Payment/URL ngoài.
 
+### UC-12B — Cổng thanh toán mở rộng
+
+- Hỗ trợ thêm `ZALOPAY`, `PAYOS` và `BANK_QR` đối soát qua SePay mà không thay đổi nguyên tắc Payment/Attempt/Outbox.
+- ZaloPay chỉ xác nhận callback có HMAC Key2 hợp lệ; PayOS chỉ xác nhận webhook có checksum hợp lệ; SePay chỉ nhận raw-body HMAC còn hạn và giao dịch vào đúng mã/số tiền.
+- Return URL của mọi cổng chỉ dùng để hiển thị; callback/webhook hợp lệ mới được chuyển Payment sang `PAID`.
+- Credential chỉ lấy từ biến môi trường, không trả về frontend, audit hoặc log.
+
 ### UC-21 — Danh mục địa chỉ GHN và báo giá phí giao hàng — P0
 
 Hưng phải triển khai thật, không chỉ viết tài liệu:
@@ -89,7 +96,7 @@ Quy tắc nghiệp vụ:
 
 ## Ràng buộc dữ liệu và tích hợp cần thực hiện
 
-- Lần xác nhận thu COD thành công phải lưu số tiền thực thu, mã biên nhận, quản trị viên xác nhận và thời điểm xác nhận; số tiền phải đúng bằng số tiền cần thu.
+- Lần xác nhận thu COD thành công phải lưu số tiền thực thu, mã biên nhận, quản trị viên xác nhận và thời điểm xác nhận; số tiền phải đúng bằng số tiền cần thu. Danh tính quản trị viên lấy từ JWT đã được Gateway xác thực, không nhận `confirmedBy` do trình duyệt tự khai.
 - Trạng thái thanh toán, thời điểm thanh toán và cách thanh toán phải thuộc các giá trị cho phép; giao diện không được sửa trực tiếp số tiền hay trường lịch sử.
 - Báo giá GHN phải kiểm tra phí không âm, cân nặng dương và kích thước hợp lệ. Khi tạo đơn, Hiếu lưu lại mã báo giá, dấu vết kiểm tra, kích thước kiện, dịch vụ và thời gian dự kiến.
 - Kiểm thử thêm: COD thiếu người xác nhận/biên nhận/sai số tiền bị từ chối; thông báo thanh toán COD trùng chỉ tạo một kết quả thành công.

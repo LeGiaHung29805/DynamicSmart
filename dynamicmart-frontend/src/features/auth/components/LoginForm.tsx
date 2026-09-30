@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { isApiError } from "@/lib/api/error";
 import { login } from "../api/auth.api";
+import { safeReturnTo } from "../safeReturnTo";
 
 interface LoginFormProps {
   returnTo: string;
@@ -40,7 +41,7 @@ export function LoginForm({ returnTo }: Readonly<LoginFormProps>) {
       setErrors({});
       await login({ email, password });
       showToast("Đăng nhập thành công. Chào mừng bạn trở lại!", "success");
-      router.replace(returnTo);
+      router.replace(safeReturnTo(returnTo));
       router.refresh();
     } catch (error) {
       const message = isApiError(error) ? error.message : "Đăng nhập chưa thành công. Vui lòng thử lại.";

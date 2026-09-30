@@ -1,12 +1,7 @@
 import { apiClient } from "@/lib/api/client";
-import { setAccessToken } from "@/lib/auth/access-token";
+import { setAnonymousSession, setAuthenticatedSession, type SessionUser } from "@/lib/auth/session";
 
-export interface AuthenticatedUser {
-  id: string;
-  email: string;
-  fullName: string;
-  role: "CUSTOMER" | "ADMIN";
-}
+export type AuthenticatedUser = SessionUser;
 
 export interface AuthResponse {
   accessToken: string;
@@ -25,7 +20,7 @@ export interface RegisterInput extends LoginInput {
 
 async function saveSession(request: Promise<AuthResponse>) {
   const response = await request;
-  setAccessToken(response.accessToken);
+  setAuthenticatedSession(response.accessToken, response.user);
   return response;
 }
 
@@ -42,6 +37,17 @@ export function refreshSession() {
 }
 
 export async function logout() {
-  await apiClient.post<void>("/api/v1/auth/logout");
-  setAccessToken(null);
+  try {
+    await apiClient.post<void>("/api/v1/auth/logout");
+  } finally {
+    setAnonymousSession();
+  }
+}
+
+export function requestPasswordReset(email: string) {
+  return apiClient.post<void>("/api/v1/auth/password/forgot", { email });
+}
+
+export function resetPassword(token: string, password: string) {
+  return apiClient.post<void>("/api/v1/auth/password/reset", { token, password });
 }
