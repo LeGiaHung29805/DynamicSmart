@@ -33,6 +33,14 @@ app:
       hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}
   checkout:
     session-ttl: ${CHECKOUT_SESSION_TTL:15m}
+  saga-recovery:
+    enabled: ${ORDER_SAGA_RECOVERY_ENABLED:true}
+    fixed-delay: ${ORDER_SAGA_RECOVERY_FIXED_DELAY:30s}
+    initial-delay: ${ORDER_SAGA_RECOVERY_INITIAL_DELAY:30s}
+    stale-after: ${ORDER_SAGA_RECOVERY_STALE_AFTER:30s}
+    lease-duration: ${ORDER_SAGA_RECOVERY_LEASE_DURATION:2m}
+    retry-backoff: ${ORDER_SAGA_RECOVERY_RETRY_BACKOFF:1m}
+    batch-size: ${ORDER_SAGA_RECOVERY_BATCH_SIZE:20}
   clients:
     identity-base-url: ${IDENTITY_SERVICE_BASE_URL:http://localhost:8081}
     catalog-base-url: ${CATALOG_SERVICE_BASE_URL:http://localhost:8082}

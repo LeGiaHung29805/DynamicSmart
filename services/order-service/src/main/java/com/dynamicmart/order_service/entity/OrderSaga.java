@@ -37,6 +37,8 @@ public class OrderSaga {
     @Column(name = "last_error_code", length = 100) private String lastErrorCode;
     @Column(name = "last_error_message", length = 1000) private String lastErrorMessage;
     @Column(name = "attempt_count", nullable = false) private int attemptCount;
+    @Column(name = "recovery_owner", length = 100) private String recoveryOwner;
+    @Column(name = "recovery_lease_until") private Instant recoveryLeaseUntil;
     @Version @Column(nullable = false) private long version;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;

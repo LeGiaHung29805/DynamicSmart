@@ -49,10 +49,34 @@ class DatabaseMigrationSmokeIT {
                   and tablename = 'order_sagas'
                   and indexname = 'uq_order_sagas_payment_id'
                 """, Integer.class);
+        Integer recoveryColumns = jdbc.queryForObject("""
+                select count(*)
+                from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'order_sagas'
+                  and column_name in ('recovery_owner', 'recovery_lease_until')
+                """, Integer.class);
+        Integer recoveryIndex = jdbc.queryForObject("""
+                select count(*)
+                from pg_indexes
+                where schemaname = 'public'
+                  and tablename = 'order_sagas'
+                  and indexname = 'idx_order_sagas_recovery_due'
+                """, Integer.class);
+        String sagaStatusConstraint = jdbc.queryForObject("""
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where conrelid = 'order_sagas'::regclass
+                  and conname = 'order_sagas_status_check'
+                """, String.class);
 
         assertEquals(2, columns);
         assertEquals(1, uniqueIndex);
         assertEquals(1, paymentColumn);
         assertEquals(1, paymentIndex);
+        assertEquals(2, recoveryColumns);
+        assertEquals(1, recoveryIndex);
+        org.junit.jupiter.api.Assertions.assertTrue(sagaStatusConstraint.contains("FINALIZING_RESERVATIONS"));
+        org.junit.jupiter.api.Assertions.assertTrue(sagaStatusConstraint.contains("INVENTORY_COMMITTED"));
     }
 }
