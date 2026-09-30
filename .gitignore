@@ -1,1 +1,4 @@
 .m2repo/
+
+# Codex local workspace, generated reports, and temporary artifacts
+**/.codex*
