@@ -22,6 +22,7 @@ public class OrderReservationFinalizationService {
     private final InventoryReservationGateway inventory;
     private final VoucherReservationGateway vouchers;
     private final OrderReservationFinalizationCheckpointService checkpoints;
+    private final OrderConfirmationEventService confirmations;
     private final OrderSagaRepository sagas;
     private final CustomerOrderRepository orders;
 
@@ -29,11 +30,13 @@ public class OrderReservationFinalizationService {
             InventoryReservationGateway inventory,
             VoucherReservationGateway vouchers,
             OrderReservationFinalizationCheckpointService checkpoints,
+            OrderConfirmationEventService confirmations,
             OrderSagaRepository sagas,
             CustomerOrderRepository orders) {
         this.inventory = inventory;
         this.vouchers = vouchers;
         this.checkpoints = checkpoints;
+        this.confirmations = confirmations;
         this.sagas = sagas;
         this.orders = orders;
     }
@@ -45,6 +48,7 @@ public class OrderReservationFinalizationService {
         requirePaymentCheckpoint(saga, order);
 
         if (saga.getStatus() == SagaStatus.COMPLETED) {
+            confirmations.enqueueIfEligible(orderId);
             return new FinalizationResult(true, false);
         }
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
@@ -81,6 +85,7 @@ public class OrderReservationFinalizationService {
                             OrderReservationService.operationKey(sagaId, "VOUCHER_CONSUME"),
                             sagaId, saga.getCorrelationId(), orderId, saga.getVoucherReservationId()));
                 }
+                confirmations.enqueueIfEligible(orderId);
                 checkpoints.markCompleted(sagaId, orderId);
                 return new FinalizationResult(true, false);
             }

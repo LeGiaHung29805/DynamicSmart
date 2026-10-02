@@ -50,7 +50,8 @@ class OrderReservationFinalizationServiceTests {
     @Test
     void confirmedOrderCommitsInventoryThenConsumesVoucherWithStableKeys() {
         Fixture fixture = fixture(saga(SagaStatus.PAYMENT_REQUESTED, true), order(OrderStatus.CONFIRMED, 100));
-        InOrder sequence = inOrder(fixture.checkpoints, fixture.inventory, fixture.vouchers);
+        InOrder sequence = inOrder(
+                fixture.checkpoints, fixture.inventory, fixture.vouchers, fixture.confirmations);
 
         var result = fixture.service.finalizeIfConfirmed(SAGA_ID, ORDER_ID);
 
@@ -59,6 +60,7 @@ class OrderReservationFinalizationServiceTests {
         sequence.verify(fixture.inventory).commit(any());
         sequence.verify(fixture.checkpoints).markInventoryCommitted(SAGA_ID, ORDER_ID);
         sequence.verify(fixture.vouchers).consume(any());
+        sequence.verify(fixture.confirmations).enqueueIfEligible(ORDER_ID);
         sequence.verify(fixture.checkpoints).markCompleted(SAGA_ID, ORDER_ID);
 
         ArgumentCaptor<InventoryReservationGateway.CommitInventoryRequest> inventoryRequest =
@@ -87,6 +89,7 @@ class OrderReservationFinalizationServiceTests {
         assertTrue(result.completed());
         verify(fixture.inventory).commit(any());
         verify(fixture.vouchers, never()).consume(any());
+        verify(fixture.confirmations).enqueueIfEligible(ORDER_ID);
         verify(fixture.checkpoints).markCompleted(SAGA_ID, ORDER_ID);
     }
 
@@ -151,12 +154,14 @@ class OrderReservationFinalizationServiceTests {
         VoucherReservationGateway vouchers = Mockito.mock(VoucherReservationGateway.class);
         OrderReservationFinalizationCheckpointService checkpoints =
                 Mockito.mock(OrderReservationFinalizationCheckpointService.class);
+        OrderConfirmationEventService confirmations = Mockito.mock(OrderConfirmationEventService.class);
         OrderSagaRepository sagas = Mockito.mock(OrderSagaRepository.class);
         CustomerOrderRepository orders = Mockito.mock(CustomerOrderRepository.class);
         when(sagas.findById(SAGA_ID)).thenReturn(Optional.of(saga));
         when(orders.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        return new Fixture(inventory, vouchers, checkpoints,
-                new OrderReservationFinalizationService(inventory, vouchers, checkpoints, sagas, orders));
+        return new Fixture(inventory, vouchers, checkpoints, confirmations,
+                new OrderReservationFinalizationService(
+                        inventory, vouchers, checkpoints, confirmations, sagas, orders));
     }
 
     private OrderSaga saga(SagaStatus status, boolean withVoucher) {
@@ -185,6 +190,7 @@ class OrderReservationFinalizationServiceTests {
             InventoryReservationGateway inventory,
             VoucherReservationGateway vouchers,
             OrderReservationFinalizationCheckpointService checkpoints,
+            OrderConfirmationEventService confirmations,
             OrderReservationFinalizationService service) {
     }
 }
