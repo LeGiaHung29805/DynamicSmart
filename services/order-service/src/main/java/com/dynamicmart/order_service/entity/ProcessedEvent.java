@@ -20,4 +20,19 @@ public class ProcessedEvent {
     @Column(nullable = false, length = 80) private String producer;
     @Column(name = "processed_at", nullable = false) private Instant processedAt;
     @Column(name = "correlation_id") private UUID correlationId;
+
+    public static ProcessedEvent record(
+            UUID eventId,
+            String eventType,
+            String producer,
+            Instant processedAt,
+            UUID correlationId) {
+        ProcessedEvent event = new ProcessedEvent();
+        event.eventId = eventId;
+        event.eventType = eventType;
+        event.producer = producer;
+        event.processedAt = processedAt;
+        event.correlationId = correlationId;
+        return event;
+    }
 }

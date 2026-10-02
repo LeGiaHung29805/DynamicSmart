@@ -89,4 +89,19 @@ public class OrderSaga {
         lastErrorMessage = null;
         updatedAt = now;
     }
+
+    public void beginPaymentCompensation(String reason, Instant now) {
+        if (status == SagaStatus.COMPENSATING || status == SagaStatus.COMPENSATED) {
+            return;
+        }
+        if (status != SagaStatus.PAYMENT_REQUESTED) {
+            throw new IllegalStateException("Saga không thể compensation Payment từ trạng thái " + status + ".");
+        }
+        status = SagaStatus.COMPENSATING;
+        currentStep = "RELEASING_RESERVATIONS_AFTER_PAYMENT_FAILURE";
+        lastErrorCode = reason;
+        lastErrorMessage = null;
+        attemptCount = Math.addExact(attemptCount, 1);
+        updatedAt = now;
+    }
 }

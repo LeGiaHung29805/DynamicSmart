@@ -87,6 +87,9 @@ public class CustomerOrder {
         order.finalTotalVnd = finalTotalVnd;
         order.currency = "VND";
         order.paymentDueAt = paymentDueAt;
+        if (status == OrderStatus.CONFIRMED) {
+            order.confirmedAt = now;
+        }
         order.createdAt = now;
         order.updatedAt = now;
         return order;

@@ -7,11 +7,13 @@ import com.dynamicmart.order_service.repository.CheckoutShippingQuoteRepository;
 import com.dynamicmart.order_service.repository.CustomerOrderRepository;
 import com.dynamicmart.order_service.repository.OrderAddressRepository;
 import com.dynamicmart.order_service.repository.OrderItemRepository;
+import com.dynamicmart.order_service.repository.OrderOperationLogRepository;
 import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import com.dynamicmart.order_service.repository.OrderShippingSnapshotRepository;
 import com.dynamicmart.order_service.repository.OrderStatusHistoryRepository;
 import com.dynamicmart.order_service.repository.OrderVoucherSnapshotRepository;
 import com.dynamicmart.order_service.repository.OutboxEventRepository;
+import com.dynamicmart.order_service.repository.ProcessedEventRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -26,7 +28,8 @@ import org.mockito.Mockito;
 				+ "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration,"
 				+ "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration",
 		"app.security.jwt.hmac-secret-base64=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
-		"app.clients.internal-api-key=test-internal-key"
+		"app.clients.internal-api-key=test-internal-key",
+		"spring.cloud.stream.bindings.paymentEvents-in-0.consumer.auto-startup=false"
 })
 @Import(OrderServiceApplicationTests.TestDoubles.class)
 class OrderServiceApplicationTests {
@@ -93,8 +96,18 @@ class OrderServiceApplicationTests {
 		}
 
 		@Bean
+		OrderOperationLogRepository orderOperationLogRepository() {
+			return Mockito.mock(OrderOperationLogRepository.class);
+		}
+
+		@Bean
 		OutboxEventRepository outboxEventRepository() {
 			return Mockito.mock(OutboxEventRepository.class);
+		}
+
+		@Bean
+		ProcessedEventRepository processedEventRepository() {
+			return Mockito.mock(ProcessedEventRepository.class);
 		}
 	}
 }
