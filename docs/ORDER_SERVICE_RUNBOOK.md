@@ -30,7 +30,7 @@ Không dùng database `order_db` đang có dữ liệu để chạy integration 
 | PostgreSQL integration suite | `6/6` test đạt trên database test riêng; Flyway V1→V8 và Hibernate validation thành công |
 | HTTP contract test | Đã có cho Identity Address, Cart selection/confirmation/voucher, Catalog inventory và Payment/shipping |
 | RabbitMQ test binder | Đã xác minh consumer retry, event routing và payload contract trong test |
-| RabbitMQ broker thật | Chưa smoke test vì máy hiện tại chưa có RabbitMQ/Docker khả dụng |
+| RabbitMQ broker thật | Đã đạt smoke test topology, outbound route, Payment consumer idempotency, poison DLQ và phục hồi sau mất broker |
 | E2E nhiều service | Chưa hoàn tất |
 | Blocker ngoài Order | Payment `ShippingQuoteResponse` phải trả `requestFingerprint` canonical |
 
@@ -419,6 +419,14 @@ Ba ca smoke bắt buộc:
 1. Phát một Payment event hợp lệ: Order đổi trạng thái đúng và `processed_events` có đúng một record.
 2. Phát lại chính event đó: trạng thái, history, reservation và Outbox không tăng lần hai.
 3. Phát poison message đúng route nhưng sai contract: consumer retry tối đa 5 lần rồi message xuất hiện trong DLQ, không requeue vô hạn.
+
+Kết quả gần nhất ngày 2026-10-03 trên RabbitMQ 3.13.7 chạy bằng Docker:
+
+- `dynamicmart.events`, queue group `order-service`, DLX/DLQ và binding được provision đúng; consumer có một kết nối hoạt động;
+- Outbox thường đi `dynamicmart.events`, `PaymentDue` đi exchange topic bền vững `payment.due`; cả hai chuyển `PENDING → PUBLISHED`, không còn owner/lease;
+- `PaymentSucceeded` thật chuyển Order `DELIVERED → COMPLETED`; phát lại cùng `eventId` vẫn chỉ có một `processed_events`, một history và một Outbox event;
+- poison JSON được thử đủ 5 lần rồi republish vào `dynamicmart.events.order-service.dlq` với payload và metadata lỗi gốc;
+- khi broker bị dừng, Outbox giữ `PENDING` và tăng attempt/backoff; sau khi broker khởi động lại, consumer tự nối lại, topology tự tạo lại và event chuyển `PUBLISHED`.
 
 Ca mất broker:
 

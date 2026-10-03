@@ -116,14 +116,14 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
   `FOR UPDATE SKIP LOCKED`; **6/6 test đã đạt trên PostgreSQL test tạm**, đồng thời suite được chặn an toàn để
   chỉ chạy trên database có chữ `test` trong tên.
 
-Chưa có hoặc chưa xác minh bằng hạ tầng thật:
+Tình trạng xác minh bằng hạ tầng thật:
 
 - E2E adapter thật với Identity, Catalog và Cart; HTTP adapter đã có nhưng còn cần contract/integration test đầy đủ.
 - E2E liên service với Identity, Catalog, Cart và Payment thật.
-- Smoke RabbitMQ broker thật, gồm provision exchange/queue/binding và poison message vào DLQ.
+- Smoke RabbitMQ broker thật đã đạt với provision exchange/queue/binding, outbound route, event lặp, poison DLQ và phục hồi sau mất broker.
 
-Runbook kiểm thử và demo đã được tách tại `docs/ORDER_SERVICE_RUNBOOK.md`; các bước cần hạ tầng thật vẫn
-giữ trạng thái chờ cho đến khi có RabbitMQ và đủ service phụ thuộc.
+Runbook kiểm thử và demo đã được tách tại `docs/ORDER_SERVICE_RUNBOOK.md`; các bước E2E liên service còn lại
+giữ trạng thái chờ cho đến khi đủ service phụ thuộc và Payment hoàn thiện contract fingerprint.
 
 ### 4.3. Khoảng lệch giữa migration V1 và thiết kế hiện hành
 
@@ -514,7 +514,7 @@ Tiêu chí hoàn thành:
 
 ### M7. State machine và vòng đời Order
 
-**Trạng thái: Đang thực hiện**
+**Trạng thái: Hoàn thành**
 
 Luồng trả trước VNPay:
 
@@ -563,6 +563,8 @@ Tiêu chí hoàn thành:
 
 - Có unit test cho mọi transition hợp lệ và không hợp lệ.
 - Event lặp không ghi history hoặc hoàn tất hai lần.
+- RabbitMQ broker smoke ngày 2026-10-03 xác nhận `PaymentSucceeded` chuyển `DELIVERED → COMPLETED`; phát lại cùng
+  `eventId` vẫn giữ đúng một `processed_events`, một history và một Outbox event.
 
 ### M8. API Customer và Admin
 
@@ -621,7 +623,7 @@ Yêu cầu:
 
 ### M9. Outbox và RabbitMQ
 
-**Trạng thái: Đang thực hiện**
+**Trạng thái: Hoàn thành**
 
 Order Service nhận:
 
@@ -676,10 +678,13 @@ Quy tắc:
 - Test cấu hình bind trực tiếp vào Rabbit binder 5.0.3 để phát hiện sớm property DLQ viết sai tên.
 - Outbox chuyển event sang `FAILED` sau lần gửi lỗi thứ 10; retry trước đó dùng backoff và giữ cùng event ID.
 
-Còn lại trước khi đánh dấu M9 hoàn thành:
+Xác minh hạ tầng thật ngày 2026-10-03:
 
-- Chạy smoke trên RabbitMQ thật để xác nhận exchange/queue/binding/DLQ được provision và message poison
-  thực sự vào DLQ. RabbitMQ local hiện chưa chạy và Docker daemon chưa sẵn sàng.
+- RabbitMQ 3.13.7 provision đúng `dynamicmart.events`, queue group `order-service`, DLX/DLQ và `payment.due`.
+- Outbox thường và `PaymentDue` đều tới đúng exchange, giữ nguyên event identity và chuyển `PUBLISHED`.
+- Poison JSON retry đủ 5 lần rồi vào DLQ với payload cùng metadata lỗi gốc, không requeue vô hạn.
+- Khi broker bị dừng, event giữ `PENDING` với attempt/backoff; khi broker trở lại, consumer/topology tự phục hồi
+  và chính event đó được publish. Mô hình vẫn là at-least-once nên consumer phải idempotent.
 
 ### M10. Kiểm thử tích hợp và hoàn thiện
 
@@ -819,10 +824,10 @@ Quy ước:
 | M4 | Client interface và mock adapter | [x] | Các boundary interface, HTTP adapter, timeout/error mapping, mock fixture và contract test đã đủ; E2E liên service theo dõi ở M10 |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
 | M6 | Create Order, idempotency, Saga | [x] | API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, recovery lease và PostgreSQL smoke V1→V8 đã đạt |
-| M7 | State machine và Payment event | [-] | Payment consumer, lifecycle command và toàn bộ event P0 đã có; còn RabbitMQ broker integration test |
+| M7 | State machine và Payment event | [x] | Payment consumer/lifecycle đã đủ; broker thật xác nhận transition và duplicate event không tạo side effect lần hai |
 | M8 | API Customer/Admin | [x] | List/detail/timeline, filter/sort allow-list, ownership/IDOR, snapshot DTO, available action và command đã kiểm thử |
-| M9 | Outbox và RabbitMQ | [-] | Publisher có distributed claim/lease, retry/backoff/FAILED; consumer retry, DLQ config và test binder đã có; còn smoke RabbitMQ thật |
-| M10 | Integration/E2E và demo | [-] | 208 test mặc định + 6 PostgreSQL IT đạt; runbook đã có; còn RabbitMQ thật và E2E liên service |
+| M9 | Outbox và RabbitMQ | [x] | Distributed claim/lease, retry/backoff/FAILED, route thường/PaymentDue, poison DLQ và broker recovery đã đạt trên RabbitMQ thật |
+| M10 | Integration/E2E và demo | [-] | 208 test mặc định + 6 PostgreSQL IT + RabbitMQ broker smoke đạt; còn E2E liên service |
 
 ## 12. Thứ tự triển khai khuyến nghị
 
@@ -1041,4 +1046,12 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
   pessimistic Checkout lock, Saga recovery `SKIP LOCKED` và Outbox claim `SKIP LOCKED`.
 - Không chạm PostgreSQL hiện hữu ở cổng 5432. Cụm tạm đã dừng; môi trường công cụ chặn thao tác xóa đệ quy nên
   thư mục tạm còn tại `%TEMP%\dynamicmart-order-pgtest-20261003-a1f3` và có thể xóa thủ công sau khi kiểm tra.
-- Docker Desktop không thể mở service trong quyền hiện tại và daemon không khởi động; RabbitMQ smoke vẫn bị chặn.
+- Sau khi Docker Desktop được người dùng khởi động, chạy RabbitMQ 3.13.7 tạm trên `5673/15673`; Order Service
+  health `UP`, consumer kết nối và toàn bộ exchange/queue/binding/DLX/DLQ được provision đúng.
+- Outbox envelope thường tới `dynamicmart.events`; `PaymentDue` tới `payment.due`; database chuyển `PUBLISHED`
+  và xóa processing lease. Poison JSON retry đủ 5 lần rồi vào DLQ với routing key
+  `order-service.payment.failed`, giữ payload và metadata gốc.
+- Payment event broker thật chuyển Order `DELIVERED → COMPLETED`. Phát lại cùng `eventId` không nhân đôi:
+  `processed_events=1`, history `=1`, Outbox `=1`.
+- Dừng broker giữa lúc có Outbox event khiến record giữ `PENDING` và tăng attempt/backoff; sau khi RabbitMQ lên
+  lại, Order tự nối lại, topology tự phục hồi và event chuyển `PUBLISHED`. M7 và M9 được đánh dấu hoàn thành.
