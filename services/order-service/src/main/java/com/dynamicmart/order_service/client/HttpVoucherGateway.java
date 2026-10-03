@@ -17,26 +17,37 @@ public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReserva
         PricingResponse response = post("/api/v1/cart/internal/voucher-pricing/preview",
                 new PricingRequest(request.customerId(), request.merchandiseVoucherId(), request.shippingVoucherId(),
                         request.shippingFeeVnd(), request.items()), PricingResponse.class);
+        if (response.vouchers() == null || response.lineDiscounts() == null) throw contractInvalid();
+        if (response.vouchers().stream().anyMatch(java.util.Objects::isNull)
+                || response.lineDiscounts().stream().anyMatch(java.util.Objects::isNull)) {
+            throw contractInvalid();
+        }
         return new VoucherPreview(response.vouchers().stream().map(value -> new AppliedVoucher(value.voucherId(), value.voucherCode(),
                 value.scope(), value.discountMethod(), value.discountValue(), value.eligibleSubtotalVnd(), value.discountAmountVnd(), value.shippingDiscountVnd())).toList(),
                 response.lineDiscounts().stream().map(value -> new LineDiscount(value.variantId(), value.productDiscountVnd(), value.orderDiscountVnd())).toList());
     }
     @Override public Reservation reserve(ReserveVoucherRequest request) {
         GroupResponse response = post("/api/v1/cart/internal/voucher-reservation-groups", request, GroupResponse.class);
+        if (response.reservationId() == null) throw contractInvalid();
         return new Reservation(response.reservationId());
     }
     @Override public void consume(ConsumeVoucherRequest request) {
-        post("/api/v1/cart/internal/voucher-reservation-groups/{id}/consume",
+        GroupResponse response = post("/api/v1/cart/internal/voucher-reservation-groups/{id}/consume",
                 new ConsumeBody(request.orderId()), GroupResponse.class, request.reservationId());
+        if (!request.reservationId().equals(response.reservationId())) throw contractInvalid();
     }
     @Override public void release(ReleaseVoucherRequest request) {
-        post("/api/v1/cart/internal/voucher-reservation-groups/{id}/release", new ReleaseBody(request.reason()), GroupResponse.class, request.reservationId());
+        GroupResponse response = post("/api/v1/cart/internal/voucher-reservation-groups/{id}/release",
+                new ReleaseBody(request.reason()), GroupResponse.class, request.reservationId());
+        if (!request.reservationId().equals(response.reservationId())) throw contractInvalid();
     }
     private <T> T post(String uri, Object body, Class<T> type, Object... variables) {
-        try { T value = client.post().uri(uri, variables).body(body).retrieve().body(type); if (value == null) throw unavailable(); return value; }
+        try { T value = client.post().uri(uri, variables).body(body).retrieve().body(type); if (value == null) throw contractInvalid(); return value; }
+        catch (OrderException exception) { throw exception; }
         catch (RestClientException exception) { throw unavailable(); }
     }
     private OrderException unavailable() { return new OrderException(HttpStatus.SERVICE_UNAVAILABLE, "CART_VOUCHER_UNAVAILABLE", "Không thể kết nối nghiệp vụ Voucher của Cart Service."); }
+    private OrderException contractInvalid() { return new OrderException(HttpStatus.BAD_GATEWAY, "CART_VOUCHER_CONTRACT_INVALID", "Cart Service trả dữ liệu Voucher không hợp lệ."); }
     private record PricingRequest(UUID customerId, UUID merchandiseVoucherId, UUID shippingVoucherId,
                                   long shippingFeeVnd, List<VoucherItem> items) { }
     private record PricingResponse(List<PricingVoucher> vouchers, List<PricingLine> lineDiscounts) { }
