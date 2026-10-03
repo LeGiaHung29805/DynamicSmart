@@ -113,17 +113,17 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
   HTTP reservation adapter, compatibility facade, state machine và context smoke test.
 - Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
 - Một PostgreSQL repository integration suite opt-in kiểm tra unique constraint, pessimistic lock và
-  `FOR UPDATE SKIP LOCKED`; suite đã compile và được chặn an toàn để chỉ chạy trên database có chữ `test` trong tên.
+  `FOR UPDATE SKIP LOCKED`; **6/6 test đã đạt trên PostgreSQL test tạm**, đồng thời suite được chặn an toàn để
+  chỉ chạy trên database có chữ `test` trong tên.
 
 Chưa có hoặc chưa xác minh bằng hạ tầng thật:
 
 - E2E adapter thật với Identity, Catalog và Cart; HTTP adapter đã có nhưng còn cần contract/integration test đầy đủ.
 - E2E liên service với Identity, Catalog, Cart và Payment thật.
 - Smoke RabbitMQ broker thật, gồm provision exchange/queue/binding và poison message vào DLQ.
-- Lần chạy xác nhận Flyway V1→V8 và repository constraint/locking suite trên PostgreSQL test riêng.
 
 Runbook kiểm thử và demo đã được tách tại `docs/ORDER_SERVICE_RUNBOOK.md`; các bước cần hạ tầng thật vẫn
-giữ trạng thái chờ cho đến khi có credential PostgreSQL test, RabbitMQ và đủ service phụ thuộc.
+giữ trạng thái chờ cho đến khi có RabbitMQ và đủ service phụ thuộc.
 
 ### 4.3. Khoảng lệch giữa migration V1 và thiết kế hiện hành
 
@@ -724,8 +724,11 @@ Tình huống bắt buộc:
   unique Checkout/Saga, unique `Idempotency-Key` và hai recovery worker claim hai Saga khác nhau bằng
   `FOR UPDATE SKIP LOCKED`; suite cũng kiểm tra hai Outbox publisher claim hai event khác nhau.
 - Hai lớp dùng Spring Cloud Stream test binder nên lần chạy database không phụ thuộc RabbitMQ thật.
-- Mã test đã qua `test-compile`; chưa chạy test database thật vì workspace chưa có credential và database
-  test riêng. Không dùng `order_db` hiện hữu để tránh migrate hoặc xóa nhầm dữ liệu.
+- Ngày 2026-10-03, suite đã chạy trên cụm PostgreSQL 13 tạm ở cổng riêng và database
+  `order_service_test`: Flyway áp thành công V1→V8, Hibernate schema validation đạt và **6/6 test đạt**.
+  Không kết nối hoặc thay đổi `order_db` hiện hữu.
+- Hibernate 7.4 phát cảnh báo PostgreSQL 13 thấp hơn phiên bản hỗ trợ tối thiểu 14; test hiện đạt nhưng môi trường
+  triển khai nên dùng PostgreSQL 14 trở lên để nằm trong dải hỗ trợ chính thức của ORM.
 
 Khi có database test riêng, chạy từ `services/order-service`:
 
@@ -811,15 +814,15 @@ Quy ước:
 |---|---|---|---|
 | M0 | Chốt REST/event contract | [-] | Payment/GHN có contract nền nhưng quote response còn thiếu fingerprint portable; Identity/Catalog/Cart và event chung còn chờ |
 | M1 | Nền service, security, cấu hình | [x] | Startup/health đạt; 3 JWT role test + 5 security HTTP test đạt |
-| M2 | Migration/entity/repository | [-] | Repository constraint/locking suite đã viết và compile; chờ chạy Flyway V1→V8 + suite trên PostgreSQL test riêng để chốt |
+| M2 | Migration/entity/repository | [x] | Flyway V1→V8, Hibernate validation và 6/6 PostgreSQL constraint/locking test đã đạt trên database test riêng |
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
 | M4 | Client interface và mock adapter | [x] | Các boundary interface, HTTP adapter, timeout/error mapping, mock fixture và contract test đã đủ; E2E liên service theo dõi ở M10 |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [-] | Đã đủ API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, HTTP adapter và recovery worker có distributed lease; chờ PostgreSQL smoke V1→V8 để chốt hoàn thành |
-| M7 | State machine và Payment event | [-] | Payment consumer, lifecycle command và toàn bộ event P0 đã có; còn RabbitMQ/PostgreSQL integration test |
+| M6 | Create Order, idempotency, Saga | [x] | API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, recovery lease và PostgreSQL smoke V1→V8 đã đạt |
+| M7 | State machine và Payment event | [-] | Payment consumer, lifecycle command và toàn bộ event P0 đã có; còn RabbitMQ broker integration test |
 | M8 | API Customer/Admin | [x] | List/detail/timeline, filter/sort allow-list, ownership/IDOR, snapshot DTO, available action và command đã kiểm thử |
 | M9 | Outbox và RabbitMQ | [-] | Publisher có distributed claim/lease, retry/backoff/FAILED; consumer retry, DLQ config và test binder đã có; còn smoke RabbitMQ thật |
-| M10 | Integration/E2E và demo | [-] | 208 test mặc định đạt; runbook đã có; PostgreSQL IT chờ DB test riêng, còn RabbitMQ thật và E2E liên service |
+| M10 | Integration/E2E và demo | [-] | 208 test mặc định + 6 PostgreSQL IT đạt; runbook đã có; còn RabbitMQ thật và E2E liên service |
 
 ## 12. Thứ tự triển khai khuyến nghị
 
@@ -1033,3 +1036,9 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
   `502 CATALOG_RESERVATION_CONTRACT_INVALID`. Voucher preview có phần tử null cũng trả contract error rõ ràng.
 - Bổ sung 2 HTTP contract test cho hai trường hợp trên; `clean verify` đạt **208 test, 0 failure, 0 error,
   0 skipped** và đóng gói JAR thành công.
+- Tạo cụm PostgreSQL 13 tạm độc lập trên cổng `55432`, database `order_service_test`; Flyway áp đủ V1→V8,
+  Hibernate validate thành công và **6/6 test PostgreSQL đạt**: unique Checkout/Saga, unique idempotency key,
+  pessimistic Checkout lock, Saga recovery `SKIP LOCKED` và Outbox claim `SKIP LOCKED`.
+- Không chạm PostgreSQL hiện hữu ở cổng 5432. Cụm tạm đã dừng; môi trường công cụ chặn thao tác xóa đệ quy nên
+  thư mục tạm còn tại `%TEMP%\dynamicmart-order-pgtest-20261003-a1f3` và có thể xóa thủ công sau khi kiểm tra.
+- Docker Desktop không thể mở service trong quyền hiện tại và daemon không khởi động; RabbitMQ smoke vẫn bị chặn.

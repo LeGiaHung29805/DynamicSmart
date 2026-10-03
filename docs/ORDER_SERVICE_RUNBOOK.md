@@ -27,7 +27,7 @@ Không dùng database `order_db` đang có dữ liệu để chạy integration 
 |---|---|
 | Build và test mặc định | `208` test đạt, `0` failure, `0` error, JAR đóng gói thành công |
 | Flyway | Có migration từ `V1` đến `V8` |
-| PostgreSQL integration suite | Đã viết và compile; chưa chạy thật vì máy hiện tại chưa có credential cho database test riêng |
+| PostgreSQL integration suite | `6/6` test đạt trên database test riêng; Flyway V1→V8 và Hibernate validation thành công |
 | HTTP contract test | Đã có cho Identity Address, Cart selection/confirmation/voucher, Catalog inventory và Payment/shipping |
 | RabbitMQ test binder | Đã xác minh consumer retry, event routing và payload contract trong test |
 | RabbitMQ broker thật | Chưa smoke test vì máy hiện tại chưa có RabbitMQ/Docker khả dụng |
