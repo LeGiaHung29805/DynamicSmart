@@ -107,21 +107,23 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
 - API Checkout Preview điều phối Address, Voucher, GHN quote và tính tiền nhưng không tạo reservation.
 - Preview gọi service ngoài transaction, sau đó khóa session để chống ghi snapshot stale; quote cũ bị invalidated.
 - Migration V3 và snapshot kích thước/trọng lượng phục vụ GHN package rule.
-- 135 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
+- 208 automated test chạy mặc định: security, JWT role, payment/Identity/Cart/Catalog contract, pricing, Checkout Session/Preview,
   Create Order API/orchestration/idempotency/revalidation/reservation/snapshot/compensation, Payment creation/checkpoint,
-  reservation finalization, HTTP reservation adapter, compatibility facade, state machine và context smoke test.
+  reservation finalization, recovery, lifecycle command, query API, outbox, messaging test binder,
+  HTTP reservation adapter, compatibility facade, state machine và context smoke test.
 - Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
+- Một PostgreSQL repository integration suite opt-in kiểm tra unique constraint, pessimistic lock và
+  `FOR UPDATE SKIP LOCKED`; suite đã compile và được chặn an toàn để chỉ chạy trên database có chữ `test` trong tên.
 
-Chưa có:
+Chưa có hoặc chưa xác minh bằng hạ tầng thật:
 
 - E2E adapter thật với Identity, Catalog và Cart; HTTP adapter đã có nhưng còn cần contract/integration test đầy đủ.
-- Controller/API Order Customer và Admin.
-- Recovery runner để tự tiếp tục Saga bị gián đoạn mà không cần client retry.
-- Hoàn tất toàn bộ vòng đời `Idempotency-Key` qua Payment event; Create Order hiện replay được
-  Saga/Order/Payment/reservation-finalization checkpoint đã commit.
-- Outbox publisher.
-- RabbitMQ consumer/producer nghiệp vụ.
-- Repository constraint/locking test, controller test và integration test.
+- E2E liên service với Identity, Catalog, Cart và Payment thật.
+- Smoke RabbitMQ broker thật, gồm provision exchange/queue/binding và poison message vào DLQ.
+- Lần chạy xác nhận Flyway V1→V8 và repository constraint/locking suite trên PostgreSQL test riêng.
+
+Runbook kiểm thử và demo đã được tách tại `docs/ORDER_SERVICE_RUNBOOK.md`; các bước cần hạ tầng thật vẫn
+giữ trạng thái chờ cho đến khi có credential PostgreSQL test, RabbitMQ và đủ service phụ thuộc.
 
 ### 4.3. Khoảng lệch giữa migration V1 và thiết kế hiện hành
 
@@ -324,7 +326,7 @@ Tiêu chí hoàn thành:
 
 ### M4. Client tích hợp và mock adapter
 
-**Trạng thái: Đang thực hiện**
+**Trạng thái: Hoàn thành trong phạm vi Order Service; E2E được theo dõi ở M10**
 
 Việc cần làm:
 
@@ -714,6 +716,27 @@ Tình huống bắt buộc:
 - Payment success và confirm received đến theo hai thứ tự khác nhau.
 - RabbitMQ dừng rồi hoạt động lại.
 
+Đã bổ sung trong lát cắt PostgreSQL M10:
+
+- `DatabaseMigrationSmokeIT` kiểm tra migration/schema và chỉ được bật khi cả
+  `ORDER_DATABASE_SMOKE=true` lẫn `DB_URL` trỏ tới database PostgreSQL có chữ `test` trong tên.
+- `PostgresRepositoryIntegrationIT` kiểm tra khóa pessimistic tuần tự hóa hai admission cùng Checkout,
+  unique Checkout/Saga, unique `Idempotency-Key` và hai recovery worker claim hai Saga khác nhau bằng
+  `FOR UPDATE SKIP LOCKED`; suite cũng kiểm tra hai Outbox publisher claim hai event khác nhau.
+- Hai lớp dùng Spring Cloud Stream test binder nên lần chạy database không phụ thuộc RabbitMQ thật.
+- Mã test đã qua `test-compile`; chưa chạy test database thật vì workspace chưa có credential và database
+  test riêng. Không dùng `order_db` hiện hữu để tránh migrate hoặc xóa nhầm dữ liệu.
+
+Khi có database test riêng, chạy từ `services/order-service`:
+
+```powershell
+$env:ORDER_DATABASE_SMOKE='true'
+$env:DB_URL='jdbc:postgresql://localhost:5432/order_service_test'
+$env:DB_USERNAME='<test-user>'
+$env:DB_PASSWORD='<test-password>'
+.\mvnw.cmd '-Dtest=DatabaseMigrationSmokeIT,PostgresRepositoryIntegrationIT' test
+```
+
 ## 8. Ma trận tích hợp
 
 | Service | Order Service nhận | Order Service cung cấp |
@@ -788,15 +811,15 @@ Quy ước:
 |---|---|---|---|
 | M0 | Chốt REST/event contract | [-] | Payment/GHN có contract nền nhưng quote response còn thiếu fingerprint portable; Identity/Catalog/Cart và event chung còn chờ |
 | M1 | Nền service, security, cấu hình | [x] | Startup/health đạt; 3 JWT role test + 5 security HTTP test đạt |
-| M2 | Migration/entity/repository | [-] | Flyway V1→V4 + Hibernate validate đã đạt trên PostgreSQL sạch; sau đồng bộ dùng V5 cho payment methods và V6 cho Saga payment checkpoint, đang chờ PostgreSQL/Docker smoke lại; còn repository constraint/locking test |
+| M2 | Migration/entity/repository | [-] | Repository constraint/locking suite đã viết và compile; chờ chạy Flyway V1→V8 + suite trên PostgreSQL test riêng để chốt |
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
-| M4 | Client interface và mock adapter | [-] | Payment/GHN, Address, Cart selection, Voucher và Inventory HTTP adapter đã có; commit/consume contract test đạt, còn test đầy đủ các adapter và E2E |
+| M4 | Client interface và mock adapter | [x] | Các boundary interface, HTTP adapter, timeout/error mapping, mock fixture và contract test đã đủ; E2E liên service theo dõi ở M10 |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [-] | Đã đủ API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, HTTP adapter và recovery worker có distributed lease; chờ PostgreSQL smoke V1→V7 để chốt hoàn thành |
+| M6 | Create Order, idempotency, Saga | [-] | Đã đủ API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, HTTP adapter và recovery worker có distributed lease; chờ PostgreSQL smoke V1→V8 để chốt hoàn thành |
 | M7 | State machine và Payment event | [-] | Payment consumer, lifecycle command và toàn bộ event P0 đã có; còn RabbitMQ/PostgreSQL integration test |
 | M8 | API Customer/Admin | [x] | List/detail/timeline, filter/sort allow-list, ownership/IDOR, snapshot DTO, available action và command đã kiểm thử |
-| M9 | Outbox và RabbitMQ | [-] | Publisher, retry/backoff/FAILED, consumer retry, DLQ config và test binder đã có; còn smoke RabbitMQ thật |
-| M10 | Integration/E2E và demo | [-] | Unit/controller/security/consumer/binder test đã có; còn PostgreSQL, RabbitMQ thật và E2E liên service |
+| M9 | Outbox và RabbitMQ | [-] | Publisher có distributed claim/lease, retry/backoff/FAILED; consumer retry, DLQ config và test binder đã có; còn smoke RabbitMQ thật |
+| M10 | Integration/E2E và demo | [-] | 208 test mặc định đạt; runbook đã có; PostgreSQL IT chờ DB test riêng, còn RabbitMQ thật và E2E liên service |
 
 ## 12. Thứ tự triển khai khuyến nghị
 
@@ -946,3 +969,67 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
 - Docker daemon và RabbitMQ local chưa hoạt động; PostgreSQL cổng 5432 đang mở nhưng không có bộ
   credential/test database riêng trong workspace, nên chưa chạy migration smoke lên database hiện có để
   tránh tác động nhầm dữ liệu ngoài phạm vi.
+- Bổ sung `PostgresRepositoryIntegrationIT` cho năm bất biến ở tầng database: cùng Checkout bị tuần tự hóa
+  bởi pessimistic lock, mỗi Checkout chỉ có một Saga, `Idempotency-Key` không được tái dùng cho Checkout
+  khác, recovery worker bỏ qua Saga đang khóa và Outbox publisher bỏ qua event đang khóa bằng
+  `FOR UPDATE SKIP LOCKED`.
+- Siết an toàn cho cả migration smoke và repository IT: chỉ khởi động khi `ORDER_DATABASE_SMOKE=true` và
+  `DB_URL` có tên database chứa `test`; sau kết nối vẫn kiểm tra lại `current_database()` như lớp phòng vệ hai.
+- Cô lập hai PostgreSQL IT khỏi RabbitMQ bằng Spring Cloud Stream test binder. `test-compile` đạt với 42 test
+  source; `clean verify` mặc định tiếp tục đạt **180 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- Gọi đích danh hai lớp IT khi chưa bật biến môi trường cho kết quả **6/6 test bị skip trước khi Spring context
+  khởi động**, xác nhận guard không đụng database mặc định.
+- Chưa chạy năm repository test trên PostgreSQL thật vì chưa có credential/database test riêng; thay đổi lát
+  cắt này vẫn chưa commit.
+- Bổ sung 10 HTTP contract test cho Identity Address, Cart Checkout Selection, Catalog Variant validation và
+  Cart `OrderConfirmed`; kiểm tra cả internal API key, URL, payload, mapping response và lỗi dependency.
+- Sửa Checkout Selection adapter không còn tự thay trọng lượng/kích thước thiếu bằng `1`; dữ liệu giao hàng
+  thiếu/sai giờ fail-fast `502 CHECKOUT_SOURCE_CONTRACT_INVALID`, đúng nguyên tắc không tạo snapshot giả.
+- Adapter kiểm tra `cartId`, CartItem ID/version, Variant ID duy nhất, tập Variant trả về và giữ thứ tự dòng Cart
+  kể cả khi Catalog trả response khác thứ tự. Lỗi mạng Catalog/Cart là `503`, tách khỏi lỗi nghiệp vụ `422`.
+- Address adapter kiểm tra ID và toàn bộ trường snapshot bắt buộc; phân biệt địa chỉ không hợp lệ `422`, Identity
+  lỗi/chậm `503` và response sai contract `502`.
+- `OrderConfirmed` contract test xác nhận gửi CartItem ID/version và phản hồi rỗng không được coi là thành công,
+  nhờ đó Outbox còn retry.
+- Bổ sung 5 contract test còn thiếu cho Inventory reserve/release và Voucher preview/reserve/release; xác nhận
+  `Idempotency-Key`, operation/Saga identity, thời hạn giữ chỗ, payload tiền và mapping reservation ID khớp
+  controller/DTO hiện tại của Catalog và Cart.
+- `clean verify` đạt **195 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- Hoàn thiện contract test Payment/GHN cho tạo Shipping Quote và VNPay attempt; request chỉ dùng package
+  data server-side và giữ đúng internal API key.
+- Siết `HttpVoucherGateway`: response preview thiếu danh sách hoặc reservation response thiếu/sai ID trả
+  `502 CART_VOUCHER_CONTRACT_INVALID`, không còn rơi vào `NullPointerException` hoặc lưu checkpoint ID rỗng.
+- Contract hiện tại của Payment Service vẫn chưa trả `requestFingerprint` trong `ShippingQuoteResponse`; đây là
+  blocker E2E thuộc chủ sở hữu Payment, Order tiếp tục yêu cầu contract đúng và fail-fast thay vì tự tính fingerprint.
+- M4 được đánh dấu hoàn thành trong phạm vi Order Service; phần xác minh kết nối service thật thuộc M10.
+  `clean verify` đạt **199 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- Phát hiện race khi nhiều instance cùng quét một Outbox row `PENDING`; migration V8 bổ sung
+  `processing_owner`, `processing_lease_until` và partial index phục vụ claim.
+- `OrderOutboxClaimService` claim event trong transaction ngắn bằng `FOR UPDATE SKIP LOCKED`, sau đó mới gửi
+  HTTP/RabbitMQ ngoài transaction. Worker chỉ được finalize claim của chính mình; lease hết hạn được worker khác
+  tiếp quản để không làm mất event khi instance dừng giữa chừng.
+- Retry trả event về `PENDING` với backoff, lần lỗi thứ 10 chuyển `FAILED`; gửi thành công chuyển `PUBLISHED` và
+  xóa lease. Crash sau khi broker nhận nhưng trước khi commit vẫn có thể phát lại, nên consumer idempotency tiếp tục
+  là bắt buộc theo mô hình at-least-once.
+- Bổ sung 7 unit test owner/lease/reclaim/backoff và PostgreSQL IT cho hai publisher dùng `SKIP LOCKED`.
+  `clean verify` đạt **206 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- PostgreSQL local yêu cầu mật khẩu nhưng workspace không có `.env`, DB environment hoặc `pgpass`; không thử
+  credential đoán và không chạm `order_db`. Hai lớp IT hiện xác nhận **6/6 test skip an toàn** khi chưa cấu hình.
+- Bổ sung `docs/ORDER_SERVICE_RUNBOOK.md` gồm cấu hình môi trường, ba mức kiểm thử, thứ tự khởi động,
+  kịch bản E2E Checkout/Payment/lifecycle, truy vấn đối chiếu database, RabbitMQ/DLQ smoke, ma trận nghiệm thu,
+  phân loại owner lỗi tích hợp và Definition of Done cho phần Hiếu.
+- Chạy lại trên working tree hiện tại: `clean verify` đạt **206 test, 0 failure, 0 error, 0 skipped** và đóng gói
+  JAR thành công; gọi đích danh hai PostgreSQL IT khi chưa cấu hình tiếp tục skip an toàn **6/6 test**.
+
+#### 2026-10-03
+
+- Fetch lại remote: nhánh Hiếu đang hơn `origin/main` 12 commit và chậm 1 commit chỉ sửa `.gitignore`; không có
+  thay đổi Payment/Order mới cần ghép. `ShippingQuoteResponse` trên `origin/main` vẫn thiếu `requestFingerprint`.
+- Bổ sung toàn bộ biến Saga recovery/Outbox lease vào `.env.example` và script
+  `services/order-service/scripts/order-e2e-smoke.ps1` để tự động kiểm tra health, Checkout/Preview, công thức
+  tiền, Create Order replay, xung đột key và ownership chéo khi các service phụ thuộc sẵn sàng.
+- Siết contract Inventory: reserve/commit/release chỉ được checkpoint khi Catalog trả đúng `reservationId` và
+  trạng thái tương ứng `RESERVED`/`COMMITTED`/`RELEASED`; response sai trả
+  `502 CATALOG_RESERVATION_CONTRACT_INVALID`. Voucher preview có phần tử null cũng trả contract error rõ ràng.
+- Bổ sung 2 HTTP contract test cho hai trường hợp trên; `clean verify` đạt **208 test, 0 failure, 0 error,
+  0 skipped** và đóng gói JAR thành công.
