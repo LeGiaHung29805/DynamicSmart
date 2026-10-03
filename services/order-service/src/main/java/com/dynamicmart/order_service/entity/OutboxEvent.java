@@ -31,6 +31,8 @@ public class OutboxEvent {
     @Column(nullable = false, length = 20) private OutboxEventStatus status;
     @Column(name = "attempt_count", nullable = false) private int attemptCount;
     @Column(name = "available_at", nullable = false) private Instant availableAt;
+    @Column(name = "processing_owner") private UUID processingOwner;
+    @Column(name = "processing_lease_until") private Instant processingLeaseUntil;
     @Column(name = "published_at") private Instant publishedAt;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
 

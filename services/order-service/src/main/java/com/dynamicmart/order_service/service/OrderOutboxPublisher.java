@@ -3,17 +3,12 @@ package com.dynamicmart.order_service.service;
 import com.dynamicmart.order_service.client.CartOrderConfirmationGateway;
 import com.dynamicmart.order_service.client.CartOrderConfirmationGateway.OrderConfirmedCommand;
 import com.dynamicmart.order_service.config.OutboxProperties;
-import com.dynamicmart.order_service.entity.OutboxEvent;
-import com.dynamicmart.order_service.entity.OutboxEventStatus;
-import com.dynamicmart.order_service.repository.OutboxEventRepository;
+import com.dynamicmart.order_service.service.OrderOutboxClaimService.OutboxClaim;
 import com.dynamicmart.order_service.service.OrderConfirmationEventService.OrderConfirmedPayload;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,99 +16,88 @@ import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class OrderOutboxPublisher {
-    private static final int MAX_ATTEMPTS = 10;
     private static final String ORDER_CONFIRMED = "OrderConfirmed";
     private static final String PAYMENT_DUE = "PaymentDue";
 
-    private final OutboxEventRepository events;
+    private final OrderOutboxClaimService claims;
     private final CartOrderConfirmationGateway cart;
     private final StreamBridge streamBridge;
     private final ObjectMapper objectMapper;
     private final OutboxProperties properties;
-    private final Clock clock;
 
     public OrderOutboxPublisher(
-            OutboxEventRepository events,
+            OrderOutboxClaimService claims,
             CartOrderConfirmationGateway cart,
             StreamBridge streamBridge,
             ObjectMapper objectMapper,
-            OutboxProperties properties,
-            Clock clock) {
-        this.events = events;
+            OutboxProperties properties) {
+        this.claims = claims;
         this.cart = cart;
         this.streamBridge = streamBridge;
         this.objectMapper = objectMapper;
         this.properties = properties;
-        this.clock = clock;
     }
 
     @Scheduled(fixedDelayString = "${app.outbox.publish-delay:1s}")
     public void publishPending() {
-        Instant now = Instant.now(clock);
-        events.findAllByStatusAndAvailableAtLessThanEqualOrderByCreatedAtAsc(
-                        OutboxEventStatus.PENDING, now, PageRequest.of(0, properties.batchSize()))
-                .forEach(event -> publishOne(event.getId()));
+        for (int index = 0; index < properties.batchSize(); index++) {
+            OutboxClaim claim = claims.claimNext().orElse(null);
+            if (claim == null) {
+                return;
+            }
+            publishClaim(claim);
+        }
     }
 
     public void publishOne(UUID eventId) {
-        OutboxEvent event = events.findById(eventId).orElse(null);
-        Instant now = Instant.now(clock);
-        if (event == null
-                || event.getStatus() != OutboxEventStatus.PENDING
-                || event.getAvailableAt().isAfter(now)) {
-            return;
-        }
+        claims.claim(eventId).ifPresent(this::publishClaim);
+    }
 
+    private void publishClaim(OutboxClaim claim) {
         try {
-            dispatch(event);
-            event.setStatus(OutboxEventStatus.PUBLISHED);
-            event.setPublishedAt(now);
-            events.save(event);
+            dispatch(claim);
+            claims.markPublished(claim.eventId(), claim.owner());
         } catch (RuntimeException failure) {
-            int attempt = Math.addExact(event.getAttemptCount(), 1);
-            event.setAttemptCount(attempt);
-            event.setStatus(attempt >= MAX_ATTEMPTS ? OutboxEventStatus.FAILED : OutboxEventStatus.PENDING);
-            event.setAvailableAt(now.plusSeconds(Math.min(300, 1L << Math.min(attempt, 8))));
-            events.save(event);
+            claims.markFailed(claim.eventId(), claim.owner());
         }
     }
 
-    private void dispatch(OutboxEvent event) {
-        if (ORDER_CONFIRMED.equals(event.getEventType())) {
-            dispatchOrderConfirmed(event);
+    private void dispatch(OutboxClaim claim) {
+        if (ORDER_CONFIRMED.equals(claim.eventType())) {
+            dispatchOrderConfirmed(claim);
             return;
         }
-        if (PAYMENT_DUE.equals(event.getEventType())) {
+        if (PAYMENT_DUE.equals(claim.eventType())) {
             boolean sent = streamBridge.send(
                     "paymentDue-out-0",
                     MessageBuilder.withPayload(new PaymentDueMessage(
-                            event.getId(), event.getAggregateId(), event.getCorrelationId())).build());
+                            claim.eventId(), claim.aggregateId(), claim.correlationId())).build());
             requireSent(sent);
             return;
         }
 
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("eventId", event.getId());
-        envelope.put("eventType", event.getEventType());
-        envelope.put("eventVersion", event.getEventVersion());
+        envelope.put("eventId", claim.eventId());
+        envelope.put("eventType", claim.eventType());
+        envelope.put("eventVersion", claim.eventVersion());
         envelope.put("producer", "order-service");
-        envelope.put("aggregateId", event.getAggregateId());
-        envelope.put("occurredAt", event.getCreatedAt());
-        envelope.put("correlationId", event.getCorrelationId());
-        envelope.put("payload", objectMapper.readTree(event.getPayload()));
+        envelope.put("aggregateId", claim.aggregateId());
+        envelope.put("occurredAt", claim.createdAt());
+        envelope.put("correlationId", claim.correlationId());
+        envelope.put("payload", objectMapper.readTree(claim.payload()));
         boolean sent = streamBridge.send(
                 "orderEvents-out-0",
                 MessageBuilder.withPayload(envelope)
-                        .setHeader("eventType", event.getEventType())
+                        .setHeader("eventType", claim.eventType())
                         .build());
         requireSent(sent);
     }
 
-    private void dispatchOrderConfirmed(OutboxEvent event) {
+    private void dispatchOrderConfirmed(OutboxClaim claim) {
         OrderConfirmedPayload payload = objectMapper.readValue(
-                event.getPayload(), OrderConfirmedPayload.class);
+                claim.payload(), OrderConfirmedPayload.class);
         cart.confirm(new OrderConfirmedCommand(
-                event.getId(), event.getCorrelationId(), payload.customerId(), payload.source(), payload.items()));
+                claim.eventId(), claim.correlationId(), payload.customerId(), payload.source(), payload.items()));
     }
 
     private void requireSent(boolean sent) {

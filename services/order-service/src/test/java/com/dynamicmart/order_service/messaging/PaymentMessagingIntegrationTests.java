@@ -14,6 +14,7 @@ import com.dynamicmart.order_service.config.OutboxProperties;
 import com.dynamicmart.order_service.entity.OutboxEvent;
 import com.dynamicmart.order_service.entity.OutboxEventStatus;
 import com.dynamicmart.order_service.repository.OutboxEventRepository;
+import com.dynamicmart.order_service.service.OrderOutboxClaimService;
 import com.dynamicmart.order_service.service.OrderOutboxPublisher;
 import com.dynamicmart.order_service.service.OrderPaymentEventHandler;
 import java.time.Clock;
@@ -114,7 +115,7 @@ class PaymentMessagingIntegrationTests {
         OutboxEvent event = OutboxEvent.pending(
                 EVENT_ID, "ORDER", ORDER_ID, "PaymentDue", 1,
                 "{\"orderId\":\"" + ORDER_ID + "\"}", CORRELATION_ID, NOW.minusSeconds(1));
-        when(events.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(events.findByIdForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
 
         publisher.publishOne(EVENT_ID);
 
@@ -134,7 +135,7 @@ class PaymentMessagingIntegrationTests {
                 EVENT_ID, "ORDER", ORDER_ID, "OrderCompleted", 1,
                 "{\"orderId\":\"" + ORDER_ID + "\",\"status\":\"COMPLETED\"}",
                 CORRELATION_ID, NOW.minusSeconds(1));
-        when(events.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(events.findByIdForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
 
         publisher.publishOne(EVENT_ID);
 
@@ -176,7 +177,7 @@ class PaymentMessagingIntegrationTests {
     @SpringBootConfiguration
     @EnableAutoConfiguration
     @EnableTestBinder
-    @Import({PaymentEventConsumerConfiguration.class, OrderOutboxPublisher.class})
+    @Import({PaymentEventConsumerConfiguration.class, OrderOutboxClaimService.class, OrderOutboxPublisher.class})
     static class TestApplication {
         @Bean
         OrderPaymentEventHandler orderPaymentEventHandler() {
@@ -195,7 +196,7 @@ class PaymentMessagingIntegrationTests {
 
         @Bean
         OutboxProperties outboxProperties() {
-            return new OutboxProperties(Duration.ofSeconds(1), 100);
+            return new OutboxProperties(Duration.ofSeconds(1), 100, Duration.ofSeconds(30));
         }
 
         @Bean

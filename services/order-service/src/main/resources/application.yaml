@@ -76,6 +76,7 @@ app:
   outbox:
     publish-delay: ${ORDER_OUTBOX_PUBLISH_DELAY:1s}
     batch-size: ${ORDER_OUTBOX_BATCH_SIZE:100}
+    processing-lease: ${ORDER_OUTBOX_PROCESSING_LEASE:30s}
   clients:
     identity-base-url: ${IDENTITY_SERVICE_BASE_URL:http://localhost:8081}
     catalog-base-url: ${CATALOG_SERVICE_BASE_URL:http://localhost:8082}
