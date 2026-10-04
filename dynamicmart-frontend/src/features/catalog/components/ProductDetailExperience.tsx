@@ -86,7 +86,7 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
     if (!selectedVariant || !canPurchase) return;
     try {
       setPendingAction("cart"); setError(undefined);
-      await addVariantToCart(selectedVariant.id, quantity);
+      await addVariantToCart(product.id, selectedVariant.id, quantity);
       showToast("Đã thêm sản phẩm vào giỏ hàng.", "success");
     } catch (caught) {
       if (isApiError(caught) && caught.status === 401) {
