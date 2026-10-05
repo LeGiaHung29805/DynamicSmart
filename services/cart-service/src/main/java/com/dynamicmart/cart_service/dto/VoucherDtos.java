@@ -36,4 +36,8 @@ public final class VoucherDtos {
                                   long discountAmountVnd, UUID customerVoucherId) { }
     public record AssignmentResponse(UUID id, UUID customerId, UUID voucherId, String status,
                                      Instant assignedAt, Instant expiresAt) { }
+    public record VoucherUsageHistoryResponse(UUID id, UUID voucherId, String voucherCode, String voucherName,
+                                              String status, long discountAmountVnd, long shippingDiscountVnd,
+                                              UUID orderId, Instant createdAt, Instant consumedAt,
+                                              Instant releasedAt, String releaseReason) { }
 }

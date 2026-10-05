@@ -2,6 +2,7 @@ package com.dynamicmart.catalog_service.query;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -20,7 +21,7 @@ public class CatalogProductQueryRepository {
 
     public ProductIdPage search(ProductSearchCriteria criteria) {
         MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("now", Instant.now())
+                .addValue("now", Timestamp.from(Instant.now()))
                 .addValue("limit", criteria.size())
                 .addValue("offset", Math.multiplyExact(criteria.page(), criteria.size()));
         String commonTableExpression = criteria.categoryId() == null ? "" : """

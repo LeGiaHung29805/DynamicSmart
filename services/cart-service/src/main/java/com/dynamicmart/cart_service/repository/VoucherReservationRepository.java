@@ -16,6 +16,7 @@ public interface VoucherReservationRepository extends JpaRepository<VoucherReser
     List<VoucherReservation> findAllByStatusAndReservedUntilLessThanEqual(String status, Instant now);
     List<VoucherReservation> findAllByCheckoutSessionId(UUID checkoutSessionId);
     List<VoucherReservation> findAllByOrderByCreatedAtDesc();
+    List<VoucherReservation> findAllByCustomerIdOrderByCreatedAtDesc(UUID customerId);
     long countByVoucherIdAndCustomerIdAndStatusIn(UUID voucherId, UUID customerId, List<String> statuses);
     @Query("select count(r) from VoucherReservation r where r.voucherId = :voucherId and r.status in ('RESERVED','CONSUMED')")
     long countAllocated(@Param("voucherId") UUID voucherId);

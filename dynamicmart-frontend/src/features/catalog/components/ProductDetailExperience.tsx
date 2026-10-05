@@ -7,6 +7,7 @@ import { BadgePercent, Check, Minus, PackageCheck, Plus, ShieldCheck, ShoppingBa
 import { formatVnd } from "@/components/common/Price";
 import { useToast } from "@/components/ui/Toast";
 import { isApiError } from "@/lib/api/error";
+import { WishlistButton } from "@/features/wishlist";
 import { addVariantToCart, createBuyNowSession } from "../api/purchase.api";
 import type { AttributeValue, ProductDetail, ProductImage, ProductVariant } from "../types";
 
@@ -86,7 +87,7 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
     if (!selectedVariant || !canPurchase) return;
     try {
       setPendingAction("cart"); setError(undefined);
-      await addVariantToCart(selectedVariant.id, quantity);
+      await addVariantToCart(product.id, selectedVariant.id, quantity);
       showToast("Đã thêm sản phẩm vào giỏ hàng.", "success");
     } catch (caught) {
       if (isApiError(caught) && caught.status === 401) {
@@ -115,6 +116,7 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
         <div className="relative aspect-square overflow-hidden rounded-[2rem] bg-slate-100 shadow-xl shadow-slate-950/5">
           {selectedImage ? <Image alt={selectedImage.altText ?? product.name} className="object-cover" fill priority sizes="(max-width: 1024px) 100vw, 52vw" src={selectedImage.imageUrl} unoptimized /> : <div className="grid size-full place-items-center font-bold text-slate-400">Chưa có ảnh</div>}
           {currentPrice?.salePriceVnd !== null && currentPrice?.salePriceVnd !== undefined ? <span className="absolute top-5 left-5 inline-flex items-center gap-1 rounded-full bg-amber-300 px-4 py-2 text-xs font-black text-amber-950"><BadgePercent className="size-4" /> Giảm {currentPrice.directSalePercent ?? 0}%</span> : null}
+          <WishlistButton className="absolute top-5 right-5" productId={product.id} />
         </div>
         {images.length > 1 ? <div className="flex gap-3 overflow-x-auto pb-1">{images.map((image) => <button aria-label={`Xem ảnh ${image.altText ?? product.name}`} className={`relative size-20 shrink-0 overflow-hidden rounded-xl border-2 bg-slate-100 ${selectedImage?.id === image.id ? "border-brand" : "border-transparent"}`} key={image.id} onClick={() => setSelectedImageId(image.id)} type="button"><Image alt="" className="object-cover" fill sizes="80px" src={image.imageUrl} unoptimized /></button>)}</div> : null}
       </div>

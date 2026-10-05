@@ -33,6 +33,8 @@ server:
   port: ${SERVER_PORT:8085}
 
 app:
+  locations:
+    vietnam-base-url: ${VIETNAM_LOCATION_BASE_URL:https://provinces.open-api.vn/api/v2}
   internal:
     api-key: ${INTERNAL_API_KEY:}
   outbox:

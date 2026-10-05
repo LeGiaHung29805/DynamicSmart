@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api/client";
 
-export function addVariantToCart(variantId: string, quantity: number) {
-  return apiClient.post<void>("/api/v1/cart/items", { variantId, quantity });
+export function addVariantToCart(productId: string, variantId: string, quantity: number) {
+  return apiClient.post<void>("/api/v1/cart/items", { productId, variantId, quantity });
 }
 
 export interface BuyNowSession {
