@@ -1,21 +1,30 @@
 "use client";
 
 import { CalendarDays, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useAuthSession } from "@/lib/auth/session";
 import { customerApi } from "../api/customer.api";
 import type { Profile } from "../types/customer.types";
 
 export function ProfilePage() {
+  const session = useAuthSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [state, setState] = useState<"loading" | "idle" | "saving" | "saved" | "error">("loading");
   useEffect(() => {
-    customerApi.profile().then((value) => { setProfile(value); setState("idle"); }).catch(() => setState("error"));
-  }, []);
+    if (session.status === "loading") return;
+    if (session.status === "anonymous") return;
+    let cancelled = false;
+    customerApi.profile().then((value) => {
+      if (!cancelled) { setProfile(value); setState("idle"); }
+    }).catch(() => { if (!cancelled) setState("error"); });
+    return () => { cancelled = true; };
+  }, [session.status]);
   const save = async () => {
     if (!profile) return;
     setState("saving");
@@ -28,7 +37,7 @@ export function ProfilePage() {
   };
   return <div className="space-y-7">
     <PageHeader eyebrow="Tài khoản" title="Hồ sơ của tôi" description="Cập nhật thông tin liên hệ dùng cho tài khoản, địa chỉ giao hàng và đơn hàng của bạn." />
-    {state === "loading" ? <SurfacePanel><p className="text-sm text-stone-500">Đang tải hồ sơ…</p></SurfacePanel> : !profile ? <SurfacePanel className="border-red-200 text-red-600">Không thể tải hồ sơ. Vui lòng đăng nhập lại hoặc thử sau.</SurfacePanel> : <>
+    {session.status === "anonymous" ? <SurfacePanel className="text-center"><p className="text-sm font-semibold text-stone-700">Bạn cần đăng nhập để xem hồ sơ.</p><Link className="mt-4 inline-flex rounded-xl bg-stone-950 px-5 py-3 text-sm font-black text-white" href="/login?returnTo=%2Fcustomer%2Faccount%2Fprofile">Đăng nhập</Link></SurfacePanel> : session.status === "loading" || state === "loading" ? <SurfacePanel><p className="text-sm text-stone-500">Đang tải hồ sơ…</p></SurfacePanel> : !profile ? <SurfacePanel className="border-red-200 text-red-600">Không thể tải hồ sơ. Vui lòng đăng nhập lại hoặc thử sau.</SurfacePanel> : <>
       <SurfacePanel className="overflow-hidden p-0 sm:p-0">
         <div className="bg-gradient-to-r from-stone-950 via-stone-900 to-rose-950 px-6 py-7 text-white sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
