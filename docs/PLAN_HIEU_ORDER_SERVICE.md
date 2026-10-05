@@ -821,13 +821,13 @@ Quy ước:
 | M1 | Nền service, security, cấu hình | [x] | Startup/health đạt; 3 JWT role test + 5 security HTTP test đạt |
 | M2 | Migration/entity/repository | [x] | Flyway V1→V8, Hibernate validation và 6/6 PostgreSQL constraint/locking test đã đạt trên database test riêng |
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
-| M4 | Client interface và mock adapter | [x] | Các boundary interface, HTTP adapter, timeout/error mapping, mock fixture và contract test đã đủ; E2E liên service theo dõi ở M10 |
+| M4 | Client interface và HTTP adapter | [x] | 7 remote boundary dùng HTTP adapter thật, có timeout/error/contract validation; E2E liên service theo dõi ở M10 |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
 | M6 | Create Order, idempotency, Saga | [x] | API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, recovery lease và PostgreSQL smoke V1→V8 đã đạt |
 | M7 | State machine và Payment event | [x] | Payment consumer/lifecycle đã đủ; broker thật xác nhận transition và duplicate event không tạo side effect lần hai |
 | M8 | API Customer/Admin | [x] | List/detail/timeline, filter/sort allow-list, ownership/IDOR, snapshot DTO, available action và command đã kiểm thử |
 | M9 | Outbox và RabbitMQ | [x] | Distributed claim/lease, retry/backoff/FAILED, route thường/PaymentDue, poison DLQ và broker recovery đã đạt trên RabbitMQ thật |
-| M10 | Integration/E2E và demo | [-] | 208 test mặc định + 6 PostgreSQL IT + RabbitMQ broker smoke đạt; còn E2E liên service |
+| M10 | Integration/E2E và demo | [-] | 208 test mặc định + 6 PostgreSQL IT + broker smoke + runtime local thật đạt; còn E2E liên service |
 
 ## 12. Thứ tự triển khai khuyến nghị
 
@@ -836,13 +836,13 @@ M0 Chốt contract tối thiểu
 → M1 Nền service và security
 → M2 Migration/entity/repository
 → M3 Checkout Session
-→ M4 Mock client
+→ M4 HTTP client và contract test
 → M5 Preview và tính tiền
 → M6 Create Order/Saga/idempotency
 → M7 State machine và Payment event
 → M8 API Order
 → M9 Outbox/RabbitMQ
-→ thay mock bằng tích hợp thật
+→ tích hợp E2E với các service thật
 → M10 Integration/E2E/demo
 ```
 
@@ -1055,3 +1055,15 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
   `processed_events=1`, history `=1`, Outbox `=1`.
 - Dừng broker giữa lúc có Outbox event khiến record giữ `PENDING` và tăng attempt/backoff; sau khi RabbitMQ lên
   lại, Order tự nối lại, topology tự phục hồi và event chuyển `PUBLISHED`. M7 và M9 được đánh dấu hoàn thành.
+
+#### 2026-10-05
+
+- Theo yêu cầu chỉ dùng thành phần thật, loại bỏ profile/adapter in-memory `standalone`; khôi phục sáu HTTP
+  component làm runtime duy nhất cho Identity, Cart, Catalog và Payment.
+- Thêm Dockerfile multi-stage, `compose.local.yml` và `order-local.ps1` cho PostgreSQL 16, RabbitMQ 3.13 và
+  Order Service. PostgreSQL/RabbitMQ có volume riêng; cổng host `5434/5674/15674` tránh xung đột dự án khác.
+- Docker Compose runtime đã chạy thật: cả ba container healthy; Flyway áp V1→V8, Hibernate validate thành công
+  và schema có 16 bảng. Script không tự ký JWT; API xác thực chờ token do Identity Service thật cấp.
+- RabbitMQ đã tạo `dynamicmart.events`, DLX, queue consumer và DLQ; Order consumer kết nối bằng AMQP thật.
+- `clean verify` trở lại baseline **208 test, 0 failure, 0 error, 0 skipped**. E2E Checkout/Create Order chưa
+  được ghi nhận cho đến khi Identity/Catalog/Cart/Payment thật cùng chạy và contract Payment fingerprint được sửa.

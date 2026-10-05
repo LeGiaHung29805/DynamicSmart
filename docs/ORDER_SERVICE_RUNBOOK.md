@@ -4,7 +4,7 @@
 >
 > **Phạm vi:** `services/order-service` và các điểm tích hợp mà Order sử dụng/cung cấp
 >
-> **Cập nhật:** 2026-10-03
+> **Cập nhật:** 2026-10-05
 >
 > **Nhánh triển khai:** `VanHieu/order-checkout-foundation`
 
@@ -31,6 +31,7 @@ Không dùng database `order_db` đang có dữ liệu để chạy integration 
 | HTTP contract test | Đã có cho Identity Address, Cart selection/confirmation/voucher, Catalog inventory và Payment/shipping |
 | RabbitMQ test binder | Đã xác minh consumer retry, event routing và payload contract trong test |
 | RabbitMQ broker thật | Đã đạt smoke test topology, outbound route, Payment consumer idempotency, poison DLQ và phục hồi sau mất broker |
+| Runtime local thật | Order + PostgreSQL 16 + RabbitMQ 3.13 đều healthy; Flyway V1→V8, API/JWT/database read và Rabbit consumer đã xác minh |
 | E2E nhiều service | Chưa hoàn tất |
 | Blocker ngoài Order | Payment `ShippingQuoteResponse` phải trả `requestFingerprint` canonical |
 
@@ -95,6 +96,43 @@ Copy-Item .\services\order-service\.env.example .\services\order-service\.env
 | Worker | `ORDER_SAGA_RECOVERY_*`, `ORDER_OUTBOX_*` nếu cần đổi mặc định |
 
 Ba giá trị `JWT_ISSUER`, `JWT_HMAC_SECRET_BASE64` và `INTERNAL_API_KEY` phải thống nhất với Identity, Gateway và các service liên quan. Không đưa secret thật vào log, ảnh demo hoặc tài liệu Git.
+
+### 4.3. Chạy Order Service local với hạ tầng thật
+
+Compose local chạy Order Service, PostgreSQL và RabbitMQ thật. Order luôn dùng HTTP adapter thật; không có runtime
+adapter giả cho Identity, Cart, Catalog hoặc Payment. Vì thế Checkout hoàn chỉnh chỉ chạy khi bốn service đó sẵn sàng.
+
+Từ `services/order-service`:
+
+```powershell
+.\scripts\order-local.ps1 up
+.\scripts\order-local.ps1 smoke
+```
+
+Lệnh `up` build và khởi động ba container. Lệnh `smoke` kiểm tra health, Flyway V8 và RabbitMQ thật; nó không tự
+tạo JWT hay dữ liệu nghiệp vụ. Muốn kiểm tra API xác thực, đặt `ORDER_LOCAL_ACCESS_TOKEN` bằng token do Identity
+Service thật cấp trước khi chạy `smoke`.
+
+Các endpoint/cổng local:
+
+| Thành phần | Địa chỉ |
+|---|---|
+| Order Service | `http://127.0.0.1:8084` |
+| Order health | `http://127.0.0.1:8084/actuator/health` |
+| PostgreSQL | `127.0.0.1:5434` |
+| RabbitMQ AMQP | `127.0.0.1:5674` |
+| RabbitMQ Management | `http://127.0.0.1:15674` (`order_user/order_password`) |
+
+Lệnh vận hành:
+
+```powershell
+.\scripts\order-local.ps1 status
+.\scripts\order-local.ps1 logs
+.\scripts\order-local.ps1 down
+```
+
+Docker Compose dùng credentials cố định chỉ dành cho local và bind port vào `127.0.0.1`. PostgreSQL và RabbitMQ
+đều có named volume, nên `down` không xóa dữ liệu. Không chạy `down -v` nếu muốn giữ `order_db`.
 
 ## 5. Các mức chạy kiểm thử
 
