@@ -51,6 +51,11 @@ public class PublicProductController {
         return ApiResponse.of(queryService.getBySlug(slug));
     }
 
+    @GetMapping("/products/id/{productId}")
+    public ApiResponse<ProductDetailResponse> detailById(@PathVariable UUID productId) {
+        return ApiResponse.of(queryService.getById(productId));
+    }
+
     @GetMapping("/variants/{variantId}")
     public ApiResponse<ProductVariantResponse> variant(@PathVariable UUID variantId) {
         return ApiResponse.of(queryService.getVariant(variantId));

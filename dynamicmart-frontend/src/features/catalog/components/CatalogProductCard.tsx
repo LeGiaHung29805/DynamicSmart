@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, BadgePercent, PackageCheck } from "lucide-react";
 import { formatVnd } from "@/components/common/Price";
+import { WishlistButton } from "@/features/wishlist";
 import type { ProductSummary } from "../types";
 
 export function CatalogProductCard({ product }: Readonly<{ product: ProductSummary }>) {
@@ -13,7 +14,8 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
 
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white transition duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-2xl hover:shadow-emerald-950/10">
-      <Link className="relative block aspect-[4/5] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200" href={`/products/${product.slug}`}>
+      <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
+        <Link className="block size-full" href={`/products/${product.slug}`}>
         {product.primaryImage?.imageUrl ? (
           // Ảnh catalog đến từ object storage do backend quản lý, nên không giới hạn hostname ở build time.
           // eslint-disable-next-line @next/next/no-img-element
@@ -21,7 +23,9 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
         ) : <span className="grid size-full place-items-center text-sm font-bold text-slate-400">DynamicMart</span>}
         <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-black tracking-wide text-slate-800 uppercase shadow-sm">{badge}</span>
         <span className="absolute right-3 bottom-3 grid size-10 translate-y-2 place-items-center rounded-full bg-slate-950 text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100"><ArrowUpRight className="size-4" /></span>
-      </Link>
+        </Link>
+        <WishlistButton className="absolute top-3 right-3" productId={product.id} />
+      </div>
       <div className="p-4 sm:p-5">
         <Link href={`/products/${product.slug}`}>
           <p className="text-[10px] font-black tracking-[0.16em] text-brand uppercase sm:text-xs">{product.category.name}</p>
