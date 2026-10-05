@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="950" viewBox="0 0 1600 950">
+  <defs>
+    <style>
+      .title{font:600 30px Arial,sans-serif;fill:#172033}.label{font:600 20px Arial,sans-serif;fill:#172033}.sub{font:400 16px Arial,sans-serif;fill:#48566a}.small{font:400 14px Arial,sans-serif;fill:#647286}.layer{fill:#fff;stroke:#53657a;stroke-width:2}.primary{fill:#eef4fa;stroke:#385a7a;stroke-width:2}.support{fill:#f5f6f8;stroke:#697889;stroke-width:2;stroke-dasharray:8 6}.external{fill:#fafafa;stroke:#53657a;stroke-width:2}.arrow{stroke:#53657a;stroke-width:2.5;fill:none;marker-end:url(#arrow)}.both{stroke:#53657a;stroke-width:2.5;fill:none;marker-start:url(#arrow);marker-end:url(#arrow)}.dash{stroke:#697889;stroke-width:2;fill:none;stroke-dasharray:8 6}.boundary{fill:none;stroke:#a3acb8;stroke-width:2;stroke-dasharray:10 7}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#53657a"/></marker>
+  </defs>
+  <rect width="1600" height="950" fill="#fff"/>
+  <text x="800" y="52" text-anchor="middle" class="title">Kiến trúc nhiều tầng của một Backend Service</text>
+
+  <rect x="70" y="105" width="300" height="105" rx="12" class="external"/>
+  <text x="220" y="148" text-anchor="middle" class="label">Client hoặc dịch vụ khác</text>
+  <text x="220" y="181" text-anchor="middle" class="sub">Gửi yêu cầu HTTP/JSON</text>
+
+  <rect x="430" y="88" width="870" height="720" rx="18" class="boundary"/>
+  <text x="455" y="120" class="small">PHẠM VI BACKEND SERVICE</text>
+
+  <rect x="570" y="145" width="570" height="105" rx="12" class="primary"/>
+  <text x="855" y="187" text-anchor="middle" class="label">Controller / API</text>
+  <text x="855" y="220" text-anchor="middle" class="sub">Tiếp nhận yêu cầu, kiểm tra đầu vào và trả phản hồi</text>
+
+  <rect x="570" y="315" width="570" height="115" rx="12" class="primary"/>
+  <text x="855" y="360" text-anchor="middle" class="label">Service / Application</text>
+  <text x="855" y="393" text-anchor="middle" class="sub">Thực hiện nghiệp vụ và điều phối trình tự xử lý</text>
+
+  <rect x="505" y="510" width="310" height="115" rx="12" class="layer"/>
+  <text x="660" y="555" text-anchor="middle" class="label">Domain / Entity</text>
+  <text x="660" y="588" text-anchor="middle" class="sub">Đối tượng và trạng thái nghiệp vụ</text>
+
+  <rect x="895" y="510" width="310" height="115" rx="12" class="layer"/>
+  <text x="1050" y="555" text-anchor="middle" class="label">Repository</text>
+  <text x="1050" y="588" text-anchor="middle" class="sub">Giao diện truy cập dữ liệu</text>
+
+  <path d="M925 690 C925 668 1175 668 1175 690 L1175 765 C1175 789 925 789 925 765 Z" class="external"/>
+  <ellipse cx="1050" cy="690" rx="125" ry="23" class="external"/>
+  <text x="1050" y="729" text-anchor="middle" class="label">PostgreSQL</text>
+  <text x="1050" y="758" text-anchor="middle" class="sub">Database của dịch vụ</text>
+
+  <rect x="1340" y="315" width="220" height="150" rx="12" class="layer"/>
+  <text x="1450" y="360" text-anchor="middle" class="label">Integration / Client</text>
+  <text x="1450" y="394" text-anchor="middle" class="sub">Chuyển đổi và trao đổi</text>
+  <text x="1450" y="419" text-anchor="middle" class="sub">dữ liệu bên ngoài</text>
+
+  <rect x="1340" y="540" width="220" height="135" rx="12" class="external"/>
+  <text x="1450" y="579" text-anchor="middle" class="label">Hệ thống bên ngoài</text>
+  <text x="1450" y="612" text-anchor="middle" class="sub">API dịch vụ · GHN</text>
+  <text x="1450" y="638" text-anchor="middle" class="sub">Cổng thanh toán · RabbitMQ</text>
+
+  <rect x="70" y="315" width="300" height="360" rx="14" class="support"/>
+  <text x="220" y="370" text-anchor="middle" class="label">Configuration &amp; Security</text>
+  <text x="220" y="415" text-anchor="middle" class="sub">Cấu hình ứng dụng</text>
+  <text x="220" y="451" text-anchor="middle" class="sub">Xác thực và phân quyền</text>
+  <text x="220" y="487" text-anchor="middle" class="sub">Xử lý ngoại lệ</text>
+  <text x="220" y="523" text-anchor="middle" class="sub">Thiết lập dùng chung</text>
+  <text x="220" y="572" text-anchor="middle" class="small">Áp dụng xuyên suốt</text>
+  <text x="220" y="597" text-anchor="middle" class="small">các tầng của dịch vụ</text>
+
+  <rect x="570" y="850" width="570" height="55" rx="8" class="support"/>
+  <text x="855" y="884" text-anchor="middle" class="sub">Các tầng trao đổi qua DTO, đối tượng miền và giao diện đã xác định</text>
+
+  <path d="M370 157H560" class="arrow"/>
+  <text x="465" y="143" text-anchor="middle" class="small">HTTP/JSON</text>
+  <path d="M855 250V305" class="arrow"/>
+  <text x="875" y="284" class="small">DTO / Command</text>
+  <path d="M735 430V500" class="both"/>
+  <text x="615" y="472" class="small">Đối tượng miền</text>
+  <path d="M975 430V500" class="arrow"/>
+  <text x="990" y="472" class="small">Repository interface</text>
+  <path d="M1050 625V658" class="arrow"/>
+  <text x="1070" y="651" class="small">JPA/JDBC</text>
+  <path d="M1140 372H1330" class="both"/>
+  <text x="1235" y="355" text-anchor="middle" class="small">HTTP / Event</text>
+  <path d="M1450 465V530" class="both"/>
+  <path d="M370 400H560" class="dash"/>
+  <path d="M370 495H495" class="dash"/>
+  <path d="M370 590H885" class="dash"/>
+</svg>

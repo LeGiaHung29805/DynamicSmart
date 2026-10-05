@@ -1,0 +1,289 @@
+{
+  "info": {
+    "_postman_id": "d93a25d1-24c5-4311-af86-e437bc15dc84",
+    "name": "DynamicMart - Payment & Shipping full flow",
+    "description": "Chạy folder theo thứ tự 01 -> 06. Collection dùng dữ liệu seed local và tự lưu token/ID vào environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Customer login thành công', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.environment.set('customerToken', body.accessToken);",
+            "pm.environment.set('customerId', body.user.id);",
+            "pm.test('Đúng role CUSTOMER', () => pm.expect(body.user.role).to.eql('CUSTOMER'));"
+          ] } }]
+        },
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Admin login thành công', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.environment.set('adminToken', body.accessToken);",
+            "pm.test('Đúng role ADMIN', () => pm.expect(body.user.role).to.eql('ADMIN'));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Locations",
+      "item": [
+        {
+          "name": "Danh sách tỉnh",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/locations/provinces" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('Có Hà Nội seed', () => pm.expect(pm.response.json().some(x => Number(x.id) === 201)).to.be.true);"
+          ] } }]
+        },
+        {
+          "name": "Danh sách phường theo tỉnh",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/locations/wards?provinceId={{provinceId}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+            "pm.test('Có Phường Phú Diễn seed', () => pm.expect(pm.response.json().some(x => Number(x.id) === 11007)).to.be.true);"
+          ] } }]
+        },
+        {
+          "name": "Validate địa chỉ nội bộ",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }],
+            "url": "{{baseUrl}}/api/v1/locations/validate?provinceId={{provinceId}}&wardId={{wardId}}"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Địa chỉ hợp lệ', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().valid).to.be.true; });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Shipping quote",
+      "item": [
+        {
+          "name": "Tạo báo giá GHN",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"provinceId\": {{provinceId}},\n  \"wardId\": {{wardId}},\n  \"items\": [\n    {\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": 1,\n      \"weightGrams\": 420,\n      \"lengthCm\": 18,\n      \"widthCm\": 10,\n      \"heightCm\": 6\n    }\n  ],\n  \"shippingDiscountVnd\": 0,\n  \"serviceCode\": null\n}" },
+            "url": "{{baseUrl}}/api/v1/shipping/quotes"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Tạo quote thành công', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.environment.set('quoteId', body.quoteId);",
+            "pm.environment.set('requestFingerprint', body.requestFingerprint);",
+            "pm.test('Phí không âm và fingerprint tồn tại', () => { pm.expect(body.feeVnd).to.be.at.least(0); pm.expect(body.requestFingerprint).to.not.be.empty; });"
+          ] } }]
+        },
+        {
+          "name": "Dùng báo giá đúng fingerprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"requestFingerprint\": \"{{requestFingerprint}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/shipping/quotes/{{quoteId}}/validate"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Quote được consume', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Dùng lại quote phải bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"requestFingerprint\": \"{{requestFingerprint}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/shipping/quotes/{{quoteId}}/validate"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Chống dùng quote hai lần', () => pm.response.to.have.status(409));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 - COD end-to-end",
+      "item": [
+        {
+          "name": "Tạo Payment COD",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "pm.environment.set('codOrderId', pm.variables.replaceIn('{{$guid}}'));",
+              "pm.environment.set('codCorrelationId', pm.variables.replaceIn('{{$guid}}'));"
+            ] } },
+            { "listen": "test", "script": { "exec": [
+              "pm.test('Tạo COD thành công', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json(); pm.environment.set('codPaymentId', body.id);",
+              "pm.test('COD POSTPAID đang PENDING', () => { pm.expect(body.method).to.eql('COD'); pm.expect(body.timing).to.eql('POSTPAID'); pm.expect(body.status).to.eql('PENDING'); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{codOrderId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"amountVnd\": {{amountVnd}},\n  \"timing\": \"POSTPAID\",\n  \"method\": \"COD\",\n  \"correlationId\": \"{{codCorrelationId}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/payments/order-context"
+          }
+        },
+        {
+          "name": "Khách xác nhận đã nhận hàng COD",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/v1/orders/{{codOrderId}}/confirm-received"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Đơn COD hoàn tất', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('COMPLETED'); });"] } }]
+        },
+        {
+          "name": "Xem attempts COD",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/v1/payments/{{codPaymentId}}/attempts"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Có COD attempt SUCCEEDED', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().some(x => x.provider === 'COD' && x.status === 'SUCCEEDED')).to.be.true; });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "05 - VNPay success callback",
+      "item": [
+        {
+          "name": "Tạo Payment VNPay PREPAID",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "pm.environment.set('vnpayOrderId', pm.variables.replaceIn('{{$guid}}'));",
+              "pm.environment.set('vnpayCorrelationId', pm.variables.replaceIn('{{$guid}}'));"
+            ] } },
+            { "listen": "test", "script": { "exec": [
+              "pm.test('Tạo VNPay thành công', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json(); pm.environment.set('vnpayPaymentId', body.id);",
+              "pm.test('Có redirect URL', () => pm.expect(body.redirectUrl).to.match(/^https?:\\/\\//));"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{vnpayOrderId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"amountVnd\": {{amountVnd}},\n  \"timing\": \"PREPAID\",\n  \"method\": \"VNPAY\",\n  \"correlationId\": \"{{vnpayCorrelationId}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/payments/order-context"
+          }
+        },
+        {
+          "name": "Lấy VNPay reference từ attempt",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/v1/payments/{{vnpayPaymentId}}/attempts"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Có VNPay attempt', () => pm.response.to.have.status(200));",
+            "const attempts = pm.response.json(); pm.expect(attempts.length).to.be.above(0);",
+            "pm.environment.set('vnpayReference', attempts[0].providerReference);"
+          ] } }]
+        },
+        {
+          "name": "Giả lập VNPay IPN hợp lệ",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "const fields = {vnp_Amount: String(Number(pm.environment.get('amountVnd')) * 100), vnp_ResponseCode: '00', vnp_TransactionNo: 'POSTMAN-' + Date.now(), vnp_TransactionStatus: '00', vnp_TxnRef: pm.environment.get('vnpayReference')};",
+              "const encode = value => encodeURIComponent(value).replace(/!/g, '%21').replace(/'/g, '%27').replace(/\\(/g, '%28').replace(/\\)/g, '%29').replace(/\\*/g, '%2A').replace(/%20/g, '%20');",
+              "const canonical = Object.keys(fields).sort().map(k => encode(k) + '=' + encode(fields[k])).join('&');",
+              "const secret = pm.environment.get('vnpayHashSecret');",
+              "if (!secret || secret.startsWith('PASTE_')) throw new Error('Hãy nhập vnpayHashSecret trong environment trước khi chạy request này.');",
+              "fields.vnp_SecureHash = CryptoJS.HmacSHA512(canonical, secret).toString(CryptoJS.enc.Hex);",
+              "pm.variables.set('vnpayIpnQuery', Object.keys(fields).map(k => encode(k) + '=' + encode(fields[k])).join('&'));"
+            ] } },
+            { "listen": "test", "script": { "exec": ["pm.test('VNPay xác nhận thành công', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().RspCode).to.eql('00'); });"] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/vnpay/ipn?{{vnpayIpnQuery}}" }
+        },
+        {
+          "name": "Customer đọc trạng thái bằng reference",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/v1/payments/return-status?reference={{vnpayReference}}"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Trạng thái authoritative là PAID', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('PAID'); });"] } }]
+        },
+        {
+          "name": "Admin xem callback audit",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/v1/payments/{{vnpayPaymentId}}/callback-audits"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Audit ghi signature và amount hợp lệ', () => { pm.response.to.have.status(200); const rows = pm.response.json(); pm.expect(rows.some(x => x.checksumValid === true && x.amountValid === true)).to.be.true; });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "06 - Negative/security cases",
+      "item": [
+        {
+          "name": "Shipping thiếu internal key -> 400/401",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"customerId\":\"{{customerId}}\",\"provinceId\":201,\"wardId\":11007,\"items\":[{\"variantId\":\"{{variantId}}\",\"quantity\":1,\"weightGrams\":420,\"lengthCm\":18,\"widthCm\":10,\"heightCm\":6}],\"shippingDiscountVnd\":0}" },
+            "url": "{{baseUrl}}/api/v1/shipping/quotes"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Không cho thiếu internal key', () => pm.expect([400,401]).to.include(pm.response.code));"] } }]
+        },
+        {
+          "name": "Customer gọi admin payments -> 403",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] },
+            "url": "{{baseUrl}}/api/v1/payments?page=0&size=20"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Gateway chặn CUSTOMER', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "Tạo PREPAID COD bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"orderId\":\"{{$guid}}\",\"customerId\":\"{{customerId}}\",\"amountVnd\":100000,\"timing\":\"PREPAID\",\"method\":\"COD\",\"correlationId\":\"{{$guid}}\"}" },
+            "url": "{{baseUrl}}/api/v1/payments/order-context"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Rule COD chỉ POSTPAID', () => pm.response.to.have.status(422));"] } }]
+        },
+        {
+          "name": "VNPay callback sai chữ ký bị từ chối",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/vnpay/ipn?vnp_TxnRef={{vnpayReference}}&vnp_Amount={{amountVnd}}00&vnp_ResponseCode=00&vnp_TransactionStatus=00&vnp_TransactionNo=INVALID-SIGNATURE&vnp_SecureHash=bad" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Sai signature trả RspCode 97', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().RspCode).to.eql('97'); });"] } }]
+        }
+      ]
+    }
+  ]
+}

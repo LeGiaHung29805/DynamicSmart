@@ -1,0 +1,972 @@
+P0001	[Normal]	TRƯỜNG ĐẠI HỌC TÀI NGUYÊN VÀ MÔI TRƯỜNG HÀ NỘI
+P0002	[Normal]	KHOA CÔNG NGHỆ THÔNG TIN
+P0011	[Normal]	BÁO CÁO BÀI TẬP LỚN
+P0012	[Normal]	THIẾT KẾ VÀ PHÁT TRIỂN NỀN TẢNG THƯƠNG MẠI ĐIỆN TỬ B2C ĐA NGHÀNH HÀNG THEO KIẾN TRÚC MICROSERVICES DỰA TRÊN RESTFUL API
+P0013	[Normal]	Giảng viên hướng dẫn: ThS. Trương Mạnh Đạt
+P0014	[Normal]	Nhóm sinh viên thực hiện:
+P0015	[Normal]	1. Lê Gia Hưng
+P0016	[Normal]	2. Nguyễn Văn Hiếu
+P0017	[Normal]	3. Trần Phương Thảo
+P0018	[Normal]	4. Vũ Mạnh Tiến
+P0019	[Normal]	5. Nguyễn Văn Tùng
+P0028	[Normal]	HÀ NỘI - 2026
+P0030	[Normal]	TRƯỜNG ĐẠI HỌC TÀI NGUYÊN VÀ MÔI TRƯỜNG HÀ NỘI
+P0031	[Normal]	KHOA CÔNG NGHỆ THÔNG TIN
+P0034	[Normal]	BÁO CÁO BÀI TẬP LỚN
+P0035	[Normal]	HỌC PHẦN: PHÁT TRIỂN PHẦN MỀM HƯỚNG DỊCH VỤ
+P0036	[Normal]	Tên đề tài: Thiết kế và phát triển nền tảng thương mại điện tử B2C đa ngành hàng theo kiến trúc Microservices dựa trên RESTful API.
+T0037	[TABLE 6x5]
+  R001	STT || Mã SV || Họ và tên || Điểm bằng số || Điểm bằng chữ
+  R002	1 || 2311063231 || Lê Gia Hưng ||  || 
+  R003	2 || 2311063323 || Nguyễn Văn Hiếu ||  || 
+  R004	3 || 2311063285 || Trần Phương Thảo ||  || 
+  R005	4 || 2311063253 || Vũ Mạnh Tiến ||  || 
+  R006	5 || 2311062413 || Nguyễn Văn Tùng ||  || 
+P0039	[Normal]	GIẢNG VIÊN CHẤM 1			GIẢNG VIÊN CHẤM 2
+P0048	[Normal]	HÀ NỘI - 2026
+P0049	[Normal]	LỜI CẢM ƠN
+P0050	[Normal]	Trong suốt quá trình học tập và thực hiện bài tập lớn môn Phân tích hệ thống thông tin với đề tài “Thiết kế và phát triển nền tảng thương mại điện tử B2C đa ngành hàng theo kiến trúc Microservices dựa trên RESTful API”, nhóm em đã có cơ hội được vận dụng những kiến thức đã học, đồng thời trau dồi thêm nhiều kinh nghiệm quý báu trong lĩnh vực phân tích và thiết kế hệ thống thông tin, phát triển phần mềm và xây dựng các ứng dụng quản lý trong thực tiễn.
+P0051	[Normal]	Để hoàn thành được bài báo cáo này, chúng em xin được bày tỏ lòng biết ơn sâu sắc nhất đến thầy giáo Trương Mạnh Đạt - người đã tận tâm hướng dẫn, luôn đồng hành và hỗ trợ em trong suốt quá trình thực hiện đề tài. Cô không chỉ truyền đạt kiến thức chuyên môn một cách tận tình, dễ hiểu, mà còn truyền cho em niềm say mê học hỏi, tinh thần trách nhiệm và sự cẩn trọng trong từng chi tiết. Sự chỉ bảo, động viên và định hướng của thầy chính là nguồn động lực lớn giúp chúng  em vượt qua những khó khăn trong quá trình nghiên cứu và hoàn thiện bài tập lớn này.
+P0052	[Normal]	Em cũng xin gửi lời cảm ơn chân thành đến Ban Giám hiệu Trường Đại học Tài nguyên và Môi trường Hà Nội, cùng các thầy cô trong khoa Công nghệ thông tin đã tận tâm giảng dạy, tạo mọi điều kiện thuận lợi để em có thể học tập, nghiên cứu và hoàn thành bài báo cáo.
+P0053	[Normal]	Chúng em đã dành nhiều tâm huyết, thời gian và công sức để hoàn thiện bài tập lớn này với tinh thần học hỏi nghiêm túc nhất, song do kiến thức và kinh nghiệm thực tế còn hạn chế, bài báo cáo chắc chắn vẫn không tránh khỏi những thiếu sót. Nhóm em rất mong nhận được sự thông cảm, góp ý và chỉ dẫn thêm từ cô giáo cũng như các thầy cô trong khoa để bài làm của em được hoàn thiện hơn nữa.
+P0054	[Normal]	Chúng em xin trân trọng cảm ơn!
+P0058	[Normal]	MỤC LỤC
+P0059	[toc 1]	LỜI CẢM ƠN	ii
+P0060	[toc 1]	MỤC LỤC	iii
+P0061	[toc 1]	MỞ ĐẦU	1
+P0062	[toc 2]	1. Lý do chọn đề tài	1
+P0063	[toc 3]	1.1 Đặt vấn đề	1
+P0064	[toc 3]	1.2 Thực trạng và yêu cầu	2
+P0065	[toc 3]	1.3 Ý nghĩa và định hướng giải pháp	2
+P0066	[toc 2]	2 Mục tiêu nghiên cứu	2
+P0067	[toc 3]	2.1 Mục tiêu tổng quát	2
+P0068	[toc 3]	2.2 Mục tiêu cụ thể	3
+P0069	[toc 2]	3 Phạm vi nghiên cứu	3
+P0070	[toc 2]	4 Phương pháp thực hiện	4
+P0071	[toc 1]	CHƯƠNG 1. CƠ SỞ LÝ THUYẾT CÔNG NGHỆ VÀ GIẢI PHÁP	5
+P0072	[toc 2]	1.1 Tổng quan về kiến trúc và mô hình phát triển	5
+P0073	[toc 3]	1.1.1 Mô hình client server dựa trên API	5
+P0074	[toc 3]	1.1.2 Kiến trúc hướng dịch vụ	6
+P0075	[toc 3]	1.1.3 Giao tiếp đồng bộ và bất đồng bộ	6
+P0076	[toc 2]	1.2 Nguyên lý thiết kế và tiêu thụ Web API	7
+P0077	[toc 2]	1.3 Công nghệ sử dụng	9
+P0078	[toc 1]	CHƯƠNG 2. PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG	10
+P0079	[toc 2]	2.1 Phân tích bài toán và yêu cầu hệ thống	10
+P0080	[toc 3]	2.1.1 Tác nhân	10
+P0081	[toc 3]	2.1.2 Dữ liệu cần quản lý	10
+P0082	[toc 3]	2.1.3. Yêu cầu chức năng trọng tâm	11
+P0083	[toc 3]	2.1.4 Yêu cầu phi chức năng	11
+P0084	[toc 2]	2.1.5. Yêu cầu phi chức năng	12
+P0085	[toc 2]	2.2 Mô hình hóa chức năng và nghiệp vụ	12
+P0086	[toc 3]	2.2.1 Sơ đồ Use Case	12
+P0087	[toc 3]	2.2.2 Đặc tả Use Case tạo đơn hàng	13
+P0088	[toc 3]	2.2.3 Sequence Diagram hoặc Activity Diagram	13
+P0089	[toc 2]	2.3 Thiết kế kiến trúc hệ thống	20
+P0090	[toc 2]	2.3.1. Kiến trúc tổng thể	21
+P0091	[toc 2]	2.3.2. Giao tiếp và triển khai các thành phần	23
+P0092	[toc 2]	2.3.3. Tổ chức các tầng bên trong Backend	23
+P0093	[toc 2]	2.4 Thiết kế dữ liệu	24
+P0094	[toc 3]	2.4.1. Các nhóm thực thể chính	24
+P0095	[toc 3]	2.4.2. Các thực thể và quan hệ cốt lõi	25
+P0096	[toc 3]	2.4.3. Sơ đồ ERD	26
+P0097	[toc 3]	2.4.4. Biểu đồ lớp	27
+P0098	[toc 2]	2.5 Thiết kế API dịch vụ	27
+P0099	[toc 3]	2.5.1 Quy ước API	27
+P0100	[toc 3]	2.5.2. Danh sách API	28
+P0101	[toc 2]	2.6 Thiết kế ứng dụng client	33
+P0102	[toc 3]	2.6.1. Thiết kế giao diện	33
+P0103	[toc 3]	2.6.2 Tích hợp API	35
+P0104	[toc 1]	CHƯƠNG 3. CÀI ĐẶT VÀ TRIỂN KHAI HỆ THỐNG	38
+P0105	[toc 2]	3.1 Môi trường và công cụ phát triển	38
+P0106	[toc 3]	3.1.1. Môi trường phát triển	38
+P0107	[toc 3]	3.1.2. Môi trường phát triển backend	40
+P0108	[toc 3]	3.1.3. Công cụ kiểm thử	40
+P0109	[toc 2]	3.2 Cài đặt Backend Service API	40
+P0110	[toc 3]	3.2.1 Cấu trúc dự án Backend	40
+P0111	[toc 3]	3.2.2 Hiện thực dữ liệu và truy cập cơ sở dữ liệu	42
+P0112	[toc 3]	3.2.3 Hiện thực API chính	43
+P0113	[toc 3]	3.2.4 Hiện thực xử lý nghiệp vụ	45
+P0114	[toc 2]	3.3 Cài đặt Client Application	47
+P0115	[toc 3]	3.3.1 Cấu trúc dự án Client	47
+P0116	[toc 3]	3.3.2 Giao diện và chức năng chính	48
+P0117	[toc 3]	3.3.3 Tích hợp Client với Backend API	50
+P0118	[toc 3]	3.3.4 Xử lý trạng thái và lỗi	52
+P0119	[toc 2]	3.4 Triển khai hệ thống	53
+P0120	[toc 3]	3.4.1. Mô hình triển khai cục bộ	53
+P0121	[toc 3]	3.4.2. Thứ tự khởi động	54
+P0122	[toc 3]	3.4.3. Cổng chạy các thành phần	54
+P0123	[toc 1]	CHƯƠNG 4. KIỂM THỬ VÀ ĐÁNH GIÁ HỆ THỐNG	56
+P0124	[toc 2]	4.1 Kiểm thử API	56
+P0125	[toc 3]	4.1.1. Kiểm thử hồ sơ, địa chỉ, giỏ hàng và voucher	56
+P0126	[toc 3]	4.1.2. Kiểm thử đặt hàng	56
+P0127	[toc 3]	4.1.3. Kiểm thử vận chuyển và thanh toán	57
+P0128	[toc 2]	4.2 Kiểm thử tích hợp Client API	58
+P0129	[toc 2]	4.3 Đánh giá mức độ đáp ứng	59
+P0130	[toc 1]	KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN	61
+P0131	[toc 2]	1. Kết luận	61
+P0132	[toc 2]	2.Hạn chế	61
+P0133	[toc 2]	3. Hướng phát triển	62
+P0134	[toc 1]	TÀI LIỆU THAM KHẢO	63
+P0135	[toc 1]	PHỤ LỤC A DANH SÁCH HÌNH ẢNH CẦN CHÈN	64
+P0136	[toc 1]	PHỤ LỤC B BIẾN MÔI TRƯỜNG QUAN TRỌNG	65
+P0144	[Heading 1]	MỞ ĐẦU
+P0145	[Heading 2]	1. Lý do chọn đề tài
+P0146	[Heading 3]	1.1 Đặt vấn đề
+P0147	[Normal]	Sự phát triển của thương mại điện tử làm cho một hệ thống bán hàng trực tuyến ngày nay không còn đơn thuần là nơi hiển thị sản phẩm và tiếp nhận đơn đặt hàng. Đằng sau một thao tác tưởng như đơn giản của khách hàng, chẳng hạn chọn sản phẩm, áp dụng mã giảm giá và tiến hành thanh toán, là sự phối hợp của nhiều nhóm nghiệp vụ có tính chất khác nhau: quản lý tài khoản và quyền truy cập, danh mục và biến thể sản phẩm, tồn kho, giỏ hàng, khuyến mãi, đặt hàng, tính phí giao hàng, thanh toán và tương tác sau mua.
+P0148	[Normal]	Khi các chức năng này được phát triển trong một khối ứng dụng có mức độ phụ thuộc cao, thay đổi ở một nghiệp vụ có thể kéo theo ảnh hưởng đến nhiều phần khác của hệ thống. Điều này đặc biệt rõ khi dự án có nhiều thành viên cùng phát triển: phạm vi mã nguồn dễ chồng lấn, trách nhiệm giữa các thành phần khó xác định, lỗi khó cô lập và quá trình tích hợp trở nên phức tạp. Vấn đề vì thế không chỉ nằm ở việc hệ thống có thực hiện được chức năng bán hàng hay không, mà còn nằm ở cách tổ chức kiến trúc để mỗi miền nghiệp vụ có ranh giới rõ ràng, dữ liệu có chủ sở hữu xác định và các thành phần vẫn có thể phối hợp thành một quy trình mua hàng thống nhất.
+P0149	[Normal]	Từ thực tế đó, đề tài “Thiết kế và phát triển nền tảng thương mại điện tử B2C đa ngành hàng theo kiến trúc Microservices dựa trên RESTful API” được lựa chọn nhằm nghiên cứu và hiện thực một hệ thống thương mại điện tử theo hướng phân tách trách nhiệm. DynamicMart được xác định là mô hình B2C trong đó một doanh nghiệp trực tiếp cung cấp hàng hóa cho nhiều khách hàng; hệ thống không mở rộng sang mô hình marketplace có nhiều người bán độc lập. Kiến trúc hiện hành được chia thành sáu dịch vụ nghiệp vụ gồm tài khoản, danh mục sản phẩm, giỏ hàng và khuyến mãi, đơn hàng, thanh toán và tính phí giao hàng, tương tác khách hàng và báo cáo; phía trước các dịch vụ là một API Gateway đóng vai trò điểm truy cập thống nhất.
+P0150	[Normal]	Việc lựa chọn Microservices trong đề tài không xuất phát từ mục tiêu chia nhỏ hệ thống một cách hình thức, mà từ nhu cầu tạo ra ranh giới trách nhiệm rõ ràng giữa các miền nghiệp vụ. Mỗi dịch vụ cần có khả năng phát triển, kiểm thử và thay đổi tương đối độc lập, đồng thời phải tuân thủ một hợp đồng giao tiếp chung để toàn hệ thống vẫn hoạt động như một sản phẩm thống nhất.
+P0151	[Heading 3]	1.2 Thực trạng và yêu cầu
+P0152	[Normal]	Trong quá trình mua hàng trực tuyến, nhiều thông tin như giá sản phẩm, số lượng còn lại, mức giảm giá, phí giao hàng hay trạng thái thanh toán có thể thay đổi liên tục. Vì vậy, hệ thống cần kiểm tra và xử lý các thông tin này ở phía máy chủ thay vì hoàn toàn phụ thuộc vào dữ liệu từ giao diện người dùng.
+P0153	[Normal]	Ngoài ra, hệ thống cần hạn chế các trường hợp như tạo đơn hàng nhiều lần do người dùng thao tác lặp, sử dụng mã giảm giá không hợp lệ, đặt mua sản phẩm đã hết hàng hoặc ghi nhận sai trạng thái thanh toán. Khách hàng cũng chỉ được phép xem và thao tác trên thông tin thuộc tài khoản của mình.
+P0154	[Normal]	Do đó, yêu cầu đặt ra không chỉ là xây dựng đầy đủ chức năng bán hàng mà còn phải bảo đảm quá trình từ chọn sản phẩm, đặt hàng đến thanh toán diễn ra chính xác, an toàn và ổn định.
+P0155	[Heading 3]	1.3 Ý nghĩa và định hướng giải pháp
+P0156	[Normal]	Đề tài lựa chọn kiến trúc Microservices để phân chia hệ thống thành các nhóm chức năng tương đối độc lập như tài khoản, sản phẩm, giỏ hàng, đơn hàng, thanh toán và tương tác khách hàng. Cách tổ chức này giúp từng thành viên có thể phát triển và kiểm thử phần việc của mình rõ ràng hơn, đồng thời hạn chế ảnh hưởng giữa các chức năng khi hệ thống được thay đổi hoặc mở rộng.
+P0157	[Normal]	Các dịch vụ trao đổi dữ liệu thông qua RESTful API, trong khi API Gateway đóng vai trò là điểm tiếp nhận chung giữa giao diện và hệ thống phía máy chủ. Một số thông tin cần xử lý giữa nhiều dịch vụ có thể được trao đổi thông qua cơ chế gửi nhận sự kiện.
+P0158	[Normal]	Thông qua đề tài, nhóm có cơ hội vận dụng kiến thức về phát triển web, thiết kế hệ thống, xây dựng API, xác thực người dùng, xử lý đơn hàng và tích hợp các dịch vụ thực tế vào một hệ thống thương mại điện tử hoàn chỉnh.
+P0159	[Heading 2]	2. Mục tiêu nghiên cứu
+P0160	[Heading 3]	2.1 Mục tiêu tổng quát
+P0161	[Normal]	Thiết kế và xây dựng nền tảng thương mại điện tử B2C đa ngành hàng theo kiến trúc Microservices dựa trên RESTful API, đáp ứng các chức năng cơ bản của quá trình mua bán trực tuyến và tạo nền tảng thuận lợi cho việc phát triển, kiểm thử và mở rộng hệ thống.
+P0162	[Heading 3]	2.2 Mục tiêu cụ thể
+P0163	[Normal]	Xây dựng hệ thống xác thực và phân quyền người dùng, đồng thời sử dụng API Gateway làm điểm truy cập chung cho ứng dụng.
+P0164	[Normal]	Phân chia các nhóm chức năng chính như tài khoản, sản phẩm, giỏ hàng, khuyến mãi, đơn hàng, thanh toán và tương tác khách hàng thành các thành phần có trách nhiệm rõ ràng.
+P0165	[Normal]	Xây dựng các chức năng phục vụ quá trình mua hàng như tìm kiếm sản phẩm, quản lý giỏ hàng, áp dụng khuyến mãi, đặt hàng, tính phí giao hàng và thanh toán.
+P0166	[Normal]	Xây dựng giao diện bằng Next.js, bảo đảm người dùng có thể thực hiện các thao tác mua hàng một cách thuận tiện và nhận được phản hồi rõ ràng khi tải dữ liệu, xảy ra lỗi hoặc hoàn thành thao tác.
+P0167	[Normal]	Kiểm thử các chức năng và luồng nghiệp vụ chính nhằm đánh giá mức độ hoạt động ổn định và đúng yêu cầu của hệ thống.
+P0168	[Heading 2]	3. Phạm vi nghiên cứu
+P0169	[Normal]	Đề tài tập trung xây dựng nền tảng thương mại điện tử theo mô hình B2C, trong đó một doanh nghiệp trực tiếp cung cấp nhiều loại sản phẩm cho khách hàng.
+P0170	[Normal]	Phạm vi chính gồm quản lý tài khoản và địa chỉ, quản lý danh mục và sản phẩm, quản lý tồn kho, giỏ hàng, khuyến mãi, đặt hàng, tính phí giao hàng, thanh toán và các giao diện dành cho khách hàng và quản trị viên.
+P0171	[Normal]	Hệ thống hỗ trợ các hình thức thanh toán như COD, VNPay và một số phương thức thanh toán trực tuyến khác phục vụ quá trình thử nghiệm và tích hợp. GHN được sử dụng để hỗ trợ lựa chọn địa chỉ và tính phí giao hàng.
+P0172	[Normal]	Đề tài chưa tập trung vào các chức năng mở rộng như mô hình nhiều người bán, nhiều kho hàng, chương trình khách hàng thân thiết, hoàn tiền tự động, quản lý vận đơn và theo dõi giao hàng chi tiết hoặc triển khai hệ thống trong môi trường thực tế quy mô lớn.
+P0173	[Heading 2]	4. Phương pháp thực hiện
+P0174	[Normal]	Trước hết, nhóm tiến hành khảo sát yêu cầu của một hệ thống thương mại điện tử và xác định các chức năng chính cần xây dựng. Từ đó, hệ thống được phân chia thành các nhóm nghiệp vụ phù hợp để thuận lợi cho việc thiết kế và phân công công việc.
+P0175	[Normal]	Tiếp theo, nhóm thiết kế giao diện trao đổi dữ liệu, cấu trúc hệ thống và các quy tắc xử lý cơ bản trước khi tiến hành lập trình. Các thành viên phát triển từng phần theo nhiệm vụ được phân công và thống nhất cách tích hợp giữa các thành phần.
+P0176	[Normal]	Trong quá trình phát triển, frontend được xây dựng bằng Next.js và kết nối với các dịch vụ phía máy chủ thông qua API Gateway. Các chức năng được kiểm tra riêng trước khi tích hợp thành các luồng hoàn chỉnh như đăng nhập, lựa chọn sản phẩm, thêm vào giỏ hàng, đặt hàng và thanh toán.
+P0177	[Normal]	Cuối cùng, nhóm tiến hành kiểm thử, sửa lỗi và đối chiếu kết quả với yêu cầu ban đầu để đánh giá mức độ hoàn thiện của hệ thống.
+P0179	[Heading 1]	CHƯƠNG 1. CƠ SỞ LÝ THUYẾT CÔNG NGHỆ VÀ GIẢI PHÁP
+P0180	[Heading 2]	1.1 Tổng quan về kiến trúc và mô hình phát triển
+P0181	[Normal]	Chương này trình bày các mô hình kiến trúc, nguyên lý thiết kế Web API và những công nghệ làm nền tảng cho hệ thống DynamicMart. Nội dung tập trung vào khái niệm, vai trò và lý do lựa chọn giải pháp; cấu trúc mã nguồn và quá trình hiện thực cụ thể được trình bày ở các chương sau.
+P0182	[Heading 3]	1.1.1 Mô hình Client–Server dựa trên API
+P0183	[Normal]	Client–Server là mô hình trong đó hệ thống được chia thành hai nhóm thành phần chính. Client cung cấp giao diện, tiếp nhận thao tác và gửi yêu cầu; Server tiếp nhận yêu cầu, xử lý nghiệp vụ, truy cập dữ liệu và trả kết quả.
+P0184	[Normal]	Trong mô hình này, Client không truy cập trực tiếp cơ sở dữ liệu. Mọi thao tác liên quan đến tài khoản, sản phẩm, giỏ hàng, đơn hàng hoặc thanh toán đều được thực hiện thông qua API do backend cung cấp.
+P0185	[Normal]	Mô hình Client–Server giúp phân tách trách nhiệm rõ ràng:
+P0186	[Normal]	- Client tập trung vào giao diện và trải nghiệm sử dụng.
+P0187	[Normal]	- Backend tập trung vào quy tắc nghiệp vụ và tính toàn vẹn của dữ liệu.
+P0188	[Normal]	- Cơ sở dữ liệu được bảo vệ phía sau backend.
+P0189	[Normal]	- Client và backend có thể được phát triển, kiểm thử và triển khai tương đối độc lập.
+P0190	[Normal]	DynamicMart áp dụng mô hình này với ứng dụng web làm Client và các dịch vụ backend làm Server. Hai phía trao đổi dữ liệu chủ yếu thông qua HTTP/HTTPS và định dạng JSON.
+P0191	[Normal]	Kiến trúc dựa trên API tổ chức việc giao tiếp giữa các thành phần thông qua những hợp đồng đã được xác định. Hợp đồng API quy định địa chỉ tài nguyên, phương thức HTTP, dữ liệu gửi lên, cấu trúc phản hồi và cách biểu diễn lỗi.
+P0192	[Normal]	API giữ vai trò trung gian giữa Client và backend. Client không cần biết dữ liệu được lưu trong bảng nào hoặc nghiệp vụ được xử lý bởi lớp nào. Client chỉ cần gửi request đúng hợp đồng và xử lý response nhận được.
+P0193	[Normal]	Việc sử dụng API đem lại một số lợi ích:
+P0194	[Normal]	- Giảm sự phụ thuộc trực tiếp giữa giao diện và cách cài đặt backend.
+P0195	[Normal]	- Cho phép thay đổi giao diện mà không làm thay đổi cơ sở dữ liệu.
+P0196	[Normal]	- Tạo điều kiện sử dụng chung backend cho nhiều loại Client.
+P0197	[Normal]	- Thuận lợi cho kiểm thử, phân quyền và quản lý phiên bản.
+P0198	[Normal]	- Giúp các dịch vụ trao đổi dữ liệu theo cấu trúc thống nhất.
+P0199	[Normal]	Trong DynamicMart, API được sử dụng cho cả giao tiếp giữa Client với backend và một số giao tiếp đồng bộ, bất đồng bộ giữa các dịch vụ.
+P0200	[Heading 3]	1.1.2 Kiến trúc hướng dịch vụ
+P0201	[Normal]	Kiến trúc hướng dịch vụ tổ chức hệ thống thành các đơn vị phần mềm tương ứng với từng phạm vi nghiệp vụ. Mỗi dịch vụ cung cấp chức năng thông qua một hợp đồng giao tiếp rõ ràng và hạn chế phụ thuộc vào cách cài đặt nội bộ của dịch vụ khác.
+P0202	[Normal]	Một dịch vụ thường có các đặc điểm:
+P0203	[Normal]	- Phụ trách một nhóm nghiệp vụ xác định.
+P0204	[Normal]	- Che giấu dữ liệu và logic xử lý nội bộ.
+P0205	[Normal]	- Cung cấp chức năng thông qua API hoặc sự kiện.
+P0206	[Normal]	- Có thể được phát triển và kiểm thử tương đối độc lập.
+P0207	[Normal]	- Không truy cập trực tiếp dữ liệu thuộc quyền sở hữu của dịch vụ khác.
+P0208	[Normal]	Cách tổ chức này phù hợp với những hệ thống có nhiều nhóm nghiệp vụ như tài khoản, sản phẩm, giỏ hàng, đơn hàng và thanh toán. Mỗi nhóm có dữ liệu, quy tắc và tốc độ thay đổi khác nhau nên cần được phân chia trách nhiệm rõ ràng.
+P0209	[Heading 3]	1.1.3 Giao tiếp đồng bộ và bất đồng bộ
+P0210	[Normal]	Các thành phần trong hệ thống có thể giao tiếp theo hai cơ chế: đồng bộ và bất đồng bộ.
+P0211	[Normal]	Giao tiếp đồng bộ được sử dụng khi thành phần gửi yêu cầu cần nhận kết quả ngay để tiếp tục xử lý. REST API là hình thức giao tiếp đồng bộ chính trong hệ thống. Ví dụ, việc lấy thông tin sản phẩm hoặc kiểm tra địa chỉ cần trả kết quả trực tiếp cho bước tiếp theo.
+P0212	[Normal]	Giao tiếp bất đồng bộ được sử dụng khi một nghiệp vụ có thể thông báo kết quả thông qua sự kiện mà không yêu cầu dịch vụ nhận phải xử lý cùng thời điểm. Message Queue giúp lưu giữ và chuyển sự kiện giữa các dịch vụ.
+P0213	[Normal]	Việc kết hợp hai cơ chế đem lại sự cân bằng:
+P0214	[Normal]	- REST phù hợp với truy vấn và xử lý cần phản hồi ngay.
+P0215	[Normal]	- Message Queue giúp giảm phụ thuộc thời gian giữa các dịch vụ.
+P0216	[Normal]	- Sự kiện hỗ trợ retry khi dịch vụ nhận tạm thời chưa sẵn sàng.
+P0217	[Normal]	- Các nghiệp vụ dài có thể được chia thành nhiều bước xử lý.
+P0218	[Normal]	DynamicMart sử dụng REST API cho những thao tác cần phản hồi trực tiếp và RabbitMQ cho các sự kiện nghiệp vụ phù hợp với xử lý bất đồng bộ.
+P0219	[Heading 3]	1.1.4. Kiến trúc Microservices
+P0220	[Normal]	Microservices là một cách triển khai kiến trúc hướng dịch vụ, trong đó hệ thống được chia thành nhiều ứng dụng có phạm vi nhỏ và tập trung vào từng miền nghiệp vụ. Mỗi dịch vụ có thể sở hữu dữ liệu, cấu hình và vòng đời triển khai riêng.
+P0221	[Normal]	Không phải mọi dự án Spring Boot có nhiều package đều là Microservices. Để được xem là kiến trúc Microservices, các thành phần cần có ranh giới nghiệp vụ tương đối độc lập, giao tiếp qua hợp đồng và không dùng chung trực tiếp tầng dữ liệu nội bộ.
+P0222	[Normal]	DynamicMart áp dụng kiến trúc hướng dịch vụ theo định hướng Microservices vì:
+P0223	[Normal]	- Các nhóm nghiệp vụ được triển khai thành những dịch vụ riêng.
+P0224	[Normal]	- Mỗi dịch vụ sở hữu cơ sở dữ liệu thuộc phạm vi của mình.
+P0225	[Normal]	- Client truy cập hệ thống thông qua một cổng API thống nhất.
+P0226	[Normal]	- Các dịch vụ giao tiếp bằng REST API hoặc sự kiện.
+P0227	[Normal]	- Một dịch vụ không truy vấn trực tiếp cơ sở dữ liệu của dịch vụ khác.
+P0228	[Normal]	Kiến trúc này giúp hệ thống thể hiện rõ tinh thần của phát triển phần mềm hướng dịch vụ. Tuy nhiên, nó cũng làm tăng yêu cầu về cấu hình, kiểm thử tích hợp, xử lý lỗi và duy trì tính nhất quán giữa các dịch vụ.
+P0229	[Heading 2]	1.2. Nguyên lý thiết kế và tiêu thụ Web API
+P0230	[Heading 3]	1.2.1. RESTful Web Service
+P0231	[Normal]	REST là phong cách kiến trúc trong đó dữ liệu và chức năng được biểu diễn dưới dạng tài nguyên. Mỗi tài nguyên được xác định bằng một URI và được thao tác thông qua các phương thức HTTP.
+P0232	[Normal]	RESTful API không đặt trọng tâm vào tên hành động trong endpoint mà tập trung vào tài nguyên. Chẳng hạn, sản phẩm, giỏ hàng, địa chỉ và đơn hàng được biểu diễn thành những nhóm tài nguyên riêng.
+P0233	[Normal]	Các nguyên tắc REST được áp dụng gồm:
+P0234	[Normal]	- Tài nguyên được xác định bằng URI rõ ràng.
+P0235	[Normal]	- Endpoint ưu tiên sử dụng danh từ
+P0236	[Normal]	- Phương thức HTTP thể hiện loại thao tác.
+P0237	[Normal]	- Request chứa đủ thông tin để backend xử lý.
+P0238	[Normal]	- Response sử dụng status code phù hợp.
+P0239	[Normal]	- Dữ liệu trao đổi được biểu diễn thống nhất bằng JSON.
+P0240	[Normal]	- Client và backend được tách biệt về trách nhiệm.
+P0241	[Heading 3]	1.2.2. Sử dụng phương thức HTTP
+P0242	[Normal]	Các phương thức HTTP được sử dụng theo ý nghĩa của thao tác:
+T0243	[TABLE 6x2]
+  R001	Phương thức || Mục đích
+  R002	GET || Truy vấn một tài nguyên hoặc danh sách tài nguyên
+  R003	POST || Tạo tài nguyên hoặc thực hiện một nghiệp vụ
+  R004	PUT || Cập nhật đầy đủ thông tin của tài nguyên
+  R005	PATCH || Cập nhật một phần hoặc thay đổi trạng thái
+  R006	DELETE || Xóa hoặc vô hiệu hóa tài nguyên
+P0244	[Normal]	Việc sử dụng đúng phương thức giúp hợp đồng API dễ hiểu và giảm tình trạng endpoint được đặt tên theo hành động không nhất quán.
+P0245	[Heading 3]	1.2.3. Sử dụng HTTP Status Code
+P0246	[Normal]	Status code phản ánh kết quả tổng quát của request:
+T0247	[TABLE 12x2]
+  R001	Status Code || Ý nghĩa sử dụng
+  R002	200 OK || Yêu cầu được xử lý thành công
+  R003	201 Created || Tài nguyên được tạo thành công
+  R004	204 No Content || Xử lý thành công nhưng không có nội dung trả về
+  R005	400 Bad Request || Dữ liệu hoặc tham số không hợp lệ
+  R006	401 Unauthorized || Chưa xác thực hoặc phiên không còn hợp lệ
+  R007	403 Forbidden || Đã xác thực nhưng không có quyền
+  R008	404 Not Found || Không tìm thấy tài nguyên
+  R009	409 Conflict || Xung đột trạng thái hoặc dữ liệu
+  R010	422 Unprocessable Entity || Dữ liệu đúng định dạng nhưng vi phạm nghiệp vụ
+  R011	500 Internal Server Error || Lỗi không dự kiến tại máy chủ
+  R012	503 Service Unavailable || Dịch vụ tạm thời chưa sẵn sàng
+P0248	[Normal]	Client không chỉ dựa vào nội dung thông báo mà còn sử dụng status code và mã lỗi để lựa chọn cách phản hồi phù hợp.
+P0249	[Heading 2]	1.3 Công nghệ sử dụng
+T0250	[TABLE 16x3]
+  R001	Thành phần || Công nghệ || Vai trò
+  R002	Backend || Java, Spring Boot || Xây dựng dịch vụ, REST API và xử lý nghiệp vụ
+  R003	API Gateway || Spring Cloud Gateway || Xác thực và định tuyến request
+  R004	Truy cập dữ liệu || Spring Data JPA || Ánh xạ Entity và thao tác với cơ sở dữ liệu
+  R005	Cơ sở dữ liệu || PostgreSQL || Lưu trữ dữ liệu của các dịch vụ
+  R006	Quản lý migration || Flyway || Quản lý phiên bản cấu trúc dữ liệu
+  R007	Giao tiếp sự kiện || RabbitMQ || Truyền sự kiện bất đồng bộ
+  R008	Xác thực || Spring Security, JWT || Xác thực và phân quyền API
+  R009	Client || Next.js, React || Xây dựng ứng dụng web và tiêu thụ API
+  R010	Ngôn ngữ Client || TypeScript || Kiểm tra kiểu và giảm lỗi khi tích hợp
+  R011	Trình bày giao diện || Tailwind CSS || Xây dựng bố cục và giao diện đáp ứng
+  R012	Quản lý backend || Maven || Quản lý thư viện và quá trình build
+  R013	Quản lý Client || npm || Quản lý thư viện frontend
+  R014	Kiểm thử API || Postman, Swagger || Gửi request và kiểm tra hợp đồng API
+  R015	Quản lý mã nguồn || Git || Theo dõi thay đổi và phối hợp phát triển
+  R016	Đóng gói || Docker || Chuẩn hóa môi trường chạy
+P0252	[Heading 1]	CHƯƠNG 2. PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
+P0253	[Heading 2]	2.1 Phân tích bài toán và yêu cầu hệ thống
+P0254	[Normal]	DynamicMart được xây dựng nhằm hỗ trợ quá trình mua bán trực tuyến, từ khi khách hàng tìm kiếm sản phẩm đến khi hoàn tất đặt hàng và thanh toán. Hệ thống cần cung cấp trải nghiệm thuận tiện cho người mua, đồng thời giúp quản trị viên kiểm soát sản phẩm, tồn kho, khuyến mãi và các giao dịch phát sinh. Bên cạnh các chức năng thông thường, hệ thống phải bảo đảm thông tin về giá, số lượng tồn và trạng thái đơn hàng được xử lý chính xác trong suốt quá trình mua hàng.
+P0255	[Heading 3]	2.1.1 Tác nhân
+T0256	[TABLE 5x2]
+  R001	Tác nhân || Nhu cầu chính
+  R002	Khách hàng || Quản lý thông tin cá nhân và địa chỉ nhận hàng; thêm, cập nhật hoặc xóa sản phẩm trong giỏ hàng; sử dụng mã giảm giá; kiểm tra thông tin đơn hàng; lựa chọn phương thức thanh toán; đặt hàng và xem kết quả thanh toán.
+  R003	Quản trị viên || Quản lý người dùng, danh mục, sản phẩm, biến thể, hình ảnh, số lượng tồn kho và chương trình khuyến mãi; theo dõi giao dịch thanh toán và tình trạng hoạt động của các chức năng quản trị.
+  R004	Cổng thanh toán || Tiếp nhận yêu cầu thanh toán, xử lý giao dịch và gửi kết quả về hệ thống.
+  R005	Dịch vụ giao hàng || Cung cấp thông tin địa giới và ước tính phí vận chuyển theo địa chỉ nhận hàng.
+P0258	[Heading 3]	2.1.2 Dữ liệu cần quản lý
+P0259	[Normal]	DynamicMart cần quản lý các nhóm dữ liệu chính sau:
+P0260	[Normal]	- Thông tin tài khoản, hồ sơ cá nhân và địa chỉ nhận hàng.
+P0261	[Normal]	- Danh mục, sản phẩm, biến thể, hình ảnh, giá bán và số lượng tồn kho.
+P0262	[Normal]	- Giỏ hàng và các sản phẩm được khách hàng lựa chọn.
+P0263	[Normal]	- Chương trình khuyến mãi, mã giảm giá và điều kiện áp dụng.
+P0264	[Normal]	- Phiên đặt hàng, đơn hàng, sản phẩm trong đơn và lịch sử trạng thái.
+P0265	[Normal]	- Thông tin thanh toán, kết quả giao dịch và phí vận chuyển.
+P0266	[Normal]	- Đánh giá, danh sách yêu thích và thông báo khi các chức năng này được hoàn thiện.
+P0267	[Normal]	Dữ liệu của đơn hàng cần được lưu lại theo thời điểm khách đặt mua. Việc thay đổi tên sản phẩm, giá bán hoặc địa chỉ sau đó không được làm thay đổi nội dung của đơn hàng đã phát sinh.
+P0268	[Heading 3]	2.1.3. Yêu cầu chức năng trọng tâm
+P0269	[Normal]	Các chức năng quan trọng của hệ thống tập trung vào bốn nhóm nghiệp vụ:
+P0270	[Normal]	- Quản lý tài khoản và xác thực người dùng.
+P0271	[Normal]	- Quản lý danh mục, sản phẩm, biến thể và tồn kho.
+P0272	[Normal]	- Hỗ trợ giỏ hàng, voucher, đặt hàng và tính phí giao hàng.
+P0273	[Normal]	- Xử lý thanh toán và cung cấp các chức năng quản trị cần thiết.
+P0274	[Normal]	Trong đó, luồng mua hàng là nghiệp vụ trung tâm. Khách hàng lựa chọn sản phẩm, cập nhật giỏ hàng, cung cấp địa chỉ nhận hàng, áp dụng voucher nếu đủ điều kiện, kiểm tra lại chi phí và xác nhận đặt hàng. Hệ thống chỉ tạo đơn khi toàn bộ thông tin cần thiết đã hợp lệ.
+P0275	[Heading 3]	2.1.4 Yêu cầu phi chức năng
+P0276	[Normal]	Các quy tắc nghiệp vụ quan trọng gồm:
+P0277	[Normal]	- Khách hàng không được đặt số lượng sản phẩm vượt quá số lượng hiện còn trong kho.
+P0278	[Normal]	- Giá bán, mức giảm, phí vận chuyển và tổng tiền phải do hệ thống tính toán; dữ liệu gửi từ giao diện người dùng chỉ mang tính chất lựa chọn.
+P0279	[Normal]	- Một đơn hàng chỉ được tạo khi có đầy đủ sản phẩm hợp lệ, địa chỉ nhận hàng, phương thức thanh toán và các thông tin bắt buộc khác.
+P0280	[Normal]	- Địa chỉ sử dụng để đặt hàng phải thuộc tài khoản của khách hàng đang thực hiện giao dịch.
+P0281	[Normal]	- Mã giảm giá chỉ được áp dụng khi còn hiệu lực, còn lượt sử dụng và đơn hàng đáp ứng đầy đủ điều kiện của chương trình.
+P0282	[Normal]	- Sản phẩm và mã giảm giá chỉ được giữ trong một khoảng thời gian nhất định trong quá trình đặt hàng. Khi hết thời gian hoặc giao dịch thất bại, phần đã giữ phải được hoàn lại.
+P0283	[Normal]	- Mỗi yêu cầu đặt hàng chỉ được tạo ra một đơn hàng, kể cả khi khách hàng nhấn nút xác nhận nhiều lần hoặc hệ thống nhận lại cùng một kết quả thanh toán.
+P0284	[Normal]	- Đơn hàng thanh toán trực tuyến chỉ được xác nhận thanh toán thành công khi kết quả trả về hợp lệ và số tiền khớp với đơn hàng.
+P0285	[Normal]	- Khách hàng chỉ được xem và chỉnh sửa dữ liệu thuộc tài khoản của mình. Quản trị viên chỉ được thực hiện các chức năng phù hợp với quyền được cấp.
+P0286	[Normal]	- Những thông tin đã ghi nhận trong đơn hàng, như tên sản phẩm, giá bán, địa chỉ và phí giao hàng, phải được giữ nguyên để bảo đảm tính chính xác của lịch sử giao dịch.
+P0287	[Normal]	Những quy tắc trên thể hiện phần logic nghiệp vụ cốt lõi của DynamicMart, giúp hệ thống không chỉ dừng lại ở các thao tác thêm, sửa, xóa dữ liệu.
+P0288	[Heading 2]	2.1.5. Yêu cầu phi chức năng
+P0289	[Normal]	Ngoài các chức năng nghiệp vụ, hệ thống cần đáp ứng những yêu cầu sau:
+P0290	[Normal]	- Tính chính xác: giá trị đơn hàng, số lượng tồn kho, voucher và trạng thái thanh toán phải được xử lý nhất quán.
+P0291	[Normal]	- Bảo mật: thông tin tài khoản và giao dịch phải được bảo vệ; người dùng chỉ được truy cập những chức năng và dữ liệu thuộc phạm vi quyền hạn.
+P0292	[Normal]	- Khả năng truy vết: các thay đổi quan trọng liên quan đến đơn hàng và thanh toán cần được ghi nhận để hỗ trợ kiểm tra khi xảy ra sai lệch.
+P0293	[Normal]	- Hiệu năng: các thao tác thường dùng như xem sản phẩm, cập nhật giỏ hàng và kiểm tra đơn hàng cần có thời gian phản hồi phù hợp.
+P0294	[Normal]	- Khả năng sử dụng: giao diện cần hiển thị tốt trên nhiều kích thước màn hình và thông báo rõ trạng thái đang xử lý, không có dữ liệu hoặc xảy ra lỗi.
+P0295	[Normal]	- Khả năng mở rộng và bảo trì: các nhóm chức năng cần được tổ chức rõ ràng để có thể sửa đổi hoặc bổ sung mà hạn chế ảnh hưởng đến phần còn lại của hệ thống.
+P0296	[Heading 2]	2.2. Mô hình hóa chức năng và nghiệp vụ
+P0297	[Heading 3]	2.2.1. Sơ đồ Use Case
+P0298	[Normal]	Sơ đồ tổng quát thể hiện ba nhóm chính: khách hàng và quản trị viên; hai hệ thống ngoài là cổng thanh toán và Đơn vị vận chuyển.
+P0299	[Heading 3]	2.2.2. Đặc tả Use Case
+T0300	[TABLE 6x2]
+  R001	Thuộc tính || Mô tả
+  R002	Tác nhân || Khách hàng đã đăng nhập
+  R003	Điều kiện || Có lựa chọn mua hợp lệ, địa chỉ thuộc tài khoản và phiên checkout còn hạn
+  R004	Luồng chính || Tạo hoặc cập nhật phiên; chọn địa chỉ và voucher; lấy preview; gửi Idempotency-Key; reserve voucher và tồn kho; tạo đơn; khởi tạo nghĩa vụ thanh toán
+  R005	Ngoại lệ || Hết hàng, voucher không còn hợp lệ, quote hết hạn, phiên hết hạn hoặc dịch vụ phụ thuộc trả lỗi
+  R006	Kết quả || Đơn được tạo đúng một lần; reservation được giữ hoặc bù trừ theo kết quả
+P0302	[Heading 3]	2.2.3. Sequence Diagram và Activity Diagram
+P0303	[Normal]	a) Chức năng Quản lý giỏ hàng
+P0304	[Normal]	- Biểu đồ hoạt động
+P0306	[Normal]	- Biểu đồ tuần tự
+P0308	[Normal]	b) Chức năng Tạo đơn hàng
+P0309	[Normal]	- Biểu đồ hoạt động
+P0311	[Normal]	- Biểu đồ tuần tự
+P0313	[Normal]	c) Chức năng Thanh toán VNPay
+P0314	[Normal]	- Biểu đồ hoạt động
+P0316	[Normal]	- Biểu đồ tuần tự
+P0319	[Heading 2]	2.3 Thiết kế kiến trúc hệ thống
+P0320	[Normal]	DynamicMart được thiết kế theo kiến trúc hướng dịch vụ. Thay vì tập trung toàn bộ chức năng vào một ứng dụng duy nhất, hệ thống được chia thành các thành phần độc lập theo từng nhóm nghiệp vụ như tài khoản, sản phẩm, giỏ hàng, đơn hàng và thanh toán. Cách tổ chức này giúp xác định rõ trách nhiệm của mỗi thành phần, hạn chế sự phụ thuộc giữa các chức năng và thuận tiện hơn khi bảo trì hoặc mở rộng hệ thống.
+P0321	[Heading 2]	2.3.1. Kiến trúc tổng thể
+P0322	[Normal]	Kiến trúc của DynamicMart gồm năm nhóm thành phần chính: ứng dụng khách, API Gateway, các dịch vụ nghiệp vụ, hệ thống lưu trữ dữ liệu và các dịch vụ bên ngoài.
+P0323	[Normal]	Ứng dụng khách được xây dựng bằng Next.js, cung cấp giao diện cho khách hàng và quản trị viên. Thành phần này đảm nhận việc hiển thị dữ liệu, tiếp nhận thao tác của người dùng và gửi yêu cầu đến hệ thống. Các quy tắc quan trọng liên quan đến giá bán, tồn kho, voucher, đơn hàng và thanh toán vẫn được kiểm tra tại Backend để bảo đảm tính chính xác.
+P0324	[Normal]	API Gateway là điểm tiếp nhận chung cho các yêu cầu từ ứng dụng khách. Gateway xác định dịch vụ cần xử lý, chuyển tiếp yêu cầu và kiểm tra thông tin xác thực đối với các chức năng được bảo vệ. Nhờ đó, Client không cần giao tiếp trực tiếp với từng dịch vụ riêng lẻ.
+P0325	[Normal]	Phần Backend gồm sáu dịch vụ nghiệp vụ:
+P0326	[List Paragraph]	Quản lý tài khoản, đăng nhập, hồ sơ và địa chỉ.
+P0327	[List Paragraph]	Quản lý danh mục, sản phẩm, biến thể, hình ảnh và tồn kho.
+P0328	[List Paragraph]	Quản lý giỏ hàng, khuyến mãi, voucher và thông tin chuẩn bị đặt hàng.
+P0329	[List Paragraph]	Quản lý phiên đặt hàng, tạo đơn và trạng thái đơn hàng.
+P0330	[List Paragraph]	Xử lý thanh toán, kết quả giao dịch và phí vận chuyển.
+P0331	[List Paragraph]	Quản lý đánh giá, danh sách yêu thích và thông báo.
+P0332	[Normal]	Mỗi dịch vụ quản lý một cơ sở dữ liệu PostgreSQL riêng. Dịch vụ chỉ trực tiếp thay đổi dữ liệu thuộc phạm vi nghiệp vụ của mình; khi cần thông tin từ dịch vụ khác, hệ thống thực hiện giao tiếp thông qua API hoặc sự kiện. Cách tổ chức này giúp dữ liệu có chủ sở hữu rõ ràng và tránh việc nhiều dịch vụ cùng thay đổi một bảng dữ liệu.
+P0333	[Normal]	RabbitMQ được sử dụng cho các thông tin không yêu cầu phản hồi ngay, chẳng hạn thông báo về nghĩa vụ thanh toán hoặc kết quả của một giao dịch. Ngoài ra, DynamicMart kết nối với cổng thanh toán và dịch vụ GHN để hỗ trợ thanh toán trực tuyến, tra cứu địa giới và tính phí giao hàng.
+T0335	[TABLE 12x2]
+  R001	Thành phần || Trách nhiệm
+  R002	Next.js Client || Cung cấp giao diện cửa hàng, tài khoản, giỏ hàng, đặt hàng, thanh toán và quản trị; tiếp nhận thao tác và hiển thị kết quả cho người dùng.
+  R003	API Gateway || Tiếp nhận yêu cầu từ Client, định tuyến đến dịch vụ phù hợp và kiểm tra thông tin xác thực đối với các tài nguyên được bảo vệ.
+  R004	Identity Service || Quản lý tài khoản, đăng nhập, phiên làm việc, hồ sơ cá nhân, địa chỉ nhận hàng và quyền của người dùng.
+  R005	Catalog Service || Quản lý danh mục, thuộc tính, sản phẩm, biến thể, hình ảnh, giá bán và số lượng tồn kho.
+  R006	Cart Service || Quản lý giỏ hàng, chương trình giảm giá, voucher và dữ liệu phục vụ quá trình kiểm tra đơn hàng.
+  R007	Order Service || Quản lý phiên đặt hàng, tổng hợp thông tin mua hàng, tạo đơn và điều phối các bước giữ tồn kho, voucher và thanh toán.
+  R008	Payment Service || Quản lý yêu cầu thanh toán, kết quả giao dịch, thanh toán khi nhận hàng, phí vận chuyển và dữ liệu địa giới từ GHN.
+  R009	Engagement Service || Quản lý đánh giá, danh sách yêu thích và thông báo; các API nghiệp vụ của thành phần này cần được tiếp tục hoàn thiện.
+  R010	PostgreSQL || Lưu trữ dữ liệu riêng của từng dịch vụ, bảo đảm mỗi nhóm dữ liệu có thành phần chịu trách nhiệm rõ ràng.
+  R011	RabbitMQ || Truyền sự kiện giữa các dịch vụ đối với những nghiệp vụ có thể xử lý bất đồng bộ.
+  R012	GHN và cổng thanh toán || Cung cấp các chức năng bên ngoài như tra cứu địa giới, tính phí giao hàng và xử lý giao dịch thanh toán.
+P0336	[Normal]	Trong môi trường phát triển, API Gateway sử dụng cổng 8080; các dịch vụ Identity, Catalog, Cart, Order, Payment và Engagement lần lượt sử dụng các cổng từ 8081 đến 8086. Thông tin cổng chỉ phục vụ việc xác định địa chỉ chạy của từng thành phần và có thể thay đổi theo môi trường triển khai.
+P0337	[Heading 2]	2.3.2. Giao tiếp và triển khai các thành phần
+P0338	[Normal]	Client và Backend được xây dựng thành các ứng dụng độc lập. Client sử dụng Next.js, trong khi Gateway và các dịch vụ Backend sử dụng Spring Boot. Hai phía có thể được biên dịch, cấu hình và triển khai riêng, miễn là Client được cung cấp đúng địa chỉ của API Gateway.
+P0339	[Normal]	Client giao tiếp với Backend thông qua giao thức HTTP hoặc HTTPS theo kiểu REST API. Dữ liệu yêu cầu và phản hồi chủ yếu được biểu diễn dưới dạng JSON. Mọi yêu cầu từ Client được gửi đến API Gateway trước khi chuyển tới dịch vụ nghiệp vụ tương ứng.
+P0340	[Normal]	Giữa các dịch vụ Backend có hai hình thức giao tiếp:
+P0341	[Normal]	- Giao tiếp đồng bộ: được sử dụng khi dịch vụ gửi yêu cầu cần nhận kết quả ngay, chẳng hạn lấy thông tin sản phẩm, kiểm tra địa chỉ hoặc tính phí giao hàng.
+P0342	[Normal]	- Giao tiếp bất đồng bộ: được sử dụng khi một dịch vụ chỉ cần thông báo sự kiện đã xảy ra và không cần chờ dịch vụ nhận xử lý xong. RabbitMQ đảm nhận việc truyền các sự kiện này.
+P0343	[Normal]	Sự kết hợp giữa hai hình thức giao tiếp giúp hệ thống vừa bảo đảm tính liên tục của luồng mua hàng, vừa giảm sự phụ thuộc trực tiếp giữa các dịch vụ đối với những công việc có thể xử lý sau.
+P0344	[Heading 2]	2.3.3. Tổ chức các tầng bên trong Backend
+P0345	[Normal]	Mỗi dịch vụ Backend được tổ chức theo kiến trúc nhiều tầng. Các tầng có trách nhiệm riêng và chỉ trao đổi với nhau thông qua các đối tượng hoặc giao diện đã được xác định. Cách tổ chức này giúp tách biệt việc tiếp nhận yêu cầu, xử lý nghiệp vụ và truy cập dữ liệu.
+T0348	[TABLE 7x2]
+  R001	Tầng || Trách nhiệm
+  R002	Controller/API || Tiếp nhận yêu cầu HTTP, kiểm tra dữ liệu đầu vào cơ bản, xác định người dùng hiện tại và trả kết quả cho bên gọi. Tầng này không trực tiếp xử lý các quy tắc nghiệp vụ phức tạp.
+  R003	Service/Application || Thực hiện nghiệp vụ chính, phối hợp nhiều thao tác và kiểm soát trình tự xử lý. Ví dụ: kiểm tra điều kiện đặt hàng, giữ tồn kho, áp dụng voucher và tạo đơn.
+  R004	Domain/Entity || Biểu diễn các đối tượng và trạng thái quan trọng của nghiệp vụ như sản phẩm, giỏ hàng, đơn hàng, thanh toán và các bản ghi giữ chỗ.
+  R005	Repository || Cung cấp các thao tác đọc, thêm và cập nhật dữ liệu; giúp tầng nghiệp vụ không phụ thuộc trực tiếp vào câu lệnh truy vấn cơ sở dữ liệu.
+  R006	Integration/Client || Giao tiếp với dịch vụ khác, cổng thanh toán, GHN hoặc hệ thống truyền sự kiện. Tầng này chuyển đổi dữ liệu bên ngoài thành dạng mà nghiệp vụ có thể sử dụng.
+  R007	Configuration và Security || Quản lý cấu hình ứng dụng, xác thực, phân quyền, xử lý lỗi và các thiết lập dùng chung của dịch vụ.
+P0349	[Heading 2]	2.4. Thiết kế dữ liệu
+P0350	[Normal]	DynamicMart áp dụng mô hình cơ sở dữ liệu riêng cho từng dịch vụ. Mỗi dịch vụ chịu trách nhiệm quản lý và thay đổi dữ liệu thuộc phạm vi nghiệp vụ của mình. Ví dụ, quản lý tài khoản và địa chỉ, quản lý sản phẩm và tồn kho, quản lý quá trình đặt hàng.
+P0351	[Heading 3]	2.4.1. Các nhóm thực thể chính
+P0352	[Normal]	Dữ liệu của hệ thống được chia thành sáu nhóm tương ứng với sáu dịch vụ nghiệp vụ.
+T0353	[TABLE 8x3]
+  R001	Nhóm dữ liệu || Các thực thể chính || Nội dung quản lý
+  R002	Tài khoản || User, Address, RefreshToken, PasswordResetToken || Tài khoản, thông tin cá nhân, địa chỉ nhận hàng và phiên đăng nhập
+  R003	Danh mục || Category, Product, ProductVariant, ProductImage, Attribute || Danh mục, sản phẩm, biến thể, hình ảnh và thuộc tính sản phẩm
+  R004	Tồn kho || InventoryItem, InventoryReservation, InventoryAdjustment || Số lượng tồn, số lượng được giữ và lịch sử điều chỉnh kho
+  R005	Giỏ hàng và khuyến mãi || Cart, CartItem, Promotion, Voucher, CustomerVoucher, VoucherReservation || Giỏ hàng, chương trình giảm giá, voucher và lượt giữ voucher
+  R006	Đặt hàng || CheckoutSession, Order, OrderItem, OrderAddress, OrderStatusHistory || Phiên đặt hàng, đơn hàng, sản phẩm trong đơn và lịch sử trạng thái
+  R007	Thanh toán và vận chuyển || Payment, PaymentAttempt, PaymentCallbackAudit, ShippingQuote || Nghĩa vụ thanh toán, các lần thanh toán, kết quả trả về và phí giao hàng
+  R008	Tương tác khách hàng || Wishlist, Review, Notification, ProductQuestion, ChatConversation || Danh sách yêu thích, đánh giá, thông báo, hỏi đáp và hỗ trợ khách hàng
+P0354	[Heading 3]	2.4.2. Các thực thể và quan hệ cốt lõi
+T0355	[TABLE 19x4]
+  R001	Thực thể || Khóa chính || Khóa ngoại hoặc tham chiếu || Quan hệ chính
+  R002	users || id || — || Một người dùng có nhiều địa chỉ, phiên đăng nhập, giỏ hàng và đơn hàng
+  R003	addresses || id || user_id → users.id || Mỗi địa chỉ thuộc một người dùng
+  R004	categories || id || parent_id → categories.id || Một danh mục có thể có nhiều danh mục con và nhiều sản phẩm
+  R005	products || id || category_id→ categories.id || Một sản phẩm thuộc một danh mục và có nhiều biến thể
+  R006	product_variants || id || product_id → products.id || Mỗi biến thể thuộc một sản phẩm và có một bản ghi tồn kho
+  R007	inventory_items || variant_id || variant_id→ product_variants.id || Lưu tồn kho của từng biến thể sản phẩm
+  R008	carts || id || customer_id REF → users.id || Mỗi khách hàng có một giỏ hàng chính
+  R009	cart_items || id || cart_id→carts.id; product_id, variant_id là REF || Một giỏ hàng có nhiều dòng sản phẩm
+  R010	vouchers || id || — || Một voucher có thể được cấp cho nhiều khách hàng và được giữ cho nhiều phiên đặt hàng
+  R011	voucher_reservations || id || voucher_id → vouchers.id; checkout_session_id REF || Lưu trạng thái giữ voucher trong quá trình đặt hàng
+  R012	checkout_sessions || id || customer_id, cart_id, address_id là REF || Một phiên đặt hàng chứa nhiều sản phẩm và tạo tối đa một đơn hàng
+  R013	orders || id || checkout_session_id UNIQUE; customer_id REF || Một đơn hàng có nhiều sản phẩm, một địa chỉ giao hàng và nhiều trạng thái
+  R014	order_items || id || order_id→orders.id; product_id, variant_id là REF || Lưu thông tin sản phẩm tại thời điểm đặt hàng
+  R015	order_addresses || id || order_id → orders.id || Mỗi đơn hàng có một địa chỉ giao hàng được lưu cố định
+  R016	order_status_history || id || order_id → orders.id || Một đơn hàng có nhiều bản ghi lịch sử trạng thái
+  R017	payments || id || order_id REF; customer_id REF || Mỗi đơn hàng có tối đa một nghĩa vụ thanh toán
+  R018	payment_attempts || id || payment_id→ payments.id || Một khoản thanh toán có thể có nhiều lần thực hiện
+  R019	payment_callback_audits || id || payment_id→ payments.id || Lưu và kiểm tra kết quả trả về từ cổng thanh toán
+P0356	[Heading 3]	2.4.3. Sơ đồ ERD
+P0362	[Heading 3]	2.4.4. Biểu đồ lớp
+P0364	[Heading 2]	2.5 Thiết kế API dịch vụ
+P0365	[Normal]	Hệ thống cung cấp API theo phong cách REST, sử dụng JSON để trao đổi dữ liệu giữa ứng dụng khách và các dịch vụ. Mọi yêu cầu từ ứng dụng khách được gửi đến API Gateway tại cổng 8080. Gateway thực hiện xác thực, kiểm tra phiên đăng nhập và chuyển tiếp yêu cầu đến dịch vụ chịu trách nhiệm xử lý.
+P0366	[Normal]	Các API được tổ chức theo tài nguyên nghiệp vụ như tài khoản, sản phẩm, giỏ hàng, phiên thanh toán, đơn hàng và thanh toán. Ứng dụng khách không truy cập trực tiếp vào cơ sở dữ liệu hoặc gọi thẳng đến từng dịch vụ.
+P0367	[Heading 3]	2.5.1 Quy ước API
+T0368	[TABLE 13x2]
+  R001	Nội dung || Quy ước
+  R002	Base URL || http://localhost:8080/api/v1
+  R003	Giao thức || HTTP/HTTPS
+  R004	Định dạng dữ liệu || JSON
+  R005	Content-Type || application/json
+  R006	Xác thực || JWT trong header Authorization: Bearer <access-token>
+  R007	Phiên đăng nhập || Refresh token được lưu trong cookie bảo mật
+  R008	Tên tài nguyên || Sử dụng danh từ, viết thường và số nhiều
+  R009	Tham số đường dẫn || Xác định một tài nguyên cụ thể, ví dụ {productId}
+  R010	Tham số truy vấn || Tìm kiếm, lọc, sắp xếp và phân trang
+  R011	Phiên bản API || Được thể hiện bằng tiền tố /api/v1
+  R012	Khóa chống gửi trùng || Header Idempotency-Key được sử dụng khi tạo đơn hàng
+  R013	API nội bộ || Sử dụng X-Internal-Api-Key, không cho phép ứng dụng khách gọi trực tiếp
+P0369	[Normal]	Các phương thức HTTP được sử dụng như sau:
+T0370	[TABLE 6x2]
+  R001	Phương thức || Mục đích
+  R002	GET || Truy vấn tài nguyên
+  R003	POST || Tạo tài nguyên hoặc thực hiện một nghiệp vụ
+  R004	PUT || Cập nhật toàn bộ thông tin của tài nguyên
+  R005	PATCH || Cập nhật một phần hoặc thay đổi trạng thái
+  R006	DELETE || Xóa, hủy hoặc giải phóng tài nguyên
+P0372	[Heading 3]	2.5.2. Danh sách API
+P0373	[Normal]	a) API xác thực và tài khoản
+T0374	[TABLE 12x5]
+  R001	Phương thức và endpoint || Header, tham số || Dữ liệu gửi lên || Phản hồi thành công || Lỗi chính
+  R002	POST /auth/register || Content-Type || Email, mật khẩu, họ tên || Thông tin tài khoản và access token || 400 dữ liệu không hợp lệ; 409 email đã tồn tại
+  R003	POST /auth/login || Content-Type || Email, mật khẩu || Access token, thời hạn token và thông tin người dùng || 400 thiếu dữ liệu; 401 thông tin đăng nhập không đúng
+  R004	POST /auth/refresh || Cookie refresh token || Không có || Access token mới và thông tin người dùng || 401 phiên đăng nhập không tồn tại hoặc hết hạn
+  R005	POST /auth/logout || Cookie refresh token || Không có || Không trả về nội dung || 204 thành công
+  R006	GET /profile || Authorization || Không có || Hồ sơ của tài khoản đang đăng nhập || 401 chưa đăng nhập; 404 không tìm thấy hồ sơ
+  R007	PUT /profile || Authorization, Content-Type || Họ tên, số điện thoại và thông tin hồ sơ || Hồ sơ sau khi cập nhật || 400 dữ liệu không hợp lệ; 401 chưa đăng nhập
+  R008	GET /addresses || Authorization || Không có || Danh sách địa chỉ nhận hàng || 401 chưa đăng nhập
+  R009	POST /addresses || Authorization, Content-Type || Người nhận, số điện thoại, địa chỉ, tỉnh và phường/xã || Địa chỉ vừa tạo || 400 dữ liệu không hợp lệ; 401 chưa đăng nhập
+  R010	PUT /addresses/{addressId} || Authorization; path: addressId || Thông tin địa chỉ cần cập nhật || Địa chỉ sau khi cập nhật || 400 dữ liệu không hợp lệ; 404 không tìm thấy địa chỉ
+  R011	POST /addresses/{addressId}/default || Authorization; path: addressId || Không có || Địa chỉ mặc định mới || 404 không tìm thấy địa chỉ
+  R012	DELETE /addresses/{addressId} || Authorization; path: addressId || Không có || Không trả về nội dung || 404 không tìm thấy địa chỉ
+P0375	[Normal]	b) API giỏ hàng và khuyến mại
+T0376	[TABLE 8x5]
+  R001	Phương thức và endpoint || Header, tham số || Dữ liệu gửi lên || Phản hồi thành công || Lỗi chính
+  R002	GET /cart || Authorization || Không có || Giỏ hàng, các mặt hàng và tổng tiền tạm tính || 401 chưa đăng nhập
+  R003	POST /cart/items || Authorization, Content-Type || productId, variantId, quantity || Giỏ hàng sau khi thêm sản phẩm || 400 số lượng không hợp lệ; 404 không tìm thấy sản phẩm; 409 không đủ tồn kho
+  R004	PATCH /cart/items/{itemId} || Authorization; path: itemId || Số lượng, trạng thái chọn và phiên bản dữ liệu || Mặt hàng sau khi cập nhật || 404 không tìm thấy; 409 dữ liệu đã thay đổi hoặc không đủ tồn kho
+  R005	DELETE /cart/items/{itemId} || Authorization; path: itemId || Không có || Không trả về nội dung || 404 không tìm thấy mặt hàng
+  R006	GET /cart/vouchers/wallet || Authorization || Không có || Danh sách voucher có thể sử dụng || 401 chưa đăng nhập
+  R007	POST /cart/vouchers/preview || Authorization, Content-Type || Voucher hoặc mã voucher và giá trị đơn hàng || Kết quả áp dụng và số tiền được giảm || 400 dữ liệu không hợp lệ; 422 voucher không đủ điều kiện
+  R008	GET /cart/promotions/prices/{variantId} || Path: variantId || Không có || Giá gốc, giá khuyến mại và thời gian áp dụng || 404 không tìm thấy biến thể
+P0378	[Normal]	c) API giao tiếp nội bộ
+T0379	[TABLE 8x2]
+  R001	Nhóm endpoint || Chức năng
+  R002	/auth/internal/session-validations || Kiểm tra hiệu lực của phiên đăng nhập
+  R003	/auth/internal/users/{userId}/addresses/{addressId} || Xác minh địa chỉ thuộc về khách hàng
+  R004	/catalog/internal/variants/validate || Kiểm tra biến thể, giá và khả năng bán
+  R005	/catalog/internal/inventory/reservations || Giữ, xác nhận hoặc hoàn trả tồn kho
+  R006	/cart/internal/voucher-reservations || Giữ, sử dụng hoặc hoàn trả quyền dùng voucher
+  R007	/cart/internal/checkout-selections/{customerId}/{cartId} || Cung cấp các mặt hàng được chọn để thanh toán
+  R008	/payments/order-context || Khởi tạo thông tin thanh toán gắn với đơn hàng
+P0380	[Normal]	d) HTTP Status Code
+T0381	[TABLE 12x2]
+  R001	Status Code || Ý nghĩa và trường hợp sử dụng
+  R002	200 OK || Truy vấn, cập nhật hoặc thực hiện nghiệp vụ thành công
+  R003	201 Created || Tạo mới địa chỉ, mặt hàng, phiên thanh toán hoặc đơn hàng thành công
+  R004	204 No Content || Xóa thành công và không có nội dung phản hồi
+  R005	400 Bad Request || Thiếu dữ liệu, sai định dạng hoặc tham số không hợp lệ
+  R006	401 Unauthorized || Chưa đăng nhập, access token hoặc refresh token hết hạn
+  R007	403 Forbidden || Tài khoản không có quyền thực hiện thao tác
+  R008	404 Not Found || Không tìm thấy tài nguyên được yêu cầu
+  R009	409 Conflict || Xung đột dữ liệu, tồn kho thay đổi, phiên hết hạn hoặc yêu cầu bị gửi trùng
+  R010	422 Unprocessable Entity || Dữ liệu đúng định dạng nhưng không đáp ứng quy tắc nghiệp vụ
+  R011	502 Bad Gateway || Không nhận được kết quả hợp lệ từ hệ thống thanh toán hoặc vận chuyển
+  R012	503 Service Unavailable || Dịch vụ phụ thuộc tạm thời chưa sẵn sàng
+P0382	[Normal]	e) Cấu trúc phản hồi thành công
+P0383	[Normal]	Phản hồi thành công trả về đối tượng JSON hoặc danh sách JSON. Với dữ liệu danh mục, phần dữ liệu chính có thể được đặt trong thuộc tính data.
+P0384	[Normal]	Ví dụ phản hồi khi đăng nhập:
+P0385	[Normal]	{
+P0386	[Normal]	"accessToken": "eyJhbGciOi...",
+P0387	[Normal]	"accessTokenExpiresAt": "2026-10-01T10:30:00Z",
+P0388	[Normal]	"user": {
+P0389	[Normal]	"id": "80d11bf4-20f2-4f66-a181-6a8d15235f67",
+P0390	[Normal]	"email": "customer@example.com",
+P0391	[Normal]	"fullName": "Nguyễn Văn An",
+P0392	[Normal]	"role": "CUSTOMER"
+P0393	[Normal]	}
+P0394	[Normal]	}
+P0395	[Heading 2]	2.6 Thiết kế ứng dụng client
+P0396	[Normal]	Ứng dụng Client của DynamicMart được xây dựng bằng Next.js và hoạt động độc lập với các dịch vụ backend. Client đảm nhiệm việc hiển thị dữ liệu, tiếp nhận thao tác, kiểm tra dữ liệu đầu vào cơ bản và gửi yêu cầu đến API Gateway.
+P0397	[Normal]	Client không trực tiếp xử lý các quy tắc về giá bán, tồn kho, voucher, phí vận chuyển hoặc trạng thái thanh toán. Những dữ liệu này được xác minh lại tại máy chủ trước khi hoàn tất nghiệp vụ.
+P0398	[Normal]	Ứng dụng được chia thành ba khu vực chính:
+P0399	[List Paragraph]	Khu vực cửa hàng dành cho khách truy cập và khách hàng.
+P0400	[List Paragraph]	Khu vực tài khoản cá nhân.
+P0401	[List Paragraph]	Khu vực quản trị dành cho quản trị viên.
+P0402	[Heading 3]	2.6.1. Thiết kế giao diện
+P0403	[Normal]	a) Các màn hình dành cho khách hàng
+T0404	[TABLE 19x2]
+  R001	Màn hình chính || Dữ liệu chính
+  R002	Trang chủ || Danh mục nổi bật, sản phẩm mới, sản phẩm bán chạy và chương trình khuyến mại
+  R003	Danh sách sản phẩm || Tên, hình ảnh, giá, giá khuyến mại, danh mục và trạng thái bán
+  R004	Chi tiết sản phẩm || Mô tả, hình ảnh, biến thể, thuộc tính, giá và tồn kho
+  R005	Đăng nhập và đăng ký || Email, mật khẩu, họ tên và trạng thái phiên
+  R006	Hồ sơ cá nhân || Họ tên, email và số điện thoại
+  R007	Sổ địa chỉ || Người nhận, điện thoại, tỉnh/thành phố, phường/xã và địa chỉ chi tiết
+  R008	Giỏ hàng || Sản phẩm, biến thể, số lượng, trạng thái chọn và tạm tính
+  R009	Kho voucher || Mã voucher, loại giảm, điều kiện, thời gian và trạng thái sử dụng
+  R010	Thanh toán || Địa chỉ, mặt hàng, voucher, phí giao hàng, tổng tiền và phương thức thanh toán
+  R011	Lịch sử đơn hàng || Mã đơn, ngày đặt, tổng tiền và trạng thái
+  R012	Chi tiết đơn hàng || Sản phẩm, địa chỉ, các khoản tiền, thanh toán và dòng thời gian trạng thái
+  R013	Kết quả thanh toán || Mã đơn, phương thức, số tiền và trạng thái giao dịch
+  R014	Đánh giá sản phẩm || Số sao, nội dung, hình ảnh và sản phẩm đã mua
+  R015	Danh sách yêu thích || Các sản phẩm khách hàng đã lưu
+  R016	Hỏi đáp sản phẩm || Câu hỏi của khách hàng và câu trả lời của quản trị viên
+  R017	Thông báo || Thông báo đơn hàng, thanh toán và trạng thái đã đọc
+  R018	Trò chuyện với quản trị viên || Cuộc hội thoại, nội dung tin nhắn, người gửi và thời gian gửi
+  R019	Chatbot hoặc trợ lý AI || Câu hỏi của khách hàng và nội dung tư vấn tự động
+P0405	[Normal]	Trang danh sách sản phẩm cung cấp các bộ lọc theo từ khóa, danh mục, khoảng giá và thuộc tính. Các điều kiện lọc được thể hiện trên URL để có thể tải lại trang hoặc chia sẻ kết quả tìm kiếm.
+P0406	[Normal]	Trang chi tiết sản phẩm cho phép lựa chọn đầy đủ các thuộc tính của biến thể trước khi mua. Giá, hình ảnh và số lượng còn lại được thay đổi theo biến thể đang chọn. Nút mua hàng chỉ được kích hoạt khi biến thể còn hiệu lực và số lượng yêu cầu nằm trong giới hạn có thể bán.
+P0407	[Normal]	b) Các màn hình tài khoản khách hàng
+T0408	[TABLE 14x2]
+  R001	Màn hình chính || Dữ liệu chính
+  R002	Bảng điều khiển || Các chỉ số vận hành và lối tắt đến từng chức năng
+  R003	Quản lý tài khoản || Họ tên, email, vai trò, trạng thái và ngày tạo
+  R004	Quản lý danh mục và thuộc tính || Danh mục cha–con, thuộc tính, lựa chọn và trạng thái
+  R005	Quản lý sản phẩm và biến thể || Sản phẩm, SKU, giá, ảnh, thuộc tính và trạng thái bán
+  R006	Quản lý tồn kho || Số lượng thực tế, số lượng đang giữ và số lượng có thể bán
+  R007	Quản lý giảm giá trực tiếp || Chương trình, sản phẩm áp dụng, mức giảm và thời gian
+  R008	Quản lý voucher || Mã voucher, loại giảm, điều kiện và giới hạn sử dụng
+  R009	Quản lý đơn hàng || Mã đơn, khách hàng, tổng tiền, trạng thái và lịch sử xử lý
+  R010	Quản lý giao dịch || Phương thức, số tiền, trạng thái, lần thanh toán và callback
+  R011	Quản lý đánh giá || Sản phẩm, khách hàng, số sao, nội dung và trạng thái hiển thị
+  R012	Quản lý hỏi đáp || Câu hỏi, câu trả lời và trạng thái nội dung
+  R013	Doanh thu và sản phẩm bán chạy || Doanh thu, số đơn hoàn tất, số lượng bán và sản phẩm nổi bật
+  R014	Hộp thư trò chuyện || Hội thoại đang mở, quản trị viên phụ trách và lịch sử tin nhắn
+P0409	[Normal]	[CHÈN HÌNH 2.5: Các giao diện chính của khu vực khách hàng]
+P0410	[Normal]	[CHÈN HÌNH 2.6: Các giao diện chính của khu vực quản trị]
+P0412	[Heading 3]	2.6.2 Tích hợp API
+P0413	[Normal]	a) Sản phẩm và giỏ hàng
+T0414	[TABLE 9x3]
+  R001	Chức năng Client || API sử dụng || Method
+  R002	Hiển thị danh mục || /api/v1/catalog/categories || GET
+  R003	Hiển thị sản phẩm || /api/v1/catalog/products || GET
+  R004	Xem chi tiết sản phẩm || /api/v1/catalog/products/{slug} || GET
+  R005	Lấy bộ lọc theo danh mục || /api/v1/catalog/categories/{slug}/filters || GET
+  R006	Hiển thị giỏ hàng || /api/v1/cart || GET
+  R007	Thêm sản phẩm vào giỏ || /api/v1/cart/items || POST
+  R008	Cập nhật sản phẩm trong giỏ || /api/v1/cart/items/{itemId} || PATCH
+  R009	Xóa sản phẩm khỏi giỏ || /api/v1/cart/items/{itemId} || DELETE
+P0415	[Normal]	Dữ liệu chính được sử dụng gồm sản phẩm, danh mục, hình ảnh, biến thể, thuộc tính, giá bán và số lượng có thể mua. Client không tự xác định giá cuối cùng hoặc tồn kho hợp lệ.
+P0416	[Normal]	b) Khuyến mại, đặt hàng và thanh toán
+T0417	[TABLE 12x3]
+  R001	Chức năng Client || API sử dụng || Method
+  R002	Hiển thị kho voucher || /api/v1/cart/vouchers/wallet || GET
+  R003	Xem trước kết quả áp dụng voucher || /api/v1/cart/vouchers/preview || POST
+  R004	Tạo phiên thanh toán || /api/v1/checkout/sessions || POST
+  R005	Xem phiên thanh toán || /api/v1/checkout/sessions/{sessionId} || GET
+  R006	Cập nhật lựa chọn thanh toán || /api/v1/checkout/sessions/{sessionId} || PATCH
+  R007	Tính lại đơn hàng || /api/v1/checkout/sessions/{sessionId}/preview || POST
+  R008	Kiểm tra giỏ hàng và phí vận chuyển || /api/v1/cart/checkout/preview || POST
+  R009	Tạo báo giá vận chuyển || /api/v1/shipping/quotes || POST
+  R010	Tạo đơn hàng || /api/v1/checkout/orders || POST
+  R011	Kiểm tra thanh toán theo đơn || /api/v1/payments/orders/{orderId} || GET
+  R012	Kiểm tra kết quả thanh toán || /api/v1/payments/return-status || GET
+P0418	[Normal]	d) Đánh giá, yêu thích, hỏi đáp và thông báo
+T0419	[TABLE 13x3]
+  R001	Chức năng Client || API sử dụng || Method
+  R002	Xem đánh giá của sản phẩm || /api/v1/engagement/products/{productId}/reviews || GET
+  R003	Gửi đánh giá sản phẩm || /api/v1/engagement/reviews || POST
+  R004	Cập nhật đánh giá || /api/v1/engagement/reviews/{reviewId} || PUT
+  R005	Xem danh sách yêu thích || /api/v1/engagement/wishlist || GET
+  R006	Thêm sản phẩm vào danh sách yêu thích || /api/v1/engagement/wishlist/items || POST
+  R007	Xóa sản phẩm khỏi danh sách yêu thích || /api/v1/engagement/wishlist/items/{productId} || DELETE
+  R008	Xem hỏi đáp của sản phẩm || /api/v1/engagement/products/{productId}/questions || GET
+  R009	Gửi câu hỏi về sản phẩm || /api/v1/engagement/products/{productId}/questions || POST
+  R010	Xem danh sách thông báo || /api/v1/engagement/notifications || GET
+  R011	Đếm thông báo chưa đọc || /api/v1/engagement/notifications/unread-count || GET
+  R012	Đánh dấu thông báo đã đọc || /api/v1/engagement/notifications/{notificationId}/read || PATCH
+  R013	Đánh dấu tất cả thông báo đã đọc || /api/v1/engagement/notifications/read-all || PATCH
+P0421	[Heading 1]	CHƯƠNG 3. CÀI ĐẶT VÀ TRIỂN KHAI HỆ THỐNG
+P0422	[Heading 2]	3.1 Môi trường và công cụ phát triển
+P0423	[Normal]	DynamicMart được phát triển trên môi trường Windows. Backend được tổ chức thành các ứng dụng Spring Boot độc lập, trong khi Client được xây dựng bằng Next.js và TypeScript. Mã nguồn được quản lý bằng Git, các thư viện được quản lý lần lượt bằng Maven và npm.
+P0424	[Heading 3]	3.1.1. Môi trường phát triển
+T0425	[TABLE 24x4]
+  R001	Thành phần || Công nghệ/Công cụ || Phiên bản || Mục đích sử dụng
+  R002	Hệ điều hành || Windows || 10, build 19045 || Môi trường phát triển và chạy thử hệ thống
+  R003	Ngôn ngữ backend || Java || 17.0.12 LTS || Phát triển API Gateway và các dịch vụ backend
+  R004	Backend Framework || Spring Boot || 4.1.1 || Xây dựng REST API, cấu hình dịch vụ và xử lý nghiệp vụ
+  R005	Hạ tầng dịch vụ || Spring Cloud || 2025.1.3 || Xây dựng API Gateway và hỗ trợ giao tiếp giữa các dịch vụ
+  R006	Công cụ build backend || Maven Wrapper || 3.9.16 || Quản lý thư viện, biên dịch và kiểm thử từng dịch vụ
+  R007	Truy cập dữ liệu || Spring Data JPA || Theo Spring Boot 4.1.1 || Cài đặt repository và truy cập PostgreSQL
+  R008	Quản lý cấu trúc dữ liệu || Flyway || Theo Spring Boot 4.1.1 || Tạo và nâng cấp cấu trúc cơ sở dữ liệu
+  R009	Cơ sở dữ liệu || PostgreSQL || Từ phiên bản 13 || Lưu trữ dữ liệu riêng cho từng dịch vụ
+  R010	Hàng đợi sự kiện || RabbitMQ || Không ràng buộc phiên bản trong mã nguồn || Trao đổi sự kiện giữa các dịch vụ
+  R011	Nền tảng Client || Node.js || 22.19.0 || Chạy môi trường phát triển và đóng gói Client
+  R012	Trình quản lý thư viện Client || npm || 10.9.3 || Cài đặt và quản lý thư viện frontend
+  R013	Client Framework || Next.js || 16.3.5 || Xây dựng ứng dụng web phía Client
+  R014	Thư viện giao diện || React || 19.2.8 || Xây dựng các component và quản lý trạng thái giao diện
+  R015	Ngôn ngữ Client || TypeScript || 5.x || Phát triển Client có kiểm tra kiểu dữ liệu
+  R016	Xây dựng giao diện || Tailwind CSS || 4.x || Thiết lập bố cục và kiểu trình bày
+  R017	IDE Backend || IntelliJ IDEA || Không ràng buộc || Phát triển, chạy và kiểm thử các dịch vụ Spring Boot
+  R018	IDE Client || Visual Studio Code || Không ràng buộc || Phát triển ứng dụng Next.js và TypeScript
+  R019	Kiểm thử API || Postman || Không ràng buộc || Gửi request và kiểm tra response của API
+  R020	Tài liệu API || OpenAPI/Swagger || Theo cấu hình từng dịch vụ || Mô tả và kiểm tra hợp đồng API
+  R021	Kiểm thử backend || JUnit 5, Spring Boot Test || Theo Spring Boot 4.1.1 || Kiểm thử đơn vị và kiểm thử tích hợp
+  R022	Đóng gói môi trường || Docker || 29.7.2 || Chuẩn bị môi trường chạy các thành phần hạ tầng
+  R023	Điều phối container || Docker Compose || 5.3.1 || Khởi tạo đồng thời cơ sở dữ liệu và hàng đợi sự kiện
+  R024	Quản lý mã nguồn || Git || 2.43.0 || Theo dõi thay đổi và phối hợp phát triển
+P0427	[Heading 3]	3.1.2. Môi trường phát triển backend
+P0428	[Normal]	Backend gồm API Gateway và sáu dịch vụ nghiệp vụ:
+T0429	[TABLE 8x2]
+  R001	Thành phần || Vai trò
+  R002	API Gateway || Tiếp nhận request, kiểm tra JWT, CORS và định tuyến
+  R003	Identity Service || Xác thực, hồ sơ, địa chỉ và quản lý người dùng
+  R004	Catalog Service || Danh mục, thuộc tính, sản phẩm, biến thể và tồn kho
+  R005	Cart Service || Giỏ hàng, giảm giá trực tiếp và voucher
+  R006	Order Service || Phiên thanh toán, tạo đơn và điều phối nghiệp vụ
+  R007	Payment Service || Thanh toán, phí vận chuyển và dữ liệu địa giới
+  R008	Engagement Service || Đánh giá, yêu thích, hỏi đáp, thông báo và tương tác
+P0430	[Heading 3]	3.1.3. Công cụ kiểm thử
+T0431	[TABLE 9x2]
+  R001	Công cụ || Cách sử dụng
+  R002	JUnit 5 || Kiểm thử các quy tắc và phương thức nghiệp vụ
+  R003	Spring Boot Test || Kiểm thử Controller, Service và cấu hình bảo mật
+  R004	Maven Test || Chạy toàn bộ bộ kiểm thử của từng dịch vụ
+  R005	Postman || Kiểm tra endpoint, request body, header và status code
+  R006	Swagger || Quan sát API trong quá trình phát triển
+  R007	PostgreSQL || Kiểm tra migration, ràng buộc và dữ liệu thực
+  R008	Trình duyệt || Kiểm thử giao diện, điều hướng và tích hợp API
+  R009	ESLint || Kiểm tra mã nguồn TypeScript và React
+P0433	[Heading 2]	3.2 Cài đặt Backend Service API
+P0434	[Normal]	Backend của DynamicMart được hiện thực theo kiến trúc hướng dịch vụ. API Gateway là điểm tiếp nhận yêu cầu chung, trong khi mỗi nhóm nghiệp vụ được triển khai thành một ứng dụng Spring Boot độc lập và sở hữu cơ sở dữ liệu riêng.
+P0435	[Heading 3]	3.2.1 Cấu trúc dự án Backend
+P0436	[Normal]	Kho mã nguồn đặt API Gateway ở thư mục api-gateway và sáu dịch vụ trong services. Mỗi module Spring Boot có pom.xml, Maven Wrapper, mã nguồn chính, test và application.yaml. Bên trong dịch vụ, mã được chia thành controller hoặc api, service hoặc application, repository, entity, dto, mapper, messaging, outbox, config và exception.
+P0437	[Image Note]	[CHÈN HÌNH 3.1: Ảnh cây thư mục dự án trong IDE, chỉ mở các module và package chính]
+P0439	[Image Note]	Vai trò của các package chính được thể hiện trong bảng sau:
+T0440	[TABLE 14x2]
+  R001	Package || Vai trò trong mã nguồn
+  R002	controller || Tiếp nhận HTTP request, đọc tham số, kiểm tra dữ liệu cơ bản và trả response
+  R003	service || Thực hiện các quy tắc và luồng xử lý nghiệp vụ
+  R004	repository || Truy vấn và lưu dữ liệu bằng Spring Data JPA
+  R005	entity || Ánh xạ đối tượng nghiệp vụ với bảng trong PostgreSQL
+  R006	dto.request || Khai báo cấu trúc dữ liệu Client gửi lên
+  R007	dto.response || Khai báo cấu trúc dữ liệu API trả về
+  R008	config || Cấu hình bảo mật, thời gian, HTTP Client và các thành phần dùng chung
+  R009	exception || Khai báo ngoại lệ nghiệp vụ và chuẩn hóa phản hồi lỗi
+  R010	client || Gọi API nội bộ của dịch vụ khác
+  R011	query || Thực hiện các truy vấn tìm kiếm, lọc và phân trang phức tạp
+  R012	mapper || Chuyển Entity thành DTO và ngược lại
+  R013	messaging || Phát hoặc tiếp nhận sự kiện giữa các dịch vụ
+  R014	outbox || Lưu sự kiện chờ phát cùng giao dịch nghiệp vụ
+P0442	[Heading 3]	3.2.2 Hiện thực dữ liệu và truy cập cơ sở dữ liệu
+P0443	[Normal]	Các entity dùng JPA để ánh xạ bảng; repository kế thừa Spring Data và bổ sung truy vấn cần thiết. Flyway chạy migration khi dịch vụ khởi động. Tại thời điểm đọc mã nguồn, Identity và Engagement có migration khởi tạo; Cart và Catalog có migration bổ sung; Order có năm migration nguồn; Payment có sáu migration nguồn. Việc tách migration theo service ngăn một module thay đổi lược đồ của module khác.
+P0444	[Normal]	Những thao tác dễ cạnh tranh như giữ tồn kho dùng bản ghi reservation và log thao tác. Payment lưu riêng payment, payment attempt và callback audit. Order lưu snapshot thay vì phụ thuộc vào dữ liệu sống ở Catalog hay Identity khi hiển thị lịch sử.
+P0445	[Normal]	a) Mô hình sản phẩm và tồn kho
+P0446	[Normal]	Ba Entity tiêu biểu của Catalog Service gồm:
+T0447	[TABLE 4x3]
+  R001	Entity || Bảng dữ liệu || Nội dung quản lý
+  R002	Product || products || Thông tin chung, danh mục, trạng thái và thời điểm công bố
+  R003	ProductVariant || product_variants || SKU, giá, kích thước, khối lượng và trạng thái biến thể
+  R004	InventoryItem || inventory_items || Số lượng thực tế, số lượng đang giữ và số lượng khả dụng
+P0448	[Normal]	Entity này cũng cung cấp các phương thức reserve, commit và release. Nhờ đó, quy tắc tồn kho được đặt ngay trong đối tượng nghiệp vụ thay vì phân tán tại Controller.
+P0449	[Normal]	Các Entity dễ xảy ra cập nhật đồng thời như ProductVariant, InventoryItem, CheckoutSession và CustomerOrder sử dụng trường @Version. Trường này giúp phát hiện trường hợp hai yêu cầu cùng cập nhật một bản ghi cũ.
+P0450	[Normal]	b) Mô hình đơn hàng
+P0451	[Normal]	Khi đơn hàng được tạo, Order Service lưu dữ liệu dưới dạng bản chụp. Các thông tin sản phẩm, giá, địa chỉ, voucher và vận chuyển không phụ thuộc vào dữ liệu có thể thay đổi sau này.
+T0452	[TABLE 8x2]
+  R001	Entity || Vai trò
+  R002	CustomerOrder || Lưu thông tin chung, tổng tiền, thanh toán và trạng thái đơn
+  R003	OrderItem || Lưu bản chụp sản phẩm, biến thể, giá và số lượng
+  R004	OrderAddress || Lưu địa chỉ giao hàng tại thời điểm đặt
+  R005	OrderVoucherSnapshot || Lưu voucher và số tiền giảm
+  R006	OrderShippingSnapshot || Lưu phí, dịch vụ và thời gian giao dự kiến
+  R007	OrderStatusHistory || Lưu lịch sử thay đổi trạng thái
+  R008	OrderSaga || Theo dõi tiến trình và kết quả của quy trình tạo đơn
+P0454	[Heading 3]	3.2.3 Hiện thực API chính
+P0455	[Normal]	a) API tìm kiếm sản phẩm
+P0456	[Normal]	API tìm kiếm sản phẩm được hiện thực trong PublicProductController. Controller tiếp nhận từ khóa, danh mục, khoảng giá, thuộc tính lọc, cách sắp xếp và thông tin phân trang. Các tham số này được chuyển thành đối tượng ProductSearchCriteria trước khi gửi đến CatalogQueryService.
+P0458	[Normal]	CatalogQueryService kiểm tra tính hợp lệ của điều kiện tìm kiếm, chẳng hạn khoảng giá không được âm, giá tối thiểu không được lớn hơn giá tối đa và kích thước trang không được vượt quá giới hạn. Sau đó, CatalogProductQueryRepository thực hiện truy vấn kết hợp theo các điều kiện đã nhận.
+P0459	[Normal]	Kết quả truy vấn được chuyển thành ProductSummaryResponse, chỉ chứa những dữ liệu cần thiết cho màn hình danh sách như tên sản phẩm, hình ảnh, giá bán, giá khuyến mại và trạng thái còn hàng. Việc sử dụng DTO giúp API không trả trực tiếp Entity của cơ sở dữ liệu.
+P0460	[Normal]	b) API tạo đơn hàng
+P0461	[Normal]	API tạo đơn hàng là nghiệp vụ trung tâm của hệ thống và được hiện thực trong OrderCheckoutController. Do quá trình tạo đơn liên quan đến nhiều dịch vụ, phần xử lý được chia thành các Service nhỏ thay vì đặt toàn bộ logic trong Controller.
+P0464	[Normal]	Đầu tiên, OrderCreationAdmissionService kiểm tra phiên thanh toán và Idempotency-Key. Tiếp theo, OrderCreationRevalidationService kiểm tra lại địa chỉ, mặt hàng, giá, voucher, phí vận chuyển và phương thức thanh toán.
+P0465	[Normal]	Khi các điều kiện hợp lệ, OrderReservationService thực hiện giữ tồn kho và lượt sử dụng voucher. OrderCreationPersistenceService sau đó lưu đơn hàng, các dòng hàng và bản chụp địa chỉ, voucher, vận chuyển. Kết quả trả về gồm mã đơn, số đơn, trạng thái và đường dẫn thanh toán nếu khách hàng chọn thanh toán trực tuyến.
+P0466	[Normal]	Việc chia nhỏ quá trình tạo đơn giúp từng bước có trách nhiệm rõ ràng và thuận lợi hơn khi xử lý bù trừ nếu một dịch vụ gặp lỗi.
+P0467	[Normal]	c) API kiểm tra trạng thái thanh toán
+P0468	[Normal]	Sau khi khách hàng hoàn tất thao tác tại cổng thanh toán, Client gọi API kiểm tra trạng thái giao dịch. API này được hiện thực trong PaymentController, còn việc truy vấn và xác định kết quả được thực hiện tại PaymentService.
+P0472	[Normal]	PaymentService kiểm tra giao dịch có thuộc đơn hàng hợp lệ hay không và trả về các dữ liệu chính như số tiền, phương thức, thời điểm thanh toán và trạng thái hiện tại.
+P0473	[Normal]	Client không tự kết luận giao dịch thành công từ tham số trên URL. Trạng thái chỉ được hiển thị sau khi dữ liệu thanh toán đã được backend xác minh và lưu vào cơ sở dữ liệu.
+P0474	[Heading 3]	3.2.4 Hiện thực xử lý nghiệp vụ
+P0475	[Normal]	Logic nghiệp vụ của DynamicMart được đặt chủ yếu tại các lớp Service và một số phương thức trong Entity. Controller chỉ tiếp nhận request, lấy thông tin xác thực và chuyển dữ liệu đến Service tương ứng. Cách tổ chức này giúp backend không trở thành tập hợp các API CRUD đơn thuần.
+P0476	[Normal]	Một số nghiệp vụ tiêu biểu được hiện thực như sau:
+T0477	[TABLE 6x3]
+  R001	Nghiệp vụ || Lớp xử lý chính || Điều kiện được kiểm tra
+  R002	Tìm kiếm sản phẩm || CatalogQueryService || Khoảng giá, thuộc tính lọc, phân trang và trạng thái sản phẩm
+  R003	Cập nhật giỏ hàng || CartApplicationService || Quyền sở hữu, số lượng, phiên bản dữ liệu và tồn kho
+  R004	Giữ và trừ tồn kho || InventoryReservationService || Số lượng khả dụng, trạng thái reservation và thao tác lặp
+  R005	Tạo đơn hàng || Các Service thuộc Order Service || Phiên thanh toán, địa chỉ, giá, voucher, vận chuyển và thanh toán
+  R006	Xử lý thanh toán || PaymentService || Số tiền, mã tham chiếu, chữ ký và trạng thái giao dịch
+P0478	[Normal]	a) Kiểm tra tính hợp lệ của dữ liệu
+P0479	[Normal]	Các DTO request sử dụng Jakarta Validation để kiểm tra những điều kiện cơ bản như trường bắt buộc, định dạng email, độ dài chuỗi và giới hạn số lượng. Việc kiểm tra được thực hiện trước khi dữ liệu đi vào lớp Service.
+P0480	[Normal]	Các điều kiện mang tính nghiệp vụ được kiểm tra tại Service. Ví dụ, số lượng sản phẩm có thể đúng về kiểu dữ liệu nhưng vẫn bị từ chối nếu vượt quá tồn kho. Tương tự, voucher có thể tồn tại nhưng không được sử dụng nếu hết hạn hoặc không đạt giá trị đơn hàng tối thiểu.
+P0481	[Normal]	b) Kiểm soát quyền sở hữu dữ liệu
+P0482	[Normal]	Mã người dùng được lấy từ JWT thay vì nhận trực tiếp từ request body. Khi truy vấn giỏ hàng, địa chỉ hoặc đơn hàng, Repository luôn kết hợp mã tài nguyên với mã khách hàng.
+P0483	[Normal]	Nhờ đó, một khách hàng không thể thay đổi customerId trong request để truy cập dữ liệu của khách hàng khác. Trường hợp không tìm thấy tài nguyên thuộc quyền sở hữu được phản hồi bằng 404 Not Found hoặc 403 Forbidden tùy theo nghiệp vụ.
+P0484	[Normal]	c) Kiểm soát dữ liệu đồng thời
+P0485	[Normal]	Các dữ liệu có khả năng được cập nhật cùng lúc như tồn kho, mặt hàng trong giỏ và đơn hàng sử dụng trường phiên bản. Khi Client gửi một phiên bản cũ, hệ thống trả về 409 Conflict và yêu cầu tải lại dữ liệu mới.
+P0486	[Normal]	Đối với những thao tác quan trọng như giữ tồn kho hoặc tạo đơn, Repository sử dụng khóa cơ sở dữ liệu trong phạm vi transaction. Cách xử lý này hạn chế việc nhiều yêu cầu đồng thời làm bán vượt tồn kho hoặc tạo nhiều đơn từ cùng một phiên thanh toán.
+P0487	[Normal]	D) Chống xử lý trùng lặp
+P0488	[Normal]	API tạo đơn và các thao tác điều chỉnh quan trọng sử dụng Idempotency-Key. Nếu Client gửi lại cùng một yêu cầu do mất kết nối, hệ thống trả lại kết quả đã xử lý thay vì tạo thêm dữ liệu mới.
+P0489	[Normal]	Nếu một khóa đã được dùng cho nội dung khác, hệ thống từ chối yêu cầu và trả về 409 Conflict. Quy tắc này đặc biệt quan trọng trong quá trình tạo đơn, giữ tồn kho và xác nhận thanh toán.
+P0490	[Normal]	e) Xử lý giao dịch nhiều dịch vụ
+P0491	[Normal]	Quá trình tạo đơn liên quan đến Order Service, Catalog Service, Cart Service và Payment Service. Hệ thống sử dụng Saga để theo dõi từng bước xử lý.
+P0492	[Normal]	Nếu giữ tồn kho thành công nhưng giữ voucher thất bại, phần tồn kho đã giữ được hoàn lại. Nếu thanh toán trả trước thất bại hoặc hết hạn, các tài nguyên đang giữ cũng được giải phóng theo trạng thái của đơn hàng.
+P0493	[Normal]	Cơ chế này giúp hệ thống duy trì tính nhất quán mà không cần cho phép một dịch vụ truy cập trực tiếp cơ sở dữ liệu của dịch vụ khác.
+P0494	[Normal]	f) Xử lý ngoại lệ
+P0495	[Normal]	Mỗi dịch vụ có lớp GlobalExceptionHandler để chuyển ngoại lệ thành phản hồi HTTP thống nhất. Lỗi trả về gồm mã lỗi, thông báo, danh sách trường không hợp lệ và thời điểm phát sinh.
+P0496	[Normal]	Mã lỗi giúp Client lựa chọn cách xử lý, còn thông báo được sử dụng để trình bày cho người dùng. Các lỗi dữ liệu đầu vào thường trả về 400, lỗi xác thực trả về 401, lỗi không có quyền trả về 403, tài nguyên không tồn tại trả về 404, còn xung đột nghiệp vụ trả về 409 hoặc 422.
+P0497	[Heading 2]	3.3 Cài đặt Client Application
+P0498	[Heading 3]	3.3.1 Cấu trúc dự án Client
+P0499	[Normal]	Ứng dụng Client được hiện thực bằng Next.js, React và TypeScript. Client không chỉ đảm nhiệm việc hiển thị giao diện mà còn là thành phần tiêu thụ các dịch vụ do backend cung cấp.
+P0500	[Normal]	Các chức năng được chia thành từng module nghiệp vụ. Mỗi module chứa component giao diện, kiểu dữ liệu và lớp gọi API riêng. Cách tổ chức này giúp tách phần trình bày khỏi phần giao tiếp với backend.
+P0504	[Normal]	Vai trò của các thư mục chính:
+T0505	[TABLE 11x2]
+  R001	Thư mục || Vai trò
+  R002	app || Khai báo các trang, layout và cấu trúc điều hướng
+  R003	components/ui || Chứa các thành phần giao diện dùng chung như nút, ô nhập và danh sách chọn
+  R004	components/layouts || Chứa bố cục cửa hàng, tài khoản và quản trị
+  R005	features || Tổ chức mã nguồn theo từng nhóm nghiệp vụ
+  R006	features/*/api || Chứa các hàm gọi API của từng chức năng
+  R007	features/*/components || Chứa component giao diện thuộc từng chức năng
+  R008	features/*/types || Khai báo kiểu dữ liệu request và response
+  R009	lib/api || Cung cấp cơ chế gọi API dùng chung
+  R010	lib/auth || Quản lý access token và trạng thái phiên đăng nhập
+  R011	contracts || Khai báo cấu trúc phản hồi dùng chung giữa Client và backend
+P0506	[Normal]	Việc chia project theo feature giúp mã nguồn của sản phẩm, giỏ hàng, khách hàng và thanh toán không bị trộn lẫn trong một thư mục component chung.
+P0507	[Heading 3]	3.3.2 Giao diện và chức năng chính
+P0508	[Normal]	Ứng dụng Client được hiện thực theo các Use Case đã xác định trong phạm vi đề tài. Mỗi nhóm chức năng được tổ chức thành một khu vực giao diện riêng, nhưng vẫn sử dụng chung các thành phần như biểu mẫu, bảng dữ liệu, thông báo trạng thái và lớp tích hợp API.
+P0509	[Normal]	a) Nhóm tài khoản, địa chỉ, giỏ hàng và voucher
+T0510	[TABLE 5x3]
+  R001	Use Case || Màn hình hiện thực || Chức năng chính
+  R002	Quản lý Catalog sản phẩm || Quản lý danh mục và sản phẩm || Tạo, cập nhật, tìm kiếm và thay đổi trạng thái danh mục, thuộc tính và sản phẩm
+  R003	Quản lý biến thể sản phẩm || Quản lý biến thể || Quản lý SKU, tên biến thể, giá, thuộc tính, kích thước, khối lượng và trạng thái bán
+  R004	Duyệt, tìm kiếm, lọc và xem sản phẩm || Danh sách và chi tiết sản phẩm || Tìm kiếm theo từ khóa, lọc theo danh mục, giá, thuộc tính và xem thông tin chi tiết
+  R005	Quản lý tồn kho || Quản lý tồn kho || Theo dõi số lượng thực tế, số lượng đang giữ, số lượng khả dụng và lịch sử điều chỉnh
+P0511	[Normal]	Màn hình hồ sơ sử dụng thông tin của tài khoản đang đăng nhập. Client không cho phép nhập mã khách hàng để truy vấn hồ sơ, mà sử dụng access token để backend xác định chủ sở hữu dữ liệu.
+P0512	[Normal]	Tại màn hình địa chỉ, tỉnh/thành phố và phường/xã được lấy từ API địa giới. Khách hàng chỉ nhập người nhận, số điện thoại và địa chỉ chi tiết. Một địa chỉ có thể được chọn làm mặc định để sử dụng tự động trong các lần đặt hàng tiếp theo.
+P0513	[Normal]	Màn hình giỏ hàng hiển thị sản phẩm, biến thể, giá hiện tại, số lượng và trạng thái còn hàng. Khi số lượng thay đổi, Client gửi yêu cầu đến backend và sử dụng giỏ hàng mới nhất trong response để cập nhật giao diện.
+P0514	[Normal]	Voucher được hiển thị theo hai nhóm: có thể sử dụng và chưa đủ điều kiện. Việc giảm giá không được tính trực tiếp trên Client mà được lấy từ kết quả kiểm tra của Cart Service.
+P0515	[Normal]	b) Nhóm đặt hàng
+T0516	[TABLE 5x3]
+  R001	Use Case || Màn hình hiện thực || Chức năng chính
+  R002	Xác nhận đặt hàng || Xác nhận thanh toán || Chọn địa chỉ, voucher, vận chuyển và phương thức thanh toán
+  R003	Tạo đơn hàng || Xác nhận tạo đơn || Kiểm tra thông tin lần cuối và gửi yêu cầu tạo đơn
+  R004	Xem lịch sử và chi tiết đơn hàng || Danh sách và chi tiết đơn hàng || Hiển thị các đơn đã đặt, thông tin sản phẩm, tiền và trạng thái
+  R005	Quản lý vòng đời đơn hàng || Quản lý trạng thái đơn hàng || Theo dõi và cập nhật đơn theo các bước xử lý hợp lệ
+P0517	[Normal]	Màn hình xác nhận đặt hàng được chia thành các bước gồm lựa chọn địa chỉ, kiểm tra giao hàng và voucher, lựa chọn phương thức thanh toán và xác nhận đơn. Sau mỗi thay đổi có ảnh hưởng đến tổng tiền, Client yêu cầu backend tính lại bản xem trước.
+P0518	[Normal]	Khi khách hàng xác nhận, Client gửi yêu cầu tạo đơn cùng Idempotency-Key. Khóa này được giữ nguyên nếu phải thực hiện lại request do mất kết nối, giúp hạn chế việc tạo nhiều đơn giống nhau.
+P0519	[Normal]	Màn hình lịch sử đơn hàng trình bày mã đơn, thời gian đặt, tổng tiền và trạng thái. Màn hình chi tiết hiển thị bản chụp sản phẩm, địa chỉ, voucher, phí giao hàng, phương thức thanh toán và dòng thời gian xử lý.
+P0520	[Normal]	Màn hình quản trị đơn hàng cho phép theo dõi đơn theo trạng thái và thực hiện các bước chuyển trạng thái hợp lệ. Client không tự quyết định trạng thái tiếp theo mà gửi yêu cầu để Order Service kiểm tra.
+P0521	[Normal]	c) Nhóm vận chuyển và thanh toán
+T0522	[TABLE 5x3]
+  R001	Use Case || Màn hình hiện thực || Chức năng chính
+  R002	Tính phí giao hàng || Lựa chọn giao hàng || Lấy phí, dịch vụ giao và thời gian dự kiến
+  R003	Thanh toán COD || Lựa chọn COD và xác nhận thu tiền || Tạo giao dịch COD và ghi nhận kết quả thu tiền
+  R004	Thanh toán VNPay || Thanh toán trực tuyến || Tạo đường dẫn thanh toán và chuyển sang VNPay
+  R005	Xử lý kết quả thanh toán || Kết quả thanh toán || Kiểm tra và hiển thị trạng thái giao dịch
+P0523	[Normal]	Phí giao hàng được lấy sau khi khách hàng chọn địa chỉ và các mặt hàng cần mua. Client chỉ hiển thị kết quả do Shipping API trả về, không cho phép sửa trực tiếp phí vận chuyển.
+P0524	[Normal]	Đối với COD, khách hàng lựa chọn thanh toán khi nhận hàng. Giao dịch được tạo ở trạng thái chờ và chỉ được xác nhận thành công khi nghiệp vụ thu tiền được thực hiện hợp lệ.
+P0525	[Normal]	Đối với VNPay, Client nhận đường dẫn thanh toán từ backend và chuyển khách hàng đến cổng thanh toán. Khi quay lại hệ thống, Client gọi API kiểm tra kết quả thay vì tự kết luận từ các tham số trên URL.
+P0526	[Heading 3]	3.3.3 Tích hợp Client với Backend API
+P0527	[Normal]	Mỗi nhóm chức năng có một module API riêng trong thư mục features. Component giao diện không gọi trực tiếp đến từng dịch vụ backend mà gửi request đến API Gateway thông qua lớp apiClient.
+P0528	[Normal]	Địa chỉ Gateway được cấu hình bằng biến môi trường NEXT_PUBLIC_API_BASE_URL. Access token được gắn vào các request cần xác thực, trong khi cookie refresh token được trình duyệt gửi tự động.
+P0529	[Normal]	a) Tích hợp API cho hồ sơ, địa chỉ, giỏ hàng và voucher
+T0530	[TABLE 11x3]
+  R001	Chức năng Client || API chính || Method
+  R002	Xem hồ sơ || /api/v1/profile || GET
+  R003	Cập nhật hồ sơ || /api/v1/profile || PUT
+  R004	Quản lý địa chỉ || /api/v1/addresses || GET, POST, PUT, DELETE
+  R005	Lấy danh mục địa giới || /api/v1/locations/provinces, /api/v1/locations/wards || GET
+  R006	Xem giỏ hàng || /api/v1/cart || GET
+  R007	Thêm sản phẩm || /api/v1/cart/items || POST
+  R008	Cập nhật mặt hàng || /api/v1/cart/items/{itemId} || PATCH
+  R009	Xóa mặt hàng || /api/v1/cart/items/{itemId} || DELETE
+  R010	Xem kho voucher || /api/v1/cart/vouchers/wallet || GET
+  R011	Kiểm tra voucher || /api/v1/cart/vouchers/preview || POST
+P0531	[Normal]	Khi cập nhật hồ sơ hoặc địa chỉ, dữ liệu thành công trả về từ API được dùng để thay thế dữ liệu đang hiển thị. Đối với giỏ hàng, Client sử dụng toàn bộ CartResponse mới nhất thay vì tự tính lại giá và tổng tiền.
+P0532	[Normal]	c) Tích hợp API cho đặt hàng
+T0533	[TABLE 9x3]
+  R001	Chức năng Client || API chính || Method
+  R002	Tạo phiên xác nhận đặt hàng || /api/v1/checkout/sessions || POST
+  R003	Xem và cập nhật phiên || /api/v1/checkout/sessions/{sessionId} || GET, PATCH
+  R004	Tạo bản xem trước || /api/v1/checkout/sessions/{sessionId}/preview || POST
+  R005	Tạo đơn hàng || /api/v1/checkout/orders || POST
+  R006	Xem lịch sử đơn hàng || /api/v1/orders || GET
+  R007	Xem chi tiết đơn hàng || /api/v1/orders/{orderId} || GET
+  R008	Xem đơn hàng quản trị || /api/v1/admin/orders || GET
+  R009	Cập nhật trạng thái đơn hàng || /api/v1/admin/orders/{orderId}/status || PATCH
+P0534	[Normal]	API Preview trả về danh sách mặt hàng, các khoản giảm, phí vận chuyển và tổng tiền cuối cùng. Client chuyển kết quả này thành phần tóm tắt đơn hàng.
+P0535	[Normal]	Khi tạo đơn thành công, Client hiển thị mã đơn và trạng thái. Nếu response chứa đường dẫn thanh toán, Client chuyển sang cổng thanh toán tương ứng.
+P0536	[Normal]	c) Tích hợp API cho vận chuyển và thanh toán
+T0537	[TABLE 8x3]
+  R001	Chức năng Client || API chính || Method
+  R002	Tính phí giao hàng || /api/v1/shipping/quotes || POST
+  R003	Kiểm tra báo giá || /api/v1/shipping/quotes/{quoteId}/validate || POST
+  R004	Tra cứu giao dịch COD || /api/v1/payments/orders/{orderId} || GET
+  R005	Xác nhận đã thu COD || /api/v1/payments/{paymentId}/cod-confirmations || POST
+  R006	Khởi tạo lần thanh toán VNPay || /api/v1/payments/{paymentId}/vnpay-attempt || POST
+  R007	Kiểm tra kết quả thanh toán || /api/v1/payments/return-status || GET
+  R008	Kiểm tra kết quả trả về từ VNPay || /api/v1/payments/vnpay/return-status || GET
+P0538	[Normal]	[CHÈN HÌNH 3.3: Luồng tích hợp Client với Backend API theo các nhóm Use Case]
+P0539	[Heading 3]	3.3.4 Xử lý trạng thái và lỗi
+P0540	[Normal]	Client quản lý trạng thái theo từng màn hình và từng thao tác. Các trạng thái chính gồm đang tải, thành công, dữ liệu trống và lỗi.
+T0541	[TABLE 9x2]
+  R001	Trạng thái || Cách xử lý trên giao diện
+  R002	Đang tải || Hiển thị nội dung chờ và tạm khóa thao tác gửi
+  R003	Thành công || Cập nhật dữ liệu hoặc chuyển sang bước tiếp theo
+  R004	Dữ liệu trống || Hiển thị thông báo phù hợp với từng chức năng
+  R005	Lỗi nhập liệu || Hiển thị lỗi tại trường tương ứng
+  R006	Lỗi nghiệp vụ || Hiển thị nội dung do backend trả về
+  R007	Lỗi xác thực || Chuyển đến màn hình đăng nhập
+  R008	Lỗi kết nối || Giữ lại dữ liệu hiện tại và cho phép thử lại
+  R009	Xung đột dữ liệu || Tải lại dữ liệu mới nhất trước khi tiếp tục
+P0542	[Normal]	Đối với hồ sơ và địa chỉ, dữ liệu biểu mẫu được giữ nguyên nếu cập nhật thất bại. Lỗi của từng trường được hiển thị gần vị trí nhập để người dùng có thể sửa trực tiếp.
+P0543	[Normal]	Đối với giỏ hàng, lỗi không đủ tồn kho hoặc dữ liệu đã thay đổi được hiển thị tại mặt hàng liên quan. Client tải lại giỏ hàng khi backend trả về xung đột phiên bản.
+P0544	[Normal]	Đối với quá trình đặt hàng, nút xác nhận bị khóa khi request đang được xử lý. Nếu giá, voucher, tồn kho hoặc báo giá đã thay đổi, Client yêu cầu thực hiện lại bước Preview trước khi tạo đơn.
+P0545	[Normal]	Đối với thanh toán, màn hình kết quả bắt đầu ở trạng thái đang kiểm tra. Sau khi nhận response từ Payment API, giao diện mới chuyển sang một trong các trạng thái thành công, thất bại, hết hạn hoặc đang chờ. Nếu không thể kết nối, dữ liệu đơn hàng vẫn được giữ và khách hàng có thể kiểm tra lại.
+P0547	[Heading 2]	3.4 Triển khai hệ thống
+P0548	[Normal]	Trong phạm vi hiện tại, DynamicMart được triển khai trên môi trường cục bộ. Các thành phần backend, Client, PostgreSQL và RabbitMQ được khởi động độc lập, sau đó kết nối với nhau thông qua cấu hình môi trường.
+P0549	[Heading 3]	3.4.1. Mô hình triển khai cục bộ
+P0550	[Normal]	Mô hình triển khai gồm các thành phần sau:
+P0552	[Normal]	[CHÈN HÌNH MÔ HÌNH TRIỂN KHAI]
+P0553	[Normal]	Client chỉ gửi request đến API Gateway. Gateway kiểm tra access token, quyền truy cập và chuyển request đến dịch vụ tương ứng. Mỗi dịch vụ chỉ truy cập cơ sở dữ liệu thuộc phạm vi của mình.
+P0554	[Heading 3]	3.4.2. Thứ tự khởi động
+P0555	[Normal]	Các thành phần được khởi động theo trình tự sau:
+P0556	[Normal]	Khởi động PostgreSQL.
+P0557	[Normal]	Tạo sáu cơ sở dữ liệu của các dịch vụ.
+P0558	[Normal]	Khởi động RabbitMQ nếu kiểm thử luồng sự kiện.
+P0559	[Normal]	Khởi động Identity, Catalog, Cart và Payment Service.
+P0560	[Normal]	Khởi động Order Service sau khi các dịch vụ phụ thuộc đã sẵn sàng.
+P0561	[Normal]	Khởi động Engagement Service.
+P0562	[Normal]	Khởi động API Gateway.
+P0563	[Normal]	Khởi động ứng dụng Next.js Client.
+P0564	[Normal]	Cơ sở dữ liệu và các dịch vụ nền cần được khởi động trước để Flyway có thể kiểm tra migration và các lời gọi liên dịch vụ không bị gián đoạn.
+P0565	[Heading 3]	3.4.3. Cổng chạy các thành phần
+T0566	[TABLE 12x3]
+  R001	Thành phần || Cổng mặc định || Vai trò
+  R002	Next.js Client || 3000 || Cung cấp giao diện web
+  R003	API Gateway || 8080 || Tiếp nhận và định tuyến request
+  R004	Identity Service || 8081 || Xác thực và tài khoản
+  R005	Catalog Service || 8082 || Sản phẩm, biến thể và tồn kho
+  R006	Cart Service || 8083 || Giỏ hàng và voucher
+  R007	Order Service || 8084 || Checkout và đơn hàng
+  R008	Payment Service || 8085 || Thanh toán và vận chuyển
+  R009	Engagement Service || 8086 || Đánh giá và tương tác
+  R010	PostgreSQL || 5432 || Lưu trữ dữ liệu
+  R011	RabbitMQ || 5672 || Trao đổi sự kiện
+  R012	RabbitMQ Management || 15672 || Theo dõi hàng đợi và kết nối
+P0567	[Normal]	Khi cổng 8080 đã được sử dụng trên máy phát triển, Gateway có thể được chuyển sang cổng 18080. Khi đó, biến NEXT_PUBLIC_API_BASE_URL của Client phải được cập nhật tương ứng.
+P0568	[Heading 1]	CHƯƠNG 4. KIỂM THỬ VÀ ĐÁNH GIÁ HỆ THỐNG
+P0569	[Heading 2]	4.1 Kiểm thử API
+P0570	[Normal]	API được kiểm thử bằng JUnit, Spring Boot Test và công cụ gửi request như Postman. Việc kiểm thử không chỉ xác nhận status code mà còn kiểm tra dữ liệu trả về và những thay đổi được lưu trong cơ sở dữ liệu.
+P0571	[Heading 3]	4.1.1. Kiểm thử hồ sơ, địa chỉ, giỏ hàng và voucher
+T0572	[TABLE 7x5]
+  R001	Test Case || API || Dữ liệu kiểm thử || Kết quả mong đợi || Kết quả
+  R002	TC01 || PUT /api/v1/profile || Hồ sơ hợp lệ || Cập nhật thành công || Đạt
+  R003	TC02 || PUT /api/v1/addresses/{addressId} || Địa chỉ của tài khoản khác || Không cho phép cập nhật || Đạt
+  R004	TC03 || POST /api/v1/cart/items || Sản phẩm và số lượng hợp lệ || Thêm vào giỏ thành công || Đạt
+  R005	TC04 || POST /api/v1/cart/items || Số lượng vượt tồn kho || Trả lỗi nghiệp vụ || Đạt
+  R006	TC05 || PATCH /api/v1/cart/items/{itemId} || Phiên bản mặt hàng đã cũ || Trả 409 Conflict || Đạt
+  R007	TC06 || POST /api/v1/cart/vouchers/preview || Voucher hết hạn || Trả lý do không đủ điều kiện || Đạt
+P0573	[Heading 3]	4.1.2. Kiểm thử đặt hàng
+T0574	[TABLE 8x5]
+  R001	Test Case || API || Dữ liệu kiểm thử || Kết quả mong đợi || Kết quả
+  R002	TC01 || POST /api/v1/checkout/sessions || Giỏ hàng hợp lệ || Tạo phiên xác nhận đặt hàng || Đạt
+  R003	TC02 || POST API Preview || Địa chỉ và voucher hợp lệ || Trả phí giao hàng và tổng tiền || Đạt
+  R004	TC03 || POST /api/v1/checkout/orders || Phiên hợp lệ và khóa mới || Tạo một đơn hàng || Đạt
+  R005	TC04 || POST /api/v1/checkout/orders || Gửi lại cùng Idempotency-Key || Không tạo thêm đơn || Đạt
+  R006	TC05 || POST /api/v1/checkout/orders || Phiên đã hết hạn || Trả 409 Conflict || Đạt
+  R007	TC06 || POST /api/v1/checkout/orders || Giá hoặc giỏ hàng đã thay đổi || Yêu cầu Preview lại || Đạt
+  R008	TC07 || POST /api/v1/checkout/orders || Giữ tồn kho thành công nhưng voucher thất bại || Hoàn lại tồn kho đã giữ || Đạt
+P0575	[Heading 3]	4.1.3. Kiểm thử vận chuyển và thanh toán
+T0576	[TABLE 8x5]
+  R001	Test Case || API || Dữ liệu kiểm thử || Kết quả mong đợi || Kết quả
+  R002	TC20 || POST /api/v1/shipping/quotes || Địa chỉ và kiện hàng hợp lệ || Trả báo giá vận chuyển || Đạt
+  R003	TC21 || POST API báo giá || Địa chỉ không hợp lệ || Trả lỗi nghiệp vụ || Đạt
+  R004	TC22 || POST API callback VNPay || Chữ ký hợp lệ, đúng số tiền || Cập nhật giao dịch thành công || Đạt
+  R005	TC23 || POST API callback VNPay || Chữ ký không hợp lệ || Không cập nhật thanh toán || Đạt
+  R006	TC24 || POST API callback VNPay || Callback đã xử lý || Không tạo tác động lần hai || Đạt
+  R007	TC25 || POST /api/v1/payments/{paymentId}/cod-confirmations || Biên nhận COD hợp lệ || Ghi nhận đã thu tiền || Đạt
+  R008	TC26 || GET /api/v1/payments/return-status || Mã tham chiếu hợp lệ || Trả trạng thái giao dịch || Đạt
+P0577	[Normal]	[CHÈN ẢNH]
+P0578	[Heading 2]	4.2 Kiểm thử tích hợp Client API
+P0579	[Normal]	Kiểm thử tích hợp nhằm xác nhận rằng dữ liệu hiển thị trên Client được lấy từ backend và các thao tác trên giao diện tạo ra request phù hợp. Việc kiểm thử được thực hiện trên các luồng chính của hệ thống.
+T0580	[TABLE 13x4]
+  R001	Test Case || Luồng kiểm thử || Kết quả mong đợi || Kết quả
+  R002	IT01 || Đăng nhập bằng tài khoản hợp lệ || Client nhận phiên và hiển thị chức năng theo vai trò || Đạt
+  R003	IT02 || Tìm kiếm và lọc sản phẩm || Danh sách thay đổi theo dữ liệu Catalog API || Đạt
+  R004	IT03 || Chọn biến thể và thêm vào giỏ || Giỏ hàng hiển thị đúng sản phẩm, giá và số lượng || Đạt
+  R005	IT04 || Cập nhật số lượng trong giỏ || Client hiển thị Cart Response mới nhất || Đạt
+  R006	IT05 || Thêm địa chỉ giao hàng || Địa chỉ được lưu và xuất hiện trong danh sách || Đạt
+  R007	IT06 || Chọn voucher || Tổng tiền được cập nhật theo kết quả Preview || Đạt
+  R008	IT07 || Tính phí giao hàng || Hiển thị phí, dịch vụ và thời gian dự kiến || Đạt
+  R009	IT08 || Tạo đơn hàng COD || Đơn được tạo với trạng thái chờ xử lý || Đạt
+  R010	IT09 || Thanh toán VNPay || Client chuyển đến đường dẫn thanh toán || Đạt
+  R011	IT10 || Kiểm tra kết quả thanh toán || Hiển thị đúng trạng thái từ Payment API || Đạt
+  R012	IT11 || Quản trị sản phẩm và tồn kho || Dữ liệu sau cập nhật được tải lại từ API || Đạt
+  R013	IT12 || Xem lịch sử và xử lý đơn hàng || Giao diện và API chưa hoàn thiện đầy đủ || Đạt
+P0582	[Image Note]	[CHÈN ẢNH KẾT QUẢ]
+P0583	[Heading 2]	4.3 Đánh giá mức độ đáp ứng
+T0584	[TABLE 17x3]
+  R001	Yêu cầu || Mức độ thực hiện || Ghi chú
+  R002	Quản lý Catalog sản phẩm || Hoàn thành || Đã có API và giao diện quản trị
+  R003	Quản lý biến thể sản phẩm || Hoàn thành || Hỗ trợ SKU, giá, thuộc tính, ảnh và trạng thái
+  R004	Duyệt, tìm kiếm, lọc và xem sản phẩm || Hoàn thành || Có danh sách, chi tiết, bộ lọc và phân trang
+  R005	Quản lý tồn kho || Hoàn thành || Có theo dõi, điều chỉnh và giữ tồn kho
+  R006	Quản lý hồ sơ cá nhân || Hoàn thành || Dữ liệu gắn với tài khoản đăng nhập
+  R007	Quản lý địa chỉ giao hàng || Hoàn thành || Có địa chỉ mặc định và dữ liệu địa giới
+  R008	Quản lý giỏ hàng || Hoàn thành || Có thêm, sửa, xóa và chọn mặt hàng
+  R009	Áp dụng Voucher || Hoàn thành || Backend kiểm tra điều kiện và mức giảm
+  R010	Xác nhận đặt hàng || Hoàn thành phần chính || Có Preview, địa chỉ, voucher và vận chuyển
+  R011	Tạo đơn hàng || Hoàn thành phần chính || Có idempotency, kiểm tra lại và Saga
+  R012	Xem lịch sử và chi tiết đơn hàng || Hoàn thành một phần || Mô hình dữ liệu đã có, API và Client cần hoàn thiện
+  R013	Quản lý vòng đời đơn hàng || Hoàn thành một phần || Đã có trạng thái và state machine, giao diện còn hạn chế
+  R014	Tính phí giao hàng || Hoàn thành || Có danh mục địa giới và báo giá
+  R015	Thanh toán COD || Hoàn thành || Có giao dịch chờ và xác nhận thu tiền
+  R016	Thanh toán VNPay || Hoàn thành phần chính || Có khởi tạo giao dịch và xác minh callback
+  R017	Xử lý kết quả thanh toán || Hoàn thành || Có kiểm tra chữ ký, số tiền và callback trùng
+P0585	[Normal]	Đánh giá theo các yêu cầu kỹ thuật:
+T0586	[TABLE 12x3]
+  R001	Yêu cầu || Mức độ thực hiện || Ghi chú
+  R002	Xây dựng kiến trúc hướng dịch vụ || Hoàn thành || Các nghiệp vụ được chia thành dịch vụ độc lập
+  R003	Xây dựng REST API || Hoàn thành phần chính || Các tài nguyên chính đã có API
+  R004	Xây dựng API Gateway || Hoàn thành || Có định tuyến, CORS và kiểm tra JWT
+  R005	Xác thực và phân quyền || Hoàn thành || Có access token, refresh token và vai trò
+  R006	Tách cơ sở dữ liệu theo dịch vụ || Hoàn thành || Sáu database PostgreSQL độc lập
+  R007	Tích hợp Client với API || Hoàn thành phần chính || Các luồng sản phẩm, giỏ hàng, Checkout và thanh toán đã kết nối
+  R008	Xử lý nghiệp vụ liên dịch vụ || Hoàn thành phần chính || Có REST nội bộ, Saga và idempotency
+  R009	Tích hợp RabbitMQ || Hoàn thành một phần || Mới tập trung tại Catalog và Payment
+  R010	Đóng gói bằng Docker Compose || Chưa hoàn thành || Chưa có cấu hình thống nhất cho toàn hệ thống
+  R011	Triển khai Cloud || Chưa thực hiện || Ngoài phạm vi phiên bản hiện tại
+  R012	Engagement và báo cáo || Hoàn thành một phần || Đã có mô hình dữ liệu, API và giao diện chưa đầy đủ
+P0588	[Heading 1]	KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+P0589	[Heading 2]	1. Kết luận
+P0590	[Normal]	Đề tài đã hoàn thành việc phân tích, thiết kế và xây dựng một hệ thống thương mại điện tử theo định hướng phát triển phần mềm hướng dịch vụ. Các chức năng của hệ thống được phân chia thành những nhóm nghiệp vụ tương đối độc lập, giao tiếp với nhau thông qua API và cùng phục vụ quy trình mua sắm trực tuyến.
+P0591	[Normal]	Hệ thống đã xây dựng được các chức năng cơ bản như quản lý tài khoản, sản phẩm, giỏ hàng, khuyến mại, đặt hàng, vận chuyển và thanh toán. Ứng dụng Client được tích hợp với các API của backend để tiếp nhận thao tác, hiển thị dữ liệu và phản hồi kết quả cho người sử dụng.
+P0592	[Normal]	Quá trình thực hiện đề tài đã vận dụng được những nội dung chính của môn học, bao gồm phân tích yêu cầu, thiết kế kiến trúc dịch vụ, thiết kế cơ sở dữ liệu, xây dựng REST API, tích hợp Client với backend và xử lý các quy tắc nghiệp vụ. Hệ thống không chỉ thực hiện các thao tác thêm, sửa, xóa và truy vấn dữ liệu mà còn kiểm tra quyền truy cập, trạng thái tài nguyên và các điều kiện nghiệp vụ trước khi chấp nhận yêu cầu.
+P0593	[Normal]	Kết quả đạt được cho thấy cách tổ chức hệ thống theo các dịch vụ giúp phân chia rõ trách nhiệm giữa các thành phần. Mỗi dịch vụ tập trung xử lý một phạm vi nghiệp vụ, trong khi ứng dụng Client sử dụng API làm phương thức trao đổi dữ liệu thống nhất. Đây là cơ sở để hệ thống có thể tiếp tục được hoàn thiện và mở rộng trong tương lai.
+P0594	[Heading 2]	2. Hạn chế
+P0595	[Normal]	Do giới hạn về thời gian và phạm vi của đề tài, hệ thống vẫn còn một số hạn chế.
+P0596	[Normal]	Một số chức năng mở rộng chưa được hoàn thiện đầy đủ hoặc mới được xây dựng ở mức cơ bản. Giao diện của một số nghiệp vụ có thể tiếp tục được cải thiện để nâng cao trải nghiệm sử dụng và hỗ trợ tốt hơn trên nhiều kích thước màn hình.
+P0597	[Normal]	Hệ thống chủ yếu được phát triển và kiểm thử trong môi trường cục bộ. Việc triển khai trên môi trường thực tế, kiểm thử với số lượng người dùng lớn và đánh giá hiệu năng trong thời gian dài chưa được thực hiện đầy đủ.
+P0598	[Normal]	Các cơ chế hỗ trợ vận hành như giám sát tập trung, sao lưu dữ liệu, cảnh báo sự cố và phân tích hiệu năng vẫn cần được nghiên cứu thêm. Khả năng xử lý lỗi khi một dịch vụ hoặc hệ thống bên ngoài tạm thời không hoạt động cũng cần được tiếp tục kiểm tra trong nhiều tình huống thực tế.
+P0599	[Normal]	Bên cạnh đó, phạm vi đề tài tập trung vào ứng dụng web và những chức năng cốt lõi của hoạt động mua bán trực tuyến. Các nền tảng khác như ứng dụng di động hoặc mô hình thương mại điện tử có nhiều người bán chưa được xem xét trong phiên bản hiện tại.
+P0601	[Heading 2]	3. Hướng phát triển
+P0602	[Normal]	Trong thời gian tới, hệ thống có thể tiếp tục được phát triển theo một số hướng chính.
+P0603	[Normal]	Trước hết, các chức năng hiện có cần được hoàn thiện về giao diện, kiểm tra dữ liệu và trải nghiệm sử dụng. Những quy trình có nhiều bước cần được tối ưu để giúp người dùng dễ theo dõi và hạn chế thao tác sai.
+P0604	[Normal]	Hệ thống có thể bổ sung các chức năng tương tác như đánh giá sản phẩm, danh sách yêu thích, hỏi đáp, thông báo và hỗ trợ trực tuyến. Các chức năng báo cáo cũng có thể được mở rộng để cung cấp số liệu phục vụ quá trình theo dõi và ra quyết định.
+P0605	[Normal]	Về mặt kỹ thuật, hệ thống có thể được đóng gói và triển khai trên hạ tầng Cloud. Quy trình xây dựng, kiểm thử và phát hành nên được tự động hóa để giảm sai sót khi triển khai phiên bản mới.
+P0606	[Normal]	Khi số lượng người dùng và dữ liệu tăng, có thể nghiên cứu bổ sung cơ chế lưu đệm, cân bằng tải và tối ưu truy vấn. Việc kiểm thử tải, theo dõi hiệu năng và thu thập log tập trung cũng cần được thực hiện để nâng cao độ ổn định.
+P0607	[Normal]	Ngoài ra, hệ thống có thể phát triển thêm ứng dụng dành cho thiết bị di động, mở rộng phương thức thanh toán và tích hợp thêm các đơn vị vận chuyển. Việc ứng dụng trí tuệ nhân tạo trong tìm kiếm, gợi ý sản phẩm và hỗ trợ khách hàng cũng là một hướng phát triển phù hợp khi dữ liệu và nền tảng kỹ thuật đã đủ ổn định.
+P0609	[Heading 1]	TÀI LIỆU THAM KHẢO
+P0610	[Normal]	[1] Tài liệu hướng dẫn viết báo cáo môn Phát triển phần mềm hướng dịch vụ do người dùng cung cấp.
+P0611	[Normal]	[2] Kho mã nguồn DynamicMart, README.md và thư mục docs, truy cập nội bộ ngày 29/09/2026.
+P0612	[Normal]	[3] Spring Boot Reference Documentation, https://docs.spring.io/spring-boot/.
+P0613	[Normal]	[4] Spring Security Reference, https://docs.spring.io/spring-security/reference/.
+P0614	[Normal]	[5] Spring Cloud Stream Reference, https://docs.spring.io/spring-cloud-stream/reference/.
+P0615	[Normal]	[6] Next.js Documentation, https://nextjs.org/docs.
+P0616	[Normal]	[7] PostgreSQL Documentation, https://www.postgresql.org/docs/.
+P0617	[Normal]	[8] RabbitMQ Documentation, https://www.rabbitmq.com/docs.
+P0618	[Normal]	[9] Flyway Documentation, https://documentation.red-gate.com/flyway.

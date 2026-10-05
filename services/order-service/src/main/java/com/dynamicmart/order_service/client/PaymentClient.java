@@ -15,6 +15,8 @@ public interface PaymentClient {
 
     PaymentResponse createVnPayAttempt(UUID paymentId);
 
+    PaymentResponse collectCodForReceivedOrder(UUID orderId);
+
     record ShippingItemRequest(
             UUID variantId,
             int quantity,

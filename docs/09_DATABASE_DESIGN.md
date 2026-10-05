@@ -788,12 +788,12 @@ Chỉ tạo cho Order có `final_total_vnd > 0`; đơn `NOT_REQUIRED + FREE` kh�
 | `paid_at` | `timestamptz null` | Khi hệ thống xác thực đã thu tiền. |
 | `expires_at` | `timestamptz null` | TTL prepaid; postpaid QR TTL ở attempt. |
 | `correlation_id` | `uuid NOT NULL` | Nối Payment/Outbox với checkout saga đã tạo Order. |
-| `cod_receipt_no` | `varchar(100) null` | Biên nhận thu COD; chỉ có sau xác nhận thành công. |
-| `cod_confirmed_by` | `uuid null` | Logical admin ID xác nhận thu COD. |
-| `cod_confirmed_at` | `timestamptz null` | Thời điểm xác nhận thu COD. |
+| `cod_receipt_no` | `varchar(100) null` | Cột tương thích dữ liệu cũ; luồng hiện tại không yêu cầu biên nhận COD. |
+| `cod_confirmed_by` | `uuid null` | Cột tương thích dữ liệu cũ; luồng hiện tại không yêu cầu admin xác nhận. |
+| `cod_confirmed_at` | `timestamptz null` | Thời điểm COD được tự ghi nhận khi khách xác nhận đã nhận hàng. |
 | `created_at`, `updated_at` | `timestamptz` | Audit. |
 
-`PREPAID + VNPAY` tạo Payment/Attempt URL ngay sau Order. `POSTPAID` tạo Payment `PENDING` lúc Order; chỉ `POSTPAID + VNPAY` phát `PaymentDue` khi Order vào `HANDOVER_PENDING`, Payment Service nhận event này để mở VNPay Attempt. VNPay URL/QR trả sau `FAILED`/`EXPIRED` chỉ làm Attempt kết thúc, Payment vẫn `PENDING` để có thể tạo Attempt mới. COD không dùng `PaymentDue` và không tạo Attempt thành công cho đến khi admin xác nhận thu tiền tại bàn giao.
+`PREPAID + VNPAY` tạo Payment/Attempt URL ngay sau Order. `POSTPAID` tạo Payment `PENDING` lúc Order; chỉ `POSTPAID + VNPAY` phát `PaymentDue` khi Order vào `HANDOVER_PENDING`, Payment Service nhận event này để mở VNPay Attempt. VNPay URL/QR trả sau `FAILED`/`EXPIRED` chỉ làm Attempt kết thúc, Payment vẫn `PENDING` để có thể tạo Attempt mới. COD không dùng `PaymentDue`; khi khách sở hữu đơn bấm **Đã nhận hàng**, Order Service gọi lệnh nội bộ để tự ghi nhận COD thành công.
 
 ### 6.2. `payment_attempts`
 
@@ -813,12 +813,12 @@ Mỗi URL VNPay/retry hoặc lần ghi nhận COD là một attempt; không ghi 
 | `provider_transaction_id` | `varchar(120) UNIQUE null` | Transaction ID VNPay khi success. |
 | `received_amount_vnd` | `bigint null` | Amount callback/COD collection. |
 | `provider_response_code` | `varchar(50) null` | Mã kết quả provider. |
-| `collection_reference` | `varchar(120) null` | Biên nhận/mã đối soát khi thu COD. |
-| `recorded_by_admin_id` | `uuid null` | Logical Identity ID của admin xác nhận COD; null với VNPay IPN. |
-| `recorded_at` | `timestamptz null` | Mốc admin ghi nhận thu COD. |
+| `collection_reference` | `varchar(120) null` | Mã kỹ thuật nội bộ cho attempt COD; không do người dùng nhập. |
+| `recorded_by_admin_id` | `uuid null` | Cột tương thích dữ liệu cũ; null trong luồng COD hiện tại. |
+| `recorded_at` | `timestamptz null` | Mốc hệ thống ghi nhận COD sau xác nhận nhận hàng. |
 | `requested_at`, `resolved_at` | `timestamptz` | Audit lifecycle. |
 
-Unique `(payment_id, attempt_no)`. Với attempt `COD` thành công, bắt buộc `received_amount_vnd = expected_amount_vnd`, `recorded_by_admin_id`, `recorded_at` và `collection_reference`; trạng thái không được đổi trực tiếp qua UI. Postpaid VNPay QR hết hạn tạo attempt/reference mới khi Order còn `HANDOVER_PENDING`; không hủy Order.
+Unique `(payment_id, attempt_no)`. Attempt `COD` thành công được hệ thống tạo từ lệnh nội bộ sau khi khách xác nhận nhận hàng, dùng số tiền đã khóa theo Payment và không nhận số tiền/biên nhận từ trình duyệt. Postpaid VNPay QR hết hạn tạo attempt/reference mới khi Order còn `HANDOVER_PENDING`; không hủy Order.
 
 ### 6.3. `payment_callback_audits`
 

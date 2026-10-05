@@ -49,7 +49,7 @@ class OrderStateMachineTests {
     }
 
     @Test
-    void postpaidReceiptBeforePaymentWaitsForPayment() {
+    void postpaidOnlineReceiptBeforePaymentWaitsForPayment() {
         assertEquals(
                 OrderStatus.HANDOVER_PENDING,
                 stateMachine.adminHandover(OrderStatus.SHIPPING, PaymentTiming.POSTPAID));

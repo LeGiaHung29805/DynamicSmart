@@ -39,6 +39,11 @@ public class HttpPaymentClient implements PaymentClient {
         return post("/api/v1/payments/{paymentId}/vnpay-attempt", null, PaymentResponse.class, paymentId);
     }
 
+    @Override
+    public PaymentResponse collectCodForReceivedOrder(UUID orderId) {
+        return post("/api/v1/payments/orders/{orderId}/cod-collected", null, PaymentResponse.class, orderId);
+    }
+
     private <T> T post(String uri, Object body, Class<T> responseType, Object... uriVariables) {
         try {
             var request = restClient.post().uri(uri, uriVariables);

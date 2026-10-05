@@ -9,8 +9,6 @@ export type AdminPayment = {
   status: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
   expiresAt?: string;
   paidAt?: string;
-  codReceiptNo?: string;
-  codConfirmedBy?: string;
   codConfirmedAt?: string;
 };
 
@@ -22,5 +20,4 @@ export const adminPaymentsApi = {
   list: (page = 0) => apiClient.get<PaymentPage>(`api/v1/payments?page=${page}&size=20`),
   attempts: (paymentId: string) => apiClient.get<PaymentAttempt[]>(`api/v1/payments/${paymentId}/attempts`),
   audits: (paymentId: string) => apiClient.get<CallbackAudit[]>(`api/v1/payments/${paymentId}/callback-audits`),
-  confirmCod: (paymentId: string, collectedAmountVnd: number, receiptNo: string) => apiClient.post<AdminPayment>(`api/v1/payments/${paymentId}/cod-confirmations`, { collectedAmountVnd, receiptNo }),
 };

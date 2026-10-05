@@ -363,9 +363,9 @@ Các chức năng thanh toán cụ thể:
 ### 4.7. Vận hành thanh toán — P0
 
 1. Xem trạng thái Payment: chờ, thành công, thất bại hoặc hết hạn.
-2. Xem lịch sử Payment Attempt (lần tạo URL/QR hoặc xác nhận COD).
+2. Xem lịch sử Payment Attempt (lần tạo URL/QR hoặc lần COD được tự ghi nhận khi khách xác nhận đã nhận hàng).
 3. Xem audit callback VNPay: chữ ký hợp lệ, số tiền hợp lệ, callback trùng hoặc callback đến muộn.
-4. Xác nhận thu COD theo luồng vận hành được bảo vệ.
+4. Theo dõi COD; hệ thống tự ghi nhận đã thanh toán khi khách bấm **Đã nhận hàng**.
 5. Không được tự sửa số tiền thanh toán từ frontend/admin UI ngoài rule nghiệp vụ.
 6. Không được đánh dấu Payment `PAID` trước khi COD được thu hoặc IPN VNPay hợp lệ.
 
@@ -551,7 +551,7 @@ CONFIRMED
 |---|---|---|
 | Trả trước VNPay | `PENDING` → `PAID`, `FAILED` hoặc `EXPIRED` | `FAILED`/`EXPIRED` là kết thúc: phát event tương ứng để hủy Order và trả reservation. |
 | Trả sau VNPay | `PENDING` → `PAID` | URL/QR thất bại hoặc hết hạn chỉ làm Attempt `FAILED`/`EXPIRED`; Payment vẫn `PENDING` để tạo URL/QR mới. |
-| Trả sau COD | `PENDING` → `PAID` | Chỉ chuyển `PAID` sau xác nhận thu tiền có quyền, đúng số tiền và có biên nhận. |
+| Trả sau COD | `PENDING` → `PAID` | Tự chuyển `PAID` khi chính khách hàng sở hữu đơn bấm **Đã nhận hàng**; không nhập số tiền hoặc biên nhận. |
 | Đơn 0đ | Không tạo Payment | Điều kiện thanh toán được xem là đã đạt. |
 
 `PaymentDue` do Order Service phát khi Order `POSTPAID + VNPAY` chuyển `HANDOVER_PENDING`; Payment Service nhận event này để tạo Attempt VNPay trả sau. COD không dùng event này, chỉ được ghi nhận thu tiền tại bàn giao. `PaymentFailed` và `PaymentExpired` chỉ phát cho Payment trả trước; Payment Service phát `PaymentSucceeded` đúng một lần khi khoản phải thu chuyển `PAID`.

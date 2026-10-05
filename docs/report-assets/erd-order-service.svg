@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <style>
+      .title{font:700 28px Arial,sans-serif;fill:#176b45}.entity{fill:#dcfce7;stroke:#258357;stroke-width:2;filter:url(#shadow)}.relation{fill:#fff1c7;stroke:#d39b28;stroke-width:2;filter:url(#shadow)}.attr{fill:#fbfffc;stroke:#64a581;stroke-width:1.6}.line{stroke:#527565;stroke-width:2;fill:none}.ename{font:700 17px Arial,sans-serif;fill:#15533a}.rname{font:600 15px Arial,sans-serif;fill:#805b08}.atext{font:14px Arial,sans-serif;fill:#1f2937}.card{font:700 16px Arial,sans-serif;fill:#b06c00}.note{font:13px Arial,sans-serif;fill:#4b5563}
+    </style>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#176b45" flood-opacity=".15"/></filter>
+  </defs>
+  <rect width="1600" height="900" fill="#fff"/>
+  <text x="800" y="48" text-anchor="middle" class="title">ERD RÚT GỌN – ORDER SERVICE</text>
+
+  <!-- Main relationships -->
+  <path class="line" d="M330 390H430M550 390H650M890 390H1000M1120 390H1220"/>
+  <path class="line" d="M770 455V555M770 675V735"/>
+
+  <!-- Checkout session -->
+  <rect x="90" y="345" width="240" height="90" rx="3" class="entity"/>
+  <text x="210" y="398" text-anchor="middle" class="ename">PHIÊN ĐẶT HÀNG</text>
+  <ellipse cx="150" cy="205" rx="82" ry="29" class="attr"/><text x="150" y="210" text-anchor="middle" class="atext">id (PK)</text>
+  <ellipse cx="300" cy="260" rx="104" ry="29" class="attr"/><text x="300" y="265" text-anchor="middle" class="atext">customer_id (LR)</text>
+  <ellipse cx="120" cy="535" rx="82" ry="29" class="attr"/><text x="120" y="540" text-anchor="middle" class="atext">status</text>
+  <ellipse cx="305" cy="545" rx="118" ry="29" class="attr"/><text x="305" y="550" text-anchor="middle" class="atext">final_total_vnd</text>
+  <path class="line" d="M150 234L185 345M300 289L245 345M120 506L175 435M305 516L250 435"/>
+
+  <!-- Creates -->
+  <polygon points="490,330 550,390 490,450 430,390" class="relation"/>
+  <text x="490" y="395" text-anchor="middle" class="rname">TẠO THÀNH</text>
+  <text x="390" y="376" class="card">1</text><text x="578" y="376" class="card">0..1</text>
+
+  <!-- Orders -->
+  <rect x="650" y="345" width="240" height="110" rx="3" class="entity"/>
+  <text x="770" y="408" text-anchor="middle" class="ename">ĐƠN HÀNG</text>
+  <ellipse cx="620" cy="205" rx="78" ry="29" class="attr"/><text x="620" y="210" text-anchor="middle" class="atext">id (PK)</text>
+  <ellipse cx="790" cy="180" rx="132" ry="29" class="attr"/><text x="790" y="185" text-anchor="middle" class="atext">checkout_session_id (FK)</text>
+  <ellipse cx="955" cy="235" rx="105" ry="29" class="attr"/><text x="955" y="240" text-anchor="middle" class="atext">customer_id (LR)</text>
+  <ellipse cx="620" cy="545" rx="104" ry="29" class="attr"/><text x="620" y="550" text-anchor="middle" class="atext">order_number</text>
+  <ellipse cx="920" cy="545" rx="82" ry="29" class="attr"/><text x="920" y="550" text-anchor="middle" class="atext">status</text>
+  <path class="line" d="M620 234L710 345M790 209L780 345M955 264L840 345M620 516L700 455M920 516L840 455"/>
+
+  <!-- Contains -->
+  <polygon points="1060,330 1120,390 1060,450 1000,390" class="relation"/>
+  <text x="1060" y="395" text-anchor="middle" class="rname">GỒM</text>
+  <text x="950" y="376" class="card">1</text><text x="1160" y="376" class="card">N</text>
+
+  <!-- Order items -->
+  <rect x="1220" y="345" width="270" height="90" rx="3" class="entity"/>
+  <text x="1355" y="398" text-anchor="middle" class="ename">CHI TIẾT ĐƠN HÀNG</text>
+  <ellipse cx="1250" cy="205" rx="78" ry="29" class="attr"/><text x="1250" y="210" text-anchor="middle" class="atext">id (PK)</text>
+  <ellipse cx="1430" cy="235" rx="98" ry="29" class="attr"/><text x="1430" y="240" text-anchor="middle" class="atext">order_id (FK)</text>
+  <ellipse cx="1245" cy="535" rx="100" ry="29" class="attr"/><text x="1245" y="540" text-anchor="middle" class="atext">variant_id (LR)</text>
+  <ellipse cx="1435" cy="535" rx="82" ry="29" class="attr"/><text x="1435" y="540" text-anchor="middle" class="atext">quantity</text>
+  <path class="line" d="M1250 234L1300 345M1430 264L1405 345M1245 506L1300 435M1435 506L1405 435"/>
+
+  <!-- Shipping address -->
+  <polygon points="770,555 830,615 770,675 710,615" class="relation"/>
+  <text x="770" y="620" text-anchor="middle" class="rname">GIAO TỚI</text>
+  <text x="785" y="520" class="card">1</text><text x="785" y="715" class="card">1</text>
+  <rect x="650" y="735" width="240" height="90" rx="3" class="entity"/>
+  <text x="770" y="788" text-anchor="middle" class="ename">ĐỊA CHỈ GIAO HÀNG</text>
+  <ellipse cx="520" cy="780" rx="78" ry="29" class="attr"/><text x="520" y="785" text-anchor="middle" class="atext">id (PK)</text>
+  <ellipse cx="1030" cy="780" rx="98" ry="29" class="attr"/><text x="1030" y="785" text-anchor="middle" class="atext">order_id (FK)</text>
+  <path class="line" d="M598 780H650M890 780H932"/>
+
+  <text x="85" y="860" class="note">PK: khóa chính   •   FK: khóa ngoại nội bộ   •   LR: tham chiếu logic đến dữ liệu của service khác</text>
+</svg>

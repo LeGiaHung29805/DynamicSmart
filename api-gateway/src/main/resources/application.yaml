@@ -19,6 +19,7 @@ app:
     order-service-url: ${ORDER_SERVICE_URL:http://localhost:8084}
     payment-service-url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
     engagement-service-url: ${ENGAGEMENT_SERVICE_URL:http://localhost:8086}
+    ai-assistant-service-url: ${AI_ASSISTANT_SERVICE_URL:http://127.0.0.1:8001}
   security:
     internal-api-key: ${INTERNAL_API_KEY}
     jwt:

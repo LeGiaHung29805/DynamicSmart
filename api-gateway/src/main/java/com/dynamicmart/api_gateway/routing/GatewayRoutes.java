@@ -47,4 +47,8 @@ public class GatewayRoutes {
     @Bean RouterFunction<ServerResponse> engagementRoute(@Value("${app.routes.engagement-service-url}") String target) {
         return route("engagement-service").route(path("/api/v1/reviews/**").or(path("/api/v1/reports/**")), http()).before(uri(target)).build();
     }
+
+    @Bean RouterFunction<ServerResponse> aiAssistantRoute(@Value("${app.routes.ai-assistant-service-url}") String target) {
+        return route("ai-assistant-service").route(path("/api/v1/assistant/**"), http()).before(uri(target)).build();
+    }
 }

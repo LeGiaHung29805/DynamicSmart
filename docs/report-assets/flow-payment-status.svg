@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="620" viewBox="0 0 1600 620">
+  <defs>
+    <style>
+      .title{font:600 28px Arial,sans-serif;fill:#172033}.label{font:600 18px Arial,sans-serif;fill:#172033}.sub{font:400 15px Arial,sans-serif;fill:#48566a}.box{fill:#fff;stroke:#53657a;stroke-width:2}.endpoint{fill:#eef4fa;stroke:#385a7a;stroke-width:2}.db{fill:#f6f7f9;stroke:#53657a;stroke-width:2}.arrow{stroke:#53657a;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#53657a"/></marker>
+  </defs>
+  <rect width="1600" height="620" fill="#fff"/>
+  <text x="800" y="55" text-anchor="middle" class="title">Luồng tra cứu trạng thái thanh toán</text>
+
+  <rect x="70" y="190" width="280" height="120" rx="12" class="endpoint"/>
+  <text x="210" y="235" text-anchor="middle" class="label">HTTP Request</text>
+  <text x="210" y="270" text-anchor="middle" class="sub">GET</text>
+  <text x="210" y="294" text-anchor="middle" class="sub">/api/v1/payments/orders/{orderId}</text>
+
+  <rect x="405" y="190" width="230" height="120" rx="12" class="box"/>
+  <text x="520" y="240" text-anchor="middle" class="label">PaymentController</text>
+  <text x="520" y="276" text-anchor="middle" class="sub">Tiếp nhận yêu cầu</text>
+
+  <rect x="690" y="190" width="230" height="120" rx="12" class="box"/>
+  <text x="805" y="240" text-anchor="middle" class="label">PaymentService</text>
+  <text x="805" y="276" text-anchor="middle" class="sub">Xử lý nghiệp vụ tra cứu</text>
+
+  <rect x="975" y="190" width="230" height="120" rx="12" class="box"/>
+  <text x="1090" y="240" text-anchor="middle" class="label">PaymentRepository</text>
+  <text x="1090" y="276" text-anchor="middle" class="sub">Truy vấn thanh toán</text>
+
+  <path d="M1260 210 C1260 190 1480 190 1480 210 L1480 292 C1480 316 1260 316 1260 292 Z" class="db"/>
+  <ellipse cx="1370" cy="210" rx="110" ry="22" class="db"/>
+  <text x="1370" y="248" text-anchor="middle" class="label">payment_db</text>
+  <text x="1370" y="278" text-anchor="middle" class="sub">PostgreSQL</text>
+
+  <rect x="595" y="430" width="410" height="105" rx="12" class="endpoint"/>
+  <text x="800" y="472" text-anchor="middle" class="label">HTTP Response</text>
+  <text x="800" y="505" text-anchor="middle" class="sub">Trạng thái thanh toán dạng JSON</text>
+
+  <path d="M350 250H395" class="arrow"/>
+  <path d="M635 250H680" class="arrow"/>
+  <path d="M920 250H965" class="arrow"/>
+  <path d="M1205 250H1250" class="arrow"/>
+  <path d="M1370 317V365H800V420" class="arrow"/>
+</svg>

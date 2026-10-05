@@ -37,6 +37,7 @@ public class GatewaySecurityConfig {
                                 "/api/v1/payments/zalopay/callback",
                                 "/api/v1/payments/payos/webhook",
                                 "/api/v1/payments/sepay/webhook",
+                                "/api/v1/assistant/chat",
                                 "/api/v1/cart/promotions/prices/**").permitAll()
                         // Dịch vụ đích xác thực lại các route nội bộ bằng X-Internal-Api-Key.
                         .requestMatchers(HttpMethod.POST,
@@ -49,10 +50,12 @@ public class GatewaySecurityConfig {
                                 "/api/v1/locations/validate",
                                 "/api/v1/payments/orders/*").permitAll()
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/locations/provinces",
+                                "/api/v1/locations/wards",
                                 "/api/v1/catalog/categories/**",
                                 "/api/v1/catalog/products/**",
                                 "/api/v1/catalog/variants/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/cod-confirmations", "/api/v1/locations/sync").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments", "/api/v1/payments/*/callback-audits", "/api/v1/payments/*/attempts").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/users/**", "/api/v1/cart/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

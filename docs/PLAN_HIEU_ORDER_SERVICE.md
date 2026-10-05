@@ -674,7 +674,7 @@ Tình huống bắt buộc:
 - Endpoint kiểm tra Variant và Inventory từ Catalog.
 - Endpoint Cart/Voucher từ Cart Service.
 - Endpoint GHN Quote và Payment từ Payment Service.
-- `ShippingQuoteResponse` phải trả `requestFingerprint` canonical do Payment tạo. Bản hiện tại yêu cầu fingerprint khi consume nhưng không trả lại; Order không được tự tái tạo từ `Map.of` vì thứ tự serialization không portable giữa hai JVM.
+- `ShippingQuoteResponse` đã trả `requestFingerprint` canonical do Payment tạo; Order lưu nguyên giá trị này và gửi lại khi consume quote, không tự tái tạo fingerprint giữa hai JVM.
 - Catalog/Cart phải cung cấp `lengthCm`, `widthCm`, `heightCm` cùng `weightGrams` cho mỗi Variant; không dùng kích thước mặc định hoặc dữ liệu frontend.
 - RabbitMQ exchange, routing key, retry và DLQ chung.
 - JWT/internal service authentication convention.

@@ -20,6 +20,10 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findByIdForUpdate(@Param("id") UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Payment p where p.orderId = :orderId")
+    Optional<Payment> findByOrderIdForUpdate(@Param("orderId") UUID orderId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.status = :status and p.timing = :timing and p.expiresAt < :instant")
     List<Payment> findDueForUpdate(@Param("status") String status, @Param("timing") String timing, @Param("instant") Instant instant);
 
