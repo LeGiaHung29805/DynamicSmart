@@ -36,8 +36,11 @@ public class LocationService {
     }
 
     public LocationValidationResponse validate(int provinceId, int wardId) {
-        ValidatedLocation location = validateForQuote(provinceId, wardId);
-        return new LocationValidationResponse(true, location.provinceId(), location.wardId());
+        requireProvince(provinceId);
+        var ward = wards.findById(wardId).filter(value -> value.isActive() && value.getProvinceId() == provinceId)
+                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_LOCATION_MISMATCH",
+                        "Phường/Xã không thuộc Tỉnh/Thành phố đã chọn hoặc đã ngừng hỗ trợ."));
+        return new LocationValidationResponse(true, provinceId, ward.getId());
     }
 
     public ValidatedLocation validateForQuote(int provinceId, int wardId) {
