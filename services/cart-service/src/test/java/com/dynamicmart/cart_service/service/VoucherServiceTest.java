@@ -15,6 +15,7 @@ import com.dynamicmart.cart_service.repository.VoucherRepository;
 import com.dynamicmart.cart_service.repository.VoucherReservationRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -102,6 +103,23 @@ class VoucherServiceTest {
 
         assertThat(result.eligible()).isFalse();
         assertThat(result.ineligibleReason()).contains("tối thiểu");
+    }
+
+    @Test
+    void customerHistoryOnlyReadsReservationsOwnedByAuthenticatedCustomer() {
+        UUID customer = UUID.randomUUID(), voucherId = UUID.randomUUID(), checkout = UUID.randomUUID();
+        Voucher voucher = voucher(voucherId);
+        VoucherReservation reservation = new VoucherReservation(voucherId, customer, null, checkout,
+                10_000, 0, Instant.now().plusSeconds(60), Instant.now());
+        when(reservations.findAllByCustomerIdOrderByCreatedAtDesc(customer)).thenReturn(List.of(reservation));
+        when(vouchers.findById(voucherId)).thenReturn(Optional.of(voucher));
+
+        var result = service.customerHistory(customer);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).voucherCode()).isEqualTo("SAVE10");
+        verify(reservations).findAllByCustomerIdOrderByCreatedAtDesc(customer);
+        verify(reservations, never()).findAllByOrderByCreatedAtDesc();
     }
 
     private Voucher voucher(UUID id) {

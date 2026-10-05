@@ -54,6 +54,18 @@ public class VoucherService {
         return reservations.findAllByOrderByCreatedAtDesc().stream().map(this::reservation).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<VoucherUsageHistoryResponse> customerHistory(UUID customerId) {
+        return reservations.findAllByCustomerIdOrderByCreatedAtDesc(customerId).stream().map(reservation -> {
+            Voucher voucher = vouchers.findById(reservation.getVoucherId()).orElse(null);
+            return new VoucherUsageHistoryResponse(reservation.getId(), reservation.getVoucherId(),
+                    voucher == null ? "" : voucher.getCode(), voucher == null ? "Voucher" : voucher.getName(),
+                    reservation.getStatus(), reservation.getDiscountAmountVnd(), reservation.getShippingDiscountVnd(),
+                    reservation.getOrderId(), reservation.getCreatedAt(), reservation.getConsumedAt(),
+                    reservation.getReleasedAt(), reservation.getReleaseReason());
+        }).toList();
+    }
+
     @Transactional
     public VoucherResponse create(UUID actor, UUID key, VoucherRuleRequest request) {
         var duplicate = duplicate(actor, key, "VOUCHER");

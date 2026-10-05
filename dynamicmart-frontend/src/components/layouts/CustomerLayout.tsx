@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Package, TicketPercent, UserRound } from "lucide-react";
+import { MapPin, Package, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const accountLinks = [
   ["Hồ sơ", "/customer/account/profile", UserRound],
   ["Sổ địa chỉ", "/customer/account/addresses", MapPin],
   ["Đơn hàng", "/customer/account/orders", Package],
-  ["Kho voucher", "/customer/account/vouchers", TicketPercent],
 ] as const;
 
 export function CustomerLayout({ children }: Readonly<{ children: React.ReactNode }>) {

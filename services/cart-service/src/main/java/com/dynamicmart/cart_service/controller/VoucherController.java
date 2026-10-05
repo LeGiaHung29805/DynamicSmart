@@ -30,6 +30,10 @@ public class VoucherController {
 
     @GetMapping("/vouchers/wallet")
     public List<VoucherResponse> wallet(@AuthenticationPrincipal Jwt jwt) { return vouchers.wallet(user(jwt)); }
+    @GetMapping("/vouchers/history")
+    public List<VoucherUsageHistoryResponse> history(@AuthenticationPrincipal Jwt jwt) {
+        return vouchers.customerHistory(user(jwt));
+    }
     @PostMapping("/vouchers/preview")
     public VoucherResponse preview(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody VoucherPreviewRequest request) {
         return vouchers.preview(user(jwt), request);
