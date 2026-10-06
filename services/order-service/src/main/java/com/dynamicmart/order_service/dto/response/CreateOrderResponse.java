@@ -11,5 +11,6 @@ public record CreateOrderResponse(
         UUID sagaId,
         UUID paymentId,
         Instant paymentDueAt,
+        String redirectUrl,
         boolean replay) {
 }

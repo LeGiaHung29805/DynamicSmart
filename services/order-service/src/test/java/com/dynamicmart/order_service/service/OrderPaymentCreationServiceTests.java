@@ -57,14 +57,17 @@ class OrderPaymentCreationServiceTests {
     }
 
     @Test
-    void paymentRequestedCheckpointMakesRetryRemoteCallFree() {
+    void paymentRequestedCheckpointReusesOnlineAttemptForBrowserRedirect() {
         Fixture fixture = fixture();
+        when(fixture.payments.createVnPayAttempt(PAYMENT_ID)).thenReturn(response(125_000));
 
-        fixture.service.ensurePayment(command(125_000, SagaStatus.PAYMENT_REQUESTED, PAYMENT_ID,
+        var result = fixture.service.ensurePayment(command(125_000, SagaStatus.PAYMENT_REQUESTED, PAYMENT_ID,
                 "PAYMENT_CONTEXT_CREATED"));
 
         verify(fixture.payments, never()).createPayment(any());
+        verify(fixture.payments).createVnPayAttempt(PAYMENT_ID);
         verify(fixture.checkpoints, never()).markPaymentRequested(any(), any(), any(), any());
+        assertEquals("https://pay.example/attempt", result.redirectUrl());
     }
 
     @Test
@@ -117,7 +120,7 @@ class OrderPaymentCreationServiceTests {
     private PaymentResponse response(long amount) {
         return new PaymentResponse(
                 PAYMENT_ID, ORDER_ID, amount, "PREPAID", "VNPAY", "PENDING",
-                null, DUE_AT, null);
+                "https://pay.example/attempt", DUE_AT, null);
     }
 
     private record Fixture(
