@@ -2,3 +2,10 @@
 
 # Codex local workspace, generated reports, and temporary artifacts
 **/.codex*
+
+# IDE-local settings
+/.idea/
+
+# Generated report documents, extracted media, and helper scripts
+/docs/report-format-fix/
+/docs/report-revision/
