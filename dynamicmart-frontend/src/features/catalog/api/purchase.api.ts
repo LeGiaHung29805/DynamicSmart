@@ -9,6 +9,11 @@ export interface BuyNowSession {
 }
 
 /** Contract thuộc Checkout/Order; client chỉ gửi variantId và quantity, tuyệt đối không gửi giá/tồn. */
-export function createBuyNowSession(variantId: string, quantity: number) {
-  return apiClient.post<BuyNowSession>("/api/v1/checkout-sessions/buy-now", { variantId, quantity });
+export async function createBuyNowSession(variantId: string, quantity: number) {
+  const session = await apiClient.post<{ id: string }>("/api/v1/checkout/sessions", {
+    source: "BUY_NOW",
+    variantId,
+    quantity,
+  });
+  return { checkoutSessionId: session.id } satisfies BuyNowSession;
 }

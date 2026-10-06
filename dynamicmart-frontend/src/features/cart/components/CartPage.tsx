@@ -7,13 +7,31 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
+import { useAuthSession } from "@/lib/auth/session";
 import { cartApi } from "../api/cart.api";
 import type { CartDto, CartItemDto } from "../types/cart.types";
 
 export function CartPage() {
   const router = useRouter();
+  const auth = useAuthSession();
   const [cart, setCart] = useState<CartDto | null>(null); const [message, setMessage] = useState("Đang tải giỏ hàng…");
-  useEffect(() => { cartApi.get().then((value) => { setCart(value); setMessage(""); }).catch(() => setMessage("Không thể tải giỏ hàng.")); }, []);
+  useEffect(() => {
+    if (auth.status === "loading") return;
+    if (auth.status === "anonymous") {
+      router.replace("/login?returnTo=%2Fcart");
+      return;
+    }
+
+    let cancelled = false;
+    cartApi.get()
+      .then((value) => {
+        if (!cancelled) { setCart(value); setMessage(""); }
+      })
+      .catch(() => {
+        if (!cancelled) setMessage("Không thể tải giỏ hàng.");
+      });
+    return () => { cancelled = true; };
+  }, [auth.status, router]);
   const update = async (item: CartItemDto, quantity: number, selected: boolean) => {
     try { setCart(await cartApi.update(item.id, quantity, selected, item.version)); setMessage(""); }
     catch { setMessage("Giỏ hàng vừa thay đổi hoặc dữ liệu không hợp lệ. Vui lòng tải lại."); }
