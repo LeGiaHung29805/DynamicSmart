@@ -23,4 +23,19 @@ public class OrderOperationLog {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "result_payload", nullable = false, columnDefinition = "jsonb") private String resultPayload;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public static OrderOperationLog completed(
+            UUID operationKey,
+            String operationType,
+            UUID orderId,
+            String resultPayload,
+            Instant createdAt) {
+        OrderOperationLog log = new OrderOperationLog();
+        log.operationKey = operationKey;
+        log.operationType = operationType;
+        log.orderId = orderId;
+        log.resultPayload = resultPayload;
+        log.createdAt = createdAt;
+        return log;
+    }
 }

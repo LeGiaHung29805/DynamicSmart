@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +31,16 @@ public class GlobalExceptionHandler {
                 .toList();
         return ResponseEntity.badRequest().body(new ApiErrorResponse(
                 "VALIDATION_FAILED", "Dữ liệu gửi lên không hợp lệ.", errors, Instant.now(clock)));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        String field = exception.getName() == null ? "parameter" : exception.getName();
+        return ResponseEntity.badRequest().body(new ApiErrorResponse(
+                "INVALID_REQUEST_PARAMETER",
+                "Tham số truy vấn hoặc đường dẫn không hợp lệ.",
+                List.of(new ApiErrorResponse.FieldViolation(field, "Giá trị không đúng định dạng.")),
+                Instant.now(clock)));
     }
 
     private ApiErrorResponse.FieldViolation toViolation(FieldError error) {

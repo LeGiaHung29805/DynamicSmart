@@ -8,6 +8,8 @@ import java.time.Instant;
 public interface InventoryReservationGateway {
     Reservation reserve(ReserveInventoryRequest request);
 
+    void commit(CommitInventoryRequest request);
+
     void release(ReleaseInventoryRequest request);
 
     record ReserveInventoryRequest(
@@ -27,6 +29,14 @@ public interface InventoryReservationGateway {
     }
 
     record Reservation(UUID reservationId) {
+    }
+
+    record CommitInventoryRequest(
+            UUID operationKey,
+            UUID sagaId,
+            UUID correlationId,
+            UUID orderId,
+            UUID reservationId) {
     }
 
     record ReleaseInventoryRequest(

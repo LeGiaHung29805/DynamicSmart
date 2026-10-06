@@ -53,7 +53,9 @@ public class OrderCreationContextReader {
         CheckoutSession session = sessions.findByIdAndCustomerId(saga.getCheckoutSessionId(), customerId)
                 .orElseThrow(() -> notFound("CHECKOUT_SESSION_NOT_FOUND", "Không tìm thấy Checkout Session của khách hàng."));
         Instant now = Instant.now(clock);
-        if (saga.getStatus() != SagaStatus.STARTED) {
+        if (saga.getStatus() != SagaStatus.STARTED
+                && saga.getStatus() != SagaStatus.VOUCHER_RESERVED
+                && saga.getStatus() != SagaStatus.INVENTORY_RESERVED) {
             throw conflict("ORDER_SAGA_NOT_REVALIDATABLE", "Create Order Saga không còn ở bước revalidation.");
         }
         if (session.getStatus() != CheckoutStatus.ACTIVE || !session.getExpiresAt().isAfter(now)) {

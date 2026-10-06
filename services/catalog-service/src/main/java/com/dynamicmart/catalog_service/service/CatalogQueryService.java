@@ -84,6 +84,18 @@ public class CatalogQueryService {
     }
 
     @Transactional(readOnly = true)
+    public ProductDetailResponse getById(UUID productId) {
+        Product product = productRepository.findById(productId)
+                .filter(value -> value.isPublicAt(Instant.now()))
+                .orElseThrow(this::productNotFound);
+        boolean categoryActive = categoryRepository.findById(product.getCategoryId())
+                .map(category -> category.getStatus() == CatalogStatus.ACTIVE)
+                .orElse(false);
+        if (!categoryActive) throw productNotFound();
+        return responseAssembler.productDetail(product);
+    }
+
+    @Transactional(readOnly = true)
     public ProductVariantResponse getVariant(UUID variantId) {
         ProductVariant variant = variantRepository.findById(variantId)
                 .filter(value -> value.getStatus() == VariantStatus.ACTIVE)

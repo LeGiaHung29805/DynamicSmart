@@ -1,22 +1,15 @@
 package com.dynamicmart.order_service.service;
 
-import com.dynamicmart.order_service.client.PaymentClient;
-import com.dynamicmart.order_service.client.PaymentClient.OrderPaymentContextRequest;
 import com.dynamicmart.order_service.dto.request.CheckoutPreviewRequest;
 import com.dynamicmart.order_service.dto.request.CreateCheckoutSessionRequest;
 import com.dynamicmart.order_service.dto.request.CreateOrderRequest;
 import com.dynamicmart.order_service.dto.request.UpdateCheckoutSessionRequest;
 import com.dynamicmart.order_service.dto.response.CreateOrderResponse;
 import com.dynamicmart.order_service.entity.CheckoutSource;
-import com.dynamicmart.order_service.entity.CustomerOrder;
 import com.dynamicmart.order_service.entity.OrderSaga;
-import com.dynamicmart.order_service.entity.PaymentMethod;
-import com.dynamicmart.order_service.entity.PaymentTiming;
 import com.dynamicmart.order_service.exception.OrderException;
-import com.dynamicmart.order_service.repository.CustomerOrderRepository;
 import com.dynamicmart.order_service.repository.OrderSagaRepository;
-import com.dynamicmart.order_service.service.OrderCreationAdmissionService.AdmissionResult;
-import com.dynamicmart.order_service.service.OrderCreationPersistenceService.PersistedOrder;
+import com.dynamicmart.order_service.service.OrderCreationOrchestrator.CreationResult;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,43 +22,25 @@ import org.springframework.stereotype.Service;
 public class CreateOrderFacade {
     private final CheckoutSessionService sessions;
     private final CheckoutPreviewService previews;
-    private final OrderCreationAdmissionService admissions;
-    private final OrderCreationRevalidationService revalidation;
-    private final OrderReservationService reservations;
-    private final OrderCreationPersistenceService persistence;
-    private final PaymentClient payments;
     private final OrderSagaRepository sagas;
-    private final CustomerOrderRepository orders;
-    private final OrderFinalizationService finalization;
+    private final OrderCreationOrchestrator orderCreation;
 
     public CreateOrderFacade(
             CheckoutSessionService sessions,
             CheckoutPreviewService previews,
-            OrderCreationAdmissionService admissions,
-            OrderCreationRevalidationService revalidation,
-            OrderReservationService reservations,
-            OrderCreationPersistenceService persistence,
-            PaymentClient payments,
             OrderSagaRepository sagas,
-            CustomerOrderRepository orders,
-            OrderFinalizationService finalization) {
+            OrderCreationOrchestrator orderCreation) {
         this.sessions = sessions;
         this.previews = previews;
-        this.admissions = admissions;
-        this.revalidation = revalidation;
-        this.reservations = reservations;
-        this.persistence = persistence;
-        this.payments = payments;
         this.sagas = sagas;
-        this.orders = orders;
-        this.finalization = finalization;
+        this.orderCreation = orderCreation;
     }
 
     public CreateOrderResponse create(UUID customerId, UUID idempotencyKey, CreateOrderRequest request) {
         requireIdempotencyKey(idempotencyKey);
-        CreateOrderResponse replay = replayCompleted(customerId, idempotencyKey);
-        if (replay != null) {
-            return replay;
+        OrderSaga existing = sagas.findByIdempotencyKey(idempotencyKey).orElse(null);
+        if (existing != null) {
+            return response(orderCreation.create(customerId, existing.getCheckoutSessionId(), idempotencyKey));
         }
 
         var session = sessions.create(customerId,
@@ -75,43 +50,13 @@ public class CreateOrderFacade {
         previews.preview(customerId, session.id(), new CheckoutPreviewRequest(
                 request.merchandiseVoucherId(), request.shippingVoucherId(), null));
 
-        AdmissionResult admitted = admissions.admit(customerId, session.id(), idempotencyKey);
-        var validated = revalidation.revalidate(customerId, admitted.sagaId());
-        var reserved = reservations.reserve(validated);
-        PersistedOrder order = persistence.persist(validated, reserved);
-        return paymentResponse(customerId, admitted.correlationId(), order);
+        return response(orderCreation.create(customerId, session.id(), idempotencyKey));
     }
 
-    private CreateOrderResponse replayCompleted(UUID customerId, UUID idempotencyKey) {
-        OrderSaga saga = sagas.findByIdempotencyKey(idempotencyKey).orElse(null);
-        if (saga == null) {
-            return null;
-        }
-        if (saga.getOrderId() == null) {
-            throw new OrderException(HttpStatus.CONFLICT, "ORDER_CREATION_IN_PROGRESS",
-                    "Yêu cầu tạo đơn đang xử lý hoặc cần được bù trừ; vui lòng thử lại sau.");
-        }
-        CustomerOrder order = orders.findByIdAndCustomerId(saga.getOrderId(), customerId)
-                .orElseThrow(() -> new OrderException(HttpStatus.CONFLICT, "ORDER_REPLAY_OWNER_MISMATCH",
-                        "Idempotency-Key không thuộc đơn hàng của khách hàng hiện tại."));
-        return paymentResponse(customerId, saga.getCorrelationId(),
-                new PersistedOrder(order.getId(), order.getOrderNumber(), order.getStatus(), true));
-    }
-
-    private CreateOrderResponse paymentResponse(UUID customerId, UUID correlationId, PersistedOrder persisted) {
-        CustomerOrder order = orders.findByIdAndCustomerId(persisted.orderId(), customerId)
-                .orElseThrow(() -> new OrderException(HttpStatus.CONFLICT, "ORDER_NOT_FOUND_AFTER_CREATION",
-                        "Không thể tải Order vừa tạo."));
-        finalization.finalizeIfConfirmed(order);
-        if (order.getFinalTotalVnd() == 0
-                || order.getPaymentTiming() == PaymentTiming.NOT_REQUIRED
-                || order.getPaymentMethod() == PaymentMethod.FREE) {
-            return new CreateOrderResponse(order.getId(), order.getOrderNumber(), order.getStatus(), null);
-        }
-        var payment = payments.createPayment(new OrderPaymentContextRequest(
-                order.getId(), customerId, order.getFinalTotalVnd(), order.getPaymentTiming(),
-                order.getPaymentMethod(), correlationId));
-        return new CreateOrderResponse(order.getId(), order.getOrderNumber(), order.getStatus(), payment.redirectUrl());
+    private CreateOrderResponse response(CreationResult result) {
+        return new CreateOrderResponse(
+                result.orderId(), result.orderNumber(), result.status(), result.sagaId(),
+                result.paymentId(), result.paymentDueAt(), result.replay());
     }
 
     private void requireIdempotencyKey(UUID idempotencyKey) {

@@ -114,7 +114,7 @@ export async function HomePage() {
             <input aria-label="Tìm sản phẩm" className="min-w-0 flex-1 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-slate-400" name="q" placeholder="Tìm sản phẩm, thương hiệu và danh mục..." />
             <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand" type="submit">Tìm kiếm</button>
           </form>
-          <Link className="hidden shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 hover:text-brand lg:block" href="/customer/account/vouchers">Kho voucher</Link>
+          <Link className="hidden shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 hover:text-brand lg:block" href="/vouchers">Kho voucher</Link>
         </div>
       </section>
 

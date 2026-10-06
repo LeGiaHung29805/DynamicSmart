@@ -153,7 +153,8 @@
           "request": {
             "method": "POST",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] },
-            "url": "{{baseUrl}}/api/v1/orders/{{codOrderId}}/confirm-received"
+            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+            "url": "{{baseUrl}}/api/v1/orders/{{codOrderId}}/received"
           },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test('Đơn COD hoàn tất', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('COMPLETED'); });"] } }]
         },

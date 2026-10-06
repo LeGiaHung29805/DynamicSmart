@@ -32,10 +32,13 @@ public class OrderSaga {
     @Column(name = "current_step", nullable = false, length = 80) private String currentStep;
     @Column(name = "voucher_reservation_id") private UUID voucherReservationId;
     @Column(name = "inventory_reservation_id") private UUID inventoryReservationId;
+    @Column(name = "payment_id") private UUID paymentId;
     @Column(name = "correlation_id", nullable = false) private UUID correlationId;
     @Column(name = "last_error_code", length = 100) private String lastErrorCode;
     @Column(name = "last_error_message", length = 1000) private String lastErrorMessage;
     @Column(name = "attempt_count", nullable = false) private int attemptCount;
+    @Column(name = "recovery_owner", length = 100) private String recoveryOwner;
+    @Column(name = "recovery_lease_until") private Instant recoveryLeaseUntil;
     @Version @Column(nullable = false) private long version;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
@@ -68,6 +71,37 @@ public class OrderSaga {
         currentStep = "ORDER_SNAPSHOTS_PERSISTED";
         lastErrorCode = null;
         lastErrorMessage = null;
+        updatedAt = now;
+    }
+
+    public void markPaymentRequested(UUID createdPaymentId, Instant now) {
+        paymentId = createdPaymentId;
+        status = SagaStatus.PAYMENT_REQUESTED;
+        currentStep = "PAYMENT_CONTEXT_CREATED";
+        lastErrorCode = null;
+        lastErrorMessage = null;
+        updatedAt = now;
+    }
+
+    public void markPaymentNotRequired(Instant now) {
+        currentStep = "PAYMENT_NOT_REQUIRED";
+        lastErrorCode = null;
+        lastErrorMessage = null;
+        updatedAt = now;
+    }
+
+    public void beginPaymentCompensation(String reason, Instant now) {
+        if (status == SagaStatus.COMPENSATING || status == SagaStatus.COMPENSATED) {
+            return;
+        }
+        if (status != SagaStatus.PAYMENT_REQUESTED) {
+            throw new IllegalStateException("Saga không thể compensation Payment từ trạng thái " + status + ".");
+        }
+        status = SagaStatus.COMPENSATING;
+        currentStep = "RELEASING_RESERVATIONS_AFTER_PAYMENT_FAILURE";
+        lastErrorCode = reason;
+        lastErrorMessage = null;
+        attemptCount = Math.addExact(attemptCount, 1);
         updatedAt = now;
     }
 }

@@ -20,6 +20,11 @@ public class ReservationGatewayFallbackConfiguration {
             }
 
             @Override
+            public void consume(ConsumeVoucherRequest request) {
+                throw unavailable("Cart/Voucher");
+            }
+
+            @Override
             public void release(ReleaseVoucherRequest request) {
                 throw unavailable("Cart/Voucher");
             }
@@ -32,6 +37,11 @@ public class ReservationGatewayFallbackConfiguration {
         return new InventoryReservationGateway() {
             @Override
             public Reservation reserve(ReserveInventoryRequest request) {
+                throw unavailable("Catalog/Inventory");
+            }
+
+            @Override
+            public void commit(CommitInventoryRequest request) {
                 throw unavailable("Catalog/Inventory");
             }
 

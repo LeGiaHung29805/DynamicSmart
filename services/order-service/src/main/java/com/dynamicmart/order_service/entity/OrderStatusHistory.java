@@ -49,8 +49,16 @@ public class OrderStatusHistory {
     }
 
     public static OrderStatusHistory transition(
-            UUID id, UUID orderId, OrderStatus fromStatus, OrderStatus toStatus,
-            OrderActorType actorType, UUID actorId, String reason, UUID correlationId, Instant now) {
+            UUID id,
+            UUID orderId,
+            OrderStatus fromStatus,
+            OrderStatus toStatus,
+            OrderActorType actorType,
+            UUID actorId,
+            String reason,
+            UUID correlationId,
+            UUID sourceEventId,
+            Instant now) {
         OrderStatusHistory history = new OrderStatusHistory();
         history.id = id;
         history.orderId = orderId;
@@ -60,6 +68,7 @@ public class OrderStatusHistory {
         history.actorId = actorId;
         history.reason = reason;
         history.correlationId = correlationId;
+        history.sourceEventId = sourceEventId;
         history.createdAt = now;
         return history;
     }

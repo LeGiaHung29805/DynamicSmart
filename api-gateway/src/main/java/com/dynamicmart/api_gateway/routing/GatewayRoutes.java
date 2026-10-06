@@ -17,16 +17,17 @@ import static org.springframework.web.servlet.function.RequestPredicates.path;
 @Configuration
 public class GatewayRoutes {
     @Bean RouterFunction<ServerResponse> identityRoute(@Value("${app.routes.identity-service-url}") String target) {
-        return route("identity-service").route(path("/api/v1/auth/**")
-                .or(path("/api/v1/profile/**"))
-                .or(path("/api/v1/addresses/**"))
-                .or(path("/api/v1/admin/users/**")), http()).before(uri(target)).build();
+        return route("identity-service").route(path("/api/v1/auth/**"), http()).before(uri(target)).build();
     }
     @Bean RouterFunction<ServerResponse> catalogRoute(@Value("${app.routes.catalog-service-url}") String target) {
         return route("catalog-service").route(path("/api/v1/catalog/**"), http()).before(uri(target)).build();
     }
     @Bean RouterFunction<ServerResponse> cartRoute(@Value("${app.routes.cart-service-url}") String target) {
-        return route("cart-service").route(path("/api/v1/cart/**"), http()).before(uri(target)).build();
+        return route("customer-service").route(path("/api/v1/cart/**")
+                .or(path("/api/v1/profile/**"))
+                .or(path("/api/v1/addresses/**"))
+                .or(path("/api/v1/admin/users/**"))
+                .or(path("/api/v1/wishlist/**")), http()).before(uri(target)).build();
     }
     @Bean RouterFunction<ServerResponse> orderRoute(@Value("${app.routes.order-service-url}") String target) {
         return route("order-service").route(path("/api/v1/orders/**").or(path("/api/v1/checkout/**")), http()).before(uri(target)).build();

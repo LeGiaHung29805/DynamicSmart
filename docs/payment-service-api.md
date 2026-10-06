@@ -23,7 +23,7 @@ Các API đều đi qua Gateway. Browser chỉ gọi API công khai lấy địa
 | `GET /api/v1/payments?page=&size=` | Admin | Danh sách Payment phân trang, không trả URL VNPay hoặc secret. |
 | `GET /api/v1/payments/{id}/attempts` | Admin | Lịch sử lần thử đã lọc URL nhạy cảm. |
 | `GET /api/v1/payments/{id}/callback-audits` | Admin | Audit callback/IPN đã redaction. |
-| `POST /api/v1/payments/orders/{orderId}/cod-collected` | Internal Order Service | Tự ghi nhận COD đã thanh toán sau khi chính khách hàng bấm **Đã nhận hàng**; không nhập số tiền hoặc biên nhận. |
+| `POST /api/v1/payments/orders/{orderId}/cod-collected` | Internal Order Service | Được gọi từ `POST /api/v1/orders/{orderId}/received` sau khi chính khách hàng bấm **Đã nhận hàng**; không nhập số tiền hoặc biên nhận. |
 
 Consumer `paymentDue` nhận event envelope chuẩn (`eventId`, `eventType`, `eventVersion`, `producer`, `aggregateId`, `occurredAt`, `correlationId`, `payload.orderId`) từ destination `payment.due`. Trong giai đoạn chuyển đổi contract, consumer vẫn đọc được message cũ có `orderId` dạng phẳng. Event bị gửi lại chỉ được xử lý một lần nhờ `processed_events`; Order `POSTPAID` dùng VNPay, ZaloPay, PayOS hoặc QR ngân hàng và có Payment `PENDING` mới tạo attempt online.
 

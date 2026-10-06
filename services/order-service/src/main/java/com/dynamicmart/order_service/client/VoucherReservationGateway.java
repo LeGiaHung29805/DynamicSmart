@@ -8,6 +8,8 @@ import java.time.Instant;
 public interface VoucherReservationGateway {
     Reservation reserve(ReserveVoucherRequest request);
 
+    void consume(ConsumeVoucherRequest request);
+
     void release(ReleaseVoucherRequest request);
 
     record ReserveVoucherRequest(
@@ -47,6 +49,14 @@ public interface VoucherReservationGateway {
     }
 
     record Reservation(UUID reservationId) {
+    }
+
+    record ConsumeVoucherRequest(
+            UUID operationKey,
+            UUID sagaId,
+            UUID correlationId,
+            UUID orderId,
+            UUID reservationId) {
     }
 
     record ReleaseVoucherRequest(

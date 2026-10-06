@@ -11,9 +11,12 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.dynamicmart.order_service.client.PaymentClient.OrderPaymentContextRequest;
 import com.dynamicmart.order_service.client.PaymentClient.QuoteValidationRequest;
+import com.dynamicmart.order_service.client.PaymentClient.ShippingItemRequest;
+import com.dynamicmart.order_service.client.PaymentClient.ShippingQuoteRequest;
 import com.dynamicmart.order_service.entity.PaymentMethod;
 import com.dynamicmart.order_service.entity.PaymentTiming;
 import com.dynamicmart.order_service.exception.OrderException;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +30,9 @@ class HttpPaymentClientTests {
     private static final UUID CUSTOMER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID QUOTE_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID ORDER_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    private static final UUID PAYMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000004");
+    private static final UUID VARIANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000005");
+    private static final String FINGERPRINT = "a".repeat(64);
 
     private MockRestServiceServer server;
     private HttpPaymentClient client;
@@ -39,6 +45,29 @@ class HttpPaymentClientTests {
                 .baseUrl("http://payment.test")
                 .defaultHeader(HttpPaymentClient.INTERNAL_API_KEY_HEADER, INTERNAL_KEY)
                 .build());
+    }
+
+    @Test
+    void createsShippingQuoteUsingServerOwnedPackageData() {
+        server.expect(requestTo("http://payment.test/api/v1/shipping/quotes"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpPaymentClient.INTERNAL_API_KEY_HEADER, INTERNAL_KEY))
+                .andExpect(jsonPath("$.customerId").value(CUSTOMER_ID.toString()))
+                .andExpect(jsonPath("$.provinceId").value(202))
+                .andExpect(jsonPath("$.wardId").value(1450))
+                .andExpect(jsonPath("$.items[0].variantId").value(VARIANT_ID.toString()))
+                .andExpect(jsonPath("$.items[0].weightGrams").value(500))
+                .andExpect(jsonPath("$.items[0].lengthCm").value(20))
+                .andRespond(withSuccess(shippingQuote(), MediaType.APPLICATION_JSON));
+
+        var response = client.createShippingQuote(new ShippingQuoteRequest(
+                CUSTOMER_ID, 202, 1450,
+                List.of(new ShippingItemRequest(VARIANT_ID, 2, 500, 20, 10, 6)),
+                5_000, "GHN_STANDARD"));
+
+        assertEquals(QUOTE_ID, response.quoteId());
+        assertEquals(FINGERPRINT, response.requestFingerprint());
+        server.verify();
     }
 
     @Test
@@ -102,6 +131,28 @@ class HttpPaymentClientTests {
     }
 
     @Test
+    void createsVnPayAttemptWithoutInventingARequestBody() {
+        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_ID + "/vnpay-attempt"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpPaymentClient.INTERNAL_API_KEY_HEADER, INTERNAL_KEY))
+                .andRespond(withSuccess("""
+                        {
+                          "id":"00000000-0000-0000-0000-000000000004",
+                          "orderId":"00000000-0000-0000-0000-000000000003",
+                          "amountVnd":120000,"timing":"PREPAID","method":"VNPAY","status":"PENDING",
+                          "redirectUrl":"https://sandbox.vnpayment.vn/pay","expiresAt":"2026-10-02T03:00:00Z",
+                          "paidAt":null
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        var response = client.createVnPayAttempt(PAYMENT_ID);
+
+        assertEquals(PAYMENT_ID, response.id());
+        assertEquals("https://sandbox.vnpayment.vn/pay", response.redirectUrl());
+        server.verify();
+    }
+
+    @Test
     void mapsPaymentClientErrorToStableOrderError() {
         server.expect(requestTo("http://payment.test/api/v1/shipping/quotes/" + QUOTE_ID + "/validate"))
                 .andRespond(withResourceNotFound());
@@ -112,5 +163,15 @@ class HttpPaymentClientTests {
         assertEquals("PAYMENT_REQUEST_REJECTED", exception.getCode());
         assertEquals(422, exception.getStatus().value());
         server.verify();
+    }
+
+    private String shippingQuote() {
+        return """
+                {
+                  "quoteId":"%s","feeVnd":30000,"shippingDiscountVnd":5000,"payableFeeVnd":25000,
+                  "serviceId":53320,"serviceName":"GHN Standard","eta":"2-3 ngày",
+                  "expiresAt":"2026-10-02T03:00:00Z","requestFingerprint":"%s"
+                }
+                """.formatted(QUOTE_ID, FINGERPRINT);
     }
 }

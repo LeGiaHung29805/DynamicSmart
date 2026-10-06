@@ -32,7 +32,7 @@ public class OrderCheckoutController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody CreateOrderRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orders.create(currentCustomer.idFrom(jwt), idempotencyKey, request));
+        CreateOrderResponse response = orders.create(currentCustomer.idFrom(jwt), idempotencyKey, request);
+        return ResponseEntity.status(response.replay() ? HttpStatus.OK : HttpStatus.CREATED).body(response);
     }
 }

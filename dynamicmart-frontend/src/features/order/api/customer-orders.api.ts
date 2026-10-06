@@ -1,14 +1,13 @@
 import { apiClient } from "@/lib/api/client";
 
 export type CustomerOrder = {
-  id: string;
+  orderId: string;
   orderNumber: string;
   status: "PENDING_PAYMENT" | "CONFIRMED" | "PACKING" | "SHIPPING" | "HANDOVER_PENDING" | "DELIVERED" | "COMPLETED" | "CANCELLED";
   paymentTiming: "PREPAID" | "POSTPAID" | "NOT_REQUIRED";
   paymentMethod: string;
-  finalTotalVnd: number;
-  currency: string;
-  canConfirmReceived: boolean;
+  money: { finalTotalVnd: number; currency: string };
+  availableActions: string[];
   shipmentDeliveredAt?: string;
   completedAt?: string;
   createdAt: string;
@@ -16,5 +15,10 @@ export type CustomerOrder = {
 
 export const customerOrdersApi = {
   get: (orderId: string) => apiClient.get<CustomerOrder>(`api/v1/orders/${orderId}`),
-  confirmReceived: (orderId: string) => apiClient.post<CustomerOrder>(`api/v1/orders/${orderId}/confirm-received`),
+  confirmReceived: async (orderId: string) => {
+    await apiClient.post(`api/v1/orders/${orderId}/received`, undefined, {
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
+    return apiClient.get<CustomerOrder>(`api/v1/orders/${orderId}`);
+  },
 };

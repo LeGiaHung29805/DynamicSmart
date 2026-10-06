@@ -107,20 +107,23 @@ Nếu cần dữ liệu từ các phần trên, Order Service gọi REST contrac
 - API Checkout Preview điều phối Address, Voucher, GHN quote và tính tiền nhưng không tạo reservation.
 - Preview gọi service ngoài transaction, sau đó khóa session để chống ghi snapshot stale; quote cũ bị invalidated.
 - Migration V3 và snapshot kích thước/trọng lượng phục vụ GHN package rule.
-- 86 automated test chạy mặc định: security, JWT role, payment contract, pricing, Checkout Session/Preview,
-  Create Order admission/idempotency/revalidation/reservation/snapshot/compensation, state machine và context smoke test.
+- 208 automated test chạy mặc định: security, JWT role, payment/Identity/Cart/Catalog contract, pricing, Checkout Session/Preview,
+  Create Order API/orchestration/idempotency/revalidation/reservation/snapshot/compensation, Payment creation/checkpoint,
+  reservation finalization, recovery, lifecycle command, query API, outbox, messaging test binder,
+  HTTP reservation adapter, compatibility facade, state machine và context smoke test.
 - Một PostgreSQL smoke test opt-in kiểm tra Flyway và Hibernate schema validation trên database thật.
+- Một PostgreSQL repository integration suite opt-in kiểm tra unique constraint, pessimistic lock và
+  `FOR UPDATE SKIP LOCKED`; **6/6 test đã đạt trên PostgreSQL test tạm**, đồng thời suite được chặn an toàn để
+  chỉ chạy trên database có chữ `test` trong tên.
 
-Chưa có:
+Tình trạng xác minh bằng hạ tầng thật:
 
-- API Create Order.
-- REST adapter thật sang Identity, Catalog và Cart (hiện chỉ có gateway interface/fallback an toàn).
-- Controller/API Order Customer và Admin.
-- Saga orchestrator hoàn chỉnh; admission và trạng thái bắt đầu Saga đã được lưu bền vững.
-- Hoàn tất toàn bộ vòng đời `Idempotency-Key`; admission của Create Order đã được lưu bền vững trong Saga.
-- Outbox publisher.
-- RabbitMQ consumer/producer nghiệp vụ.
-- Repository constraint/locking test, controller test và integration test.
+- E2E adapter thật với Identity, Catalog và Cart; HTTP adapter đã có nhưng còn cần contract/integration test đầy đủ.
+- E2E liên service với Identity, Catalog, Cart và Payment thật.
+- Smoke RabbitMQ broker thật đã đạt với provision exchange/queue/binding, outbound route, event lặp, poison DLQ và phục hồi sau mất broker.
+
+Runbook kiểm thử và demo đã được tách tại `docs/ORDER_SERVICE_RUNBOOK.md`; các bước E2E liên service còn lại
+giữ trạng thái chờ cho đến khi đủ service phụ thuộc và Payment hoàn thiện contract fingerprint.
 
 ### 4.3. Khoảng lệch giữa migration V1 và thiết kế hiện hành
 
@@ -157,8 +160,9 @@ Những điểm cần xử lý:
 ```text
 controller/
   CheckoutController
-  CustomerOrderController
-  AdminOrderController
+  OrderQueryController
+  OrderLifecycleController
+  OrderCreationController
 
 dto/request/
   CreateCheckoutSessionRequest
@@ -316,14 +320,14 @@ Nghiệp vụ:
 
 Tiêu chí hoàn thành:
 
-- Tạo CART/BUY_NOW đã được kiểm thử với mock gateway; vẫn cần HTTP adapter thật.
-- Session hết hạn không thể update/hủy và sẽ chuyển `EXPIRED`; Create Order chưa tồn tại (M6).
+- Tạo CART/BUY_NOW đã được kiểm thử với mock gateway; HTTP adapter thật đã được đồng bộ từ `main` và còn cần E2E.
+- Session hết hạn không thể update/hủy và sẽ chuyển `EXPIRED`; Create Order API đã có ở M6.
 - Hủy lặp không xóa snapshot hoặc gọi Cart/Catalog.
 - Ownership được enforced trong service theo `sessionId + customerId`; còn cần controller/security test cho truy cập chéo thực tế.
 
 ### M4. Client tích hợp và mock adapter
 
-**Trạng thái: Đang thực hiện**
+**Trạng thái: Hoàn thành trong phạm vi Order Service; E2E được theo dõi ở M10**
 
 Việc cần làm:
 
@@ -390,7 +394,7 @@ Tiêu chí hoàn thành:
 - Có unit test đầy đủ cho công thức tiền và các biên số học.
 - Preview không tạo reservation.
 - Frontend không thể sửa phí hoặc tổng tiền bằng request.
-- HTTP adapter thật cho Address/Voucher và fingerprint portable của Payment phải được chốt trước E2E.
+- HTTP adapter thật cho Address/Voucher/Catalog đã có; fingerprint portable của Payment vẫn phải được Hưng bổ sung vào quote response trước E2E.
 
 ### M6. Tạo Order, idempotency và Saga
 
@@ -476,9 +480,42 @@ Tiêu chí hoàn thành:
 - Retry sau khi transaction đã commit trả lại Order hiện có và không ghi snapshot/Outbox lần hai.
 - Thêm 6 test cho Preview freeze, happy path snapshot, initial status, replay, reservation mismatch và stale quote; toàn module đạt **86 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
 
+Đã triển khai Create Order orchestrator và API:
+
+- Mở `POST /api/v1/checkout/sessions/{sessionId}/orders`; `Idempotency-Key` là UUID bắt buộc, Customer lấy từ JWT và endpoint không nhận giá/fee/address detail từ frontend.
+- `OrderCreationOrchestrator` ghép admission → replay lookup → revalidation → Voucher/Inventory reservation → remote shipping quote consume → local Order persistence mà không giữ transaction DB qua lời gọi HTTP.
+- `ShippingQuoteConsumptionService` gửi customer + fingerprint authoritative sang Payment và so khớp quote ID, fingerprint, fee/discount/payable, service và expiry trước khi cho phép tạo Order.
+- Lỗi consume quote sau reservation kích hoạt compensation; lỗi local persistence giữ reservation/checkpoint để cùng idempotency key retry thay vì release tài nguyên khi trạng thái commit còn chưa chắc chắn.
+- Retry từ `STARTED`, `VOUCHER_RESERVED` hoặc `INVENTORY_RESERVED` chạy lại bằng operation key ổn định; retry khi Order đã commit trả `200` và không lặp remote call, request mới trả `201`.
+- Thêm 12 test cho controller/header/status code, orchestrator happy path/replay/failure boundary, quote consume contract và resume từ reservation checkpoint; toàn module đạt **98 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+
+Đã nối Payment creation và checkpoint sau `ORDER_CREATED`:
+
+- Migration V5 thêm `payment_id` cùng unique index có điều kiện vào `order_sagas`, cho phép Saga lưu định danh Payment bền vững và chống hai Saga trỏ đến cùng Payment.
+- `OrderPaymentCreationService` gọi `PaymentClient.createPayment` sau khi transaction tạo Order đã commit; không giữ transaction database trong lúc gọi Payment.
+- Response của Payment được kiểm tra chặt `paymentId`, `orderId`, amount, payment timing, payment method và status trước khi chấp nhận.
+- `OrderPaymentCheckpointService` khóa Saga và Order, sau đó ghi nguyên tử `payment_id`, Saga `PAYMENT_REQUESTED`, bước `PAYMENT_CONTEXT_CREATED` và `paymentDueAt` của Order.
+- Retry tại `PAYMENT_REQUESTED` trả checkpoint đã lưu và không gọi Payment lần nữa. Contract tích hợp vẫn yêu cầu Payment tạo context idempotent theo `orderId` để bao phủ trường hợp remote đã tạo thành công nhưng Order chưa kịp lưu checkpoint.
+- Đơn có tổng tiền bằng 0 không gọi Payment; Saga ghi bước `PAYMENT_NOT_REQUIRED` nhưng giữ `ORDER_CREATED` để còn thực hiện commit/consume reservation.
+- Nếu Payment lỗi sau khi Order đã commit, không compensation Order/reservation và giữ Saga ở `ORDER_CREATED`; retry cùng `Idempotency-Key` sẽ thử tạo Payment lại an toàn.
+- Create Order response trả thêm `paymentId` và `paymentDueAt` để client tiếp tục luồng thanh toán.
+- Thêm 10 test cho Payment creation/validation/retry/free-order/checkpoint và failure boundary trong orchestrator; toàn module đạt **108 test, 0 failure, 0 error, 0 skipped** qua `clean verify` và đóng gói JAR thành công.
+- Smoke test Flyway V1→V5 trên PostgreSQL thật chưa chạy lại trong lượt này vì Docker Desktop không hoạt động; test opt-in đã được cập nhật để kiểm tra cột/index V5 và cần chạy khi PostgreSQL sẵn sàng.
+
+Đã triển khai commit/consume reservation sau Payment checkpoint:
+
+- `InventoryReservationGateway` có contract `commit`, `VoucherReservationGateway` có contract `consume`; cả hai nhận `sagaId`, `correlationId`, `orderId`, reservation ID và operation key tất định.
+- `OrderReservationFinalizationService` chỉ hoàn tất reservation khi Order là `CONFIRMED`. Đơn postpaid và miễn phí được xử lý ngay trong Create Order; prepaid `PENDING_PAYMENT` giữ reservation và chờ Payment event ở M7.
+- Thứ tự remote cố định là Inventory commit → Voucher consume. Service không giữ transaction database trong lúc gọi dependency và không release reservation sau khi Order đã commit.
+- Saga có thêm hai trạng thái `FINALIZING_RESERVATIONS` và `INVENTORY_COMMITTED`; mỗi ranh giới remote được ghi bằng local transaction ngắn trước khi sang bước tiếp theo.
+- Retry tại `FINALIZING_RESERVATIONS` gọi lại Inventory bằng cùng operation key; retry tại `INVENTORY_COMMITTED` bỏ qua Inventory và tiếp tục Voucher. Khi hoàn tất, Saga chuyển `COMPLETED` với bước `RESERVATIONS_FINALIZED`.
+- Lỗi remote được lưu với đúng checkpoint cần retry và tăng `attemptCount`; lỗi ghi checkpoint được đính kèm mà không che lỗi remote gốc.
+- Create Order replay có thể tiếp tục từ Payment checkpoint hoặc bất kỳ checkpoint finalization nào. HTTP adapter Catalog/Cart đã được nối vào gateway và service đích phải thực thi operation key idempotent.
+- Thêm 14 test cho checkpoint, operation key, prepaid wait, postpaid/free finalize, resume từng bước và failure boundary; toàn module đạt **122 test, 0 failure, 0 error, 0 skipped** qua `clean verify` và đóng gói JAR thành công.
+
 ### M7. State machine và vòng đời Order
 
-**Trạng thái: Đang thực hiện**
+**Trạng thái: Hoàn thành**
 
 Luồng trả trước VNPay:
 
@@ -527,31 +564,39 @@ Tiêu chí hoàn thành:
 
 - Có unit test cho mọi transition hợp lệ và không hợp lệ.
 - Event lặp không ghi history hoặc hoàn tất hai lần.
+- RabbitMQ broker smoke ngày 2026-10-03 xác nhận `PaymentSucceeded` chuyển `DELIVERED → COMPLETED`; phát lại cùng
+  `eventId` vẫn giữ đúng một `processed_events`, một history và một Outbox event.
 
 ### M8. API Customer và Admin
 
-**Trạng thái: Chưa bắt đầu**
+**Trạng thái: Hoàn thành**
 
-API Customer dự kiến:
+API Customer đã triển khai:
 
 ```text
 GET  /api/v1/orders
 GET  /api/v1/orders/{orderId}
-POST /api/v1/orders/{orderId}/confirm-received
+GET  /api/v1/orders/{orderId}/timeline
+POST /api/v1/orders/{orderId}/received
 ```
 
-API Admin dự kiến:
+API Admin đã triển khai:
 
 ```text
 GET  /api/v1/orders/admin
 GET  /api/v1/orders/admin/{orderId}
-POST /api/v1/orders/admin/{orderId}/confirm
+GET  /api/v1/orders/admin/{orderId}/timeline
 POST /api/v1/orders/admin/{orderId}/pack
 POST /api/v1/orders/admin/{orderId}/ship
 POST /api/v1/orders/admin/{orderId}/handover
 ```
 
-Lưu ý: URL cuối cùng phải được chốt với convention API chung trước khi công bố contract.
+Contract URL hiện tại tuân theo convention `/api/v1/orders`; thay đổi sau này phải được version hóa hoặc
+phối hợp với consumer trước khi công bố.
+
+Order được xác nhận tự động bởi luồng tạo đơn 0 đồng/trả sau hoặc sự kiện Payment thành công đối với
+đơn trả trước, nên không cung cấp command Admin `confirm` thủ công. Cách này tránh bỏ qua checkpoint
+Payment và reservation.
 
 Yêu cầu:
 
@@ -562,9 +607,24 @@ Yêu cầu:
 - Response dùng DTO/projection, không trả entity.
 - Chi tiết lịch sử sử dụng snapshot, không tải lại tên/giá/địa chỉ hiện tại từ service khác.
 
+Đã triển khai:
+
+- Danh sách Customer/Admin có phân trang, lọc `status`, `orderNumber`, khoảng `createdAt`; Admin có thêm
+  `customerId`.
+- Sort chỉ nhận `createdAt`, `updatedAt`, `orderNumber`, `status`, `finalTotalVnd`, tự thêm `id` làm
+  tie-breaker để phân trang ổn định; giới hạn tối đa 100 bản ghi/trang.
+- Customer lookup luôn gắn owner từ JWT trong database query và dùng `404 ORDER_NOT_FOUND` cho cả
+  Order không tồn tại lẫn không thuộc quyền sở hữu, tránh dò IDOR.
+- Detail dùng toàn bộ item/address/voucher/shipping snapshot; thiếu snapshot bắt buộc trả lỗi toàn vẹn
+  rõ ràng thay vì gọi lại service khác hoặc dựng dữ liệu hiện tại.
+- Timeline Customer che actor ID nội bộ và correlation kỹ thuật; Admin thấy audit đầy đủ.
+- Response là DTO bất biến, có `availableActions` theo trạng thái và vai trò, không serialize JPA entity.
+- Có 11 test service/controller cho ownership, RBAC, filter/sort validation, snapshot mapping, timeline
+  redaction và error envelope. Toàn module đạt 174 test qua `clean verify`.
+
 ### M9. Outbox và RabbitMQ
 
-**Trạng thái: Chưa bắt đầu**
+**Trạng thái: Hoàn thành**
 
 Order Service nhận:
 
@@ -608,9 +668,28 @@ Quy tắc:
 - `PaymentDue` chỉ dùng cho `POSTPAID + VNPAY` khi Order vào `HANDOVER_PENDING`.
 - `OrderCompleted` là nguồn chuẩn cho báo cáo và review eligibility.
 
+Đã triển khai:
+
+- Consumer `paymentEvents` dùng group bền vững `order-service`, retry tối đa 5 lần.
+- Sau khi hết retry, Rabbit binder republish message và thông tin lỗi vào exchange
+  `dynamicmart.events.dlx`, queue `dynamicmart.events.order-service.dlq`, routing key
+  `order-service.payment.failed`; message lỗi không requeue vô hạn.
+- Test binder xác nhận JSON Payment được deserialize đúng contract, retry đủ 5 lần,
+  `PaymentDue` đi `payment.due` và Order event dùng envelope version hóa trên `dynamicmart.events`.
+- Test cấu hình bind trực tiếp vào Rabbit binder 5.0.3 để phát hiện sớm property DLQ viết sai tên.
+- Outbox chuyển event sang `FAILED` sau lần gửi lỗi thứ 10; retry trước đó dùng backoff và giữ cùng event ID.
+
+Xác minh hạ tầng thật ngày 2026-10-03:
+
+- RabbitMQ 3.13.7 provision đúng `dynamicmart.events`, queue group `order-service`, DLX/DLQ và `payment.due`.
+- Outbox thường và `PaymentDue` đều tới đúng exchange, giữ nguyên event identity và chuyển `PUBLISHED`.
+- Poison JSON retry đủ 5 lần rồi vào DLQ với payload cùng metadata lỗi gốc, không requeue vô hạn.
+- Khi broker bị dừng, event giữ `PENDING` với attempt/backoff; khi broker trở lại, consumer/topology tự phục hồi
+  và chính event đó được publish. Mô hình vẫn là at-least-once nên consumer phải idempotent.
+
 ### M10. Kiểm thử tích hợp và hoàn thiện
 
-**Trạng thái: Chưa bắt đầu**
+**Trạng thái: Đang thực hiện**
 
 Các lớp kiểm thử cần có:
 
@@ -642,6 +721,30 @@ Tình huống bắt buộc:
 - Customer A đọc hoặc xác nhận Order của Customer B.
 - Payment success và confirm received đến theo hai thứ tự khác nhau.
 - RabbitMQ dừng rồi hoạt động lại.
+
+Đã bổ sung trong lát cắt PostgreSQL M10:
+
+- `DatabaseMigrationSmokeIT` kiểm tra migration/schema và chỉ được bật khi cả
+  `ORDER_DATABASE_SMOKE=true` lẫn `DB_URL` trỏ tới database PostgreSQL có chữ `test` trong tên.
+- `PostgresRepositoryIntegrationIT` kiểm tra khóa pessimistic tuần tự hóa hai admission cùng Checkout,
+  unique Checkout/Saga, unique `Idempotency-Key` và hai recovery worker claim hai Saga khác nhau bằng
+  `FOR UPDATE SKIP LOCKED`; suite cũng kiểm tra hai Outbox publisher claim hai event khác nhau.
+- Hai lớp dùng Spring Cloud Stream test binder nên lần chạy database không phụ thuộc RabbitMQ thật.
+- Ngày 2026-10-03, suite đã chạy trên cụm PostgreSQL 13 tạm ở cổng riêng và database
+  `order_service_test`: Flyway áp thành công V1→V8, Hibernate schema validation đạt và **6/6 test đạt**.
+  Không kết nối hoặc thay đổi `order_db` hiện hữu.
+- Hibernate 7.4 phát cảnh báo PostgreSQL 13 thấp hơn phiên bản hỗ trợ tối thiểu 14; test hiện đạt nhưng môi trường
+  triển khai nên dùng PostgreSQL 14 trở lên để nằm trong dải hỗ trợ chính thức của ORM.
+
+Khi có database test riêng, chạy từ `services/order-service`:
+
+```powershell
+$env:ORDER_DATABASE_SMOKE='true'
+$env:DB_URL='jdbc:postgresql://localhost:5432/order_service_test'
+$env:DB_USERNAME='<test-user>'
+$env:DB_PASSWORD='<test-password>'
+.\mvnw.cmd '-Dtest=DatabaseMigrationSmokeIT,PostgresRepositoryIntegrationIT' test
+```
 
 ## 8. Ma trận tích hợp
 
@@ -717,15 +820,15 @@ Quy ước:
 |---|---|---|---|
 | M0 | Chốt REST/event contract | [-] | Payment/GHN có contract nền nhưng quote response còn thiếu fingerprint portable; Identity/Catalog/Cart và event chung còn chờ |
 | M1 | Nền service, security, cấu hình | [x] | Startup/health đạt; 3 JWT role test + 5 security HTTP test đạt |
-| M2 | Migration/entity/repository | [-] | Flyway V1→V4 + Hibernate validate đạt trên PostgreSQL sạch; còn repository constraint/locking test |
+| M2 | Migration/entity/repository | [x] | Flyway V1→V8, Hibernate validation và 6/6 PostgreSQL constraint/locking test đã đạt trên database test riêng |
 | M3 | Checkout Session CART/BUY_NOW | [-] | API create/get/update/cancel, expiry, ownership, cancel idempotent và controller test đã có; chờ Cart/Catalog HTTP contract |
-| M4 | Client interface và mock adapter | [-] | Payment/GHN adapter, Address/Voucher/selection gateway đã có; HTTP adapter còn chờ contract thật |
+| M4 | Client interface và HTTP adapter | [x] | 7 remote boundary dùng HTTP adapter thật, có timeout/error/contract validation; E2E liên service theo dõi ở M10 |
 | M5 | Preview và tính tiền | [-] | Preview API, package rule, voucher allocation, GHN quote validation và persistence đã có; chờ response fingerprint + adapter thật |
-| M6 | Create Order, idempotency, Saga | [-] | Admission, đóng băng, revalidation, reservation/checkpoint, compensation và Order snapshot + Outbox đã có; còn orchestrator/API, remote quote consume, Payment, HTTP adapter thật và recovery runner |
-| M7 | State machine và Payment event | [-] | State machine + 9 unit test đạt; command service/consumer chưa triển khai |
-| M8 | API Customer/Admin | [ ] | Có thể làm ngay |
-| M9 | Outbox và RabbitMQ | [ ] | Cần convention RabbitMQ chung |
-| M10 | Integration/E2E và demo | [ ] | Chờ API thật của các service |
+| M6 | Create Order, idempotency, Saga | [x] | API/orchestrator, reservation/checkpoint/compensation/finalization, Payment checkpoint, recovery lease và PostgreSQL smoke V1→V8 đã đạt |
+| M7 | State machine và Payment event | [x] | Payment consumer/lifecycle đã đủ; broker thật xác nhận transition và duplicate event không tạo side effect lần hai |
+| M8 | API Customer/Admin | [x] | List/detail/timeline, filter/sort allow-list, ownership/IDOR, snapshot DTO, available action và command đã kiểm thử |
+| M9 | Outbox và RabbitMQ | [x] | Distributed claim/lease, retry/backoff/FAILED, route thường/PaymentDue, poison DLQ và broker recovery đã đạt trên RabbitMQ thật |
+| M10 | Integration/E2E và demo | [-] | 208 test mặc định + 6 PostgreSQL IT + broker smoke + runtime local thật đạt; còn E2E liên service |
 
 ## 12. Thứ tự triển khai khuyến nghị
 
@@ -734,13 +837,13 @@ M0 Chốt contract tối thiểu
 → M1 Nền service và security
 → M2 Migration/entity/repository
 → M3 Checkout Session
-→ M4 Mock client
+→ M4 HTTP client và contract test
 → M5 Preview và tính tiền
 → M6 Create Order/Saga/idempotency
 → M7 State machine và Payment event
 → M8 API Order
 → M9 Outbox/RabbitMQ
-→ thay mock bằng tích hợp thật
+→ tích hợp E2E với các service thật
 → M10 Integration/E2E/demo
 ```
 
@@ -810,3 +913,158 @@ Khi bắt đầu một mốc, đổi `[ ]` thành `[-]`. Khi toàn bộ tiêu ch
 - Chặn cả Preview sau admission; bổ sung metadata Voucher cần thiết cho snapshot lịch sử.
 - Thêm transaction tạo Order, toàn bộ snapshot, initial history và `OrderCreated` Outbox; transaction cũng consume local quote, complete Checkout và checkpoint Saga `ORDER_CREATED`.
 - Thêm 6 test cho snapshot/replay/constraint logic; toàn module đạt **86 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+- Mở Create Order API với `Idempotency-Key`, ghép orchestration đầy đủ đến `ORDER_CREATED` và consume remote shipping quote trước local persistence.
+- Cho phép retry an toàn từ checkpoint reservation; Order đã commit được replay trực tiếp, lỗi quote được compensation còn lỗi persistence giữ tài nguyên cho retry.
+- Thêm 12 test cho API/orchestrator/quote consume/resume; toàn module đạt **98 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+- Nối `PaymentClient.createPayment` ngay sau checkpoint `ORDER_CREATED`, kiểm tra đầy đủ contract response rồi lưu nguyên tử `payment_id`, `PAYMENT_REQUESTED` và `paymentDueAt`.
+- Retry đã có Payment checkpoint không gọi remote lần nữa; đơn miễn phí ghi `PAYMENT_NOT_REQUIRED`; lỗi Payment sau khi Order commit giữ reservation và `ORDER_CREATED` để retry thay vì compensation sai.
+- Migration V5 thêm Payment checkpoint cho Saga; `DatabaseMigrationSmokeIT` đã kiểm tra thêm cột và unique index nhưng chưa thể chạy PostgreSQL smoke vì Docker Desktop không hoạt động.
+- Thêm 10 test Payment creation/checkpoint và failure boundary; toàn module đạt **108 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+
+#### 2026-09-30
+
+- Mở rộng reservation gateway với Inventory `commit` và Voucher `consume`, dùng operation key tất định theo Saga và loại thao tác.
+- Thêm checkpoint `FINALIZING_RESERVATIONS` → `INVENTORY_COMMITTED` → `COMPLETED`, ghi lỗi/attempt để retry đúng remote boundary.
+- Postpaid và đơn miễn phí hoàn tất reservation ngay sau Payment checkpoint; prepaid giữ reservation trong `PENDING_PAYMENT` và chờ M7 gọi cùng finalizer sau `PaymentSucceeded`.
+- Create Order replay tiếp tục an toàn từ checkpoint finalization; không compensation tài nguyên của Order đã commit.
+- Thêm 14 test cho finalization và failure boundary; toàn module đạt **122 test, 0 failure, 0 error, 0 skipped**, `clean verify` và đóng gói JAR thành công.
+- Fetch và merge `origin/main` tới `8c8307d` ở chế độ chưa commit; khi giải quyết chồng lấn, kiến trúc `order-service` của Hiếu được ưu tiên và contract/adapter của thành viên khác được ghép chọn lọc.
+- Giữ một nguồn Create Order duy nhất là `OrderCreationOrchestrator`; endpoint one-shot từ `main` trở thành compatibility facade và chỉ ủy quyền vào orchestrator, không tự tạo Payment/finalize lần hai.
+- Xóa finalization gateway không checkpoint bị trùng, nối Catalog commit và Cart Voucher consume trực tiếp vào gateway có checkpoint của Saga.
+- Giải quyết collision Flyway bằng V5 cho additional payment methods của `main` và V6 cho `payment_id` checkpoint của Saga.
+- Thêm 4 test cho HTTP commit/consume contract và compatibility facade/replay; toàn module đạt **126 test, 0 failure, 0 error, 0 skipped** qua `clean verify` và đóng gói JAR thành công.
+- Kiểm tra chéo mã mới từ `main`: Catalog Service đạt **14/14 test**, Payment Service đạt **15/15 test**.
+- Cart Service đạt 14 business test và Identity Service đạt 8 business test; mỗi module chỉ lỗi `contextLoads` do test environment truyền nguyên chuỗi `${DB_USERNAME}` cho PostgreSQL. Đây là vấn đề cấu hình test thuộc service tương ứng, không sửa chéo trong phạm vi Order Service.
+- Full E2E Checkout Preview vẫn bị chặn ở contract do `ShippingQuoteResponse` thực tế của Payment Service chưa trả `requestFingerprint` mà Order cần để consume quote an toàn. Phần sửa response thuộc chủ sở hữu Payment Service; Order tiếp tục fail-fast bằng `INVALID_SHIPPING_QUOTE_CONTRACT`.
+- Chưa chạy lại smoke migration PostgreSQL V1→V6 vì Docker daemon không hoạt động; kiểm tra tĩnh xác nhận các version Flyway không trùng nhau.
+- Trạng thái hiện tại là merge đã giải quyết hết conflict nhưng cố ý **chưa commit/chưa push**; stash dự phòng trước merge vẫn được giữ để có thể khôi phục.
+- Triển khai recovery worker cho Create Order Saga: chỉ nhận Saga đã stale, xử lý theo batch, backoff sau lỗi và tiếp tục qua chính orchestrator idempotent hiện có thay vì tạo luồng nghiệp vụ thứ hai.
+- Migration V7 bổ sung recovery lease dùng `FOR UPDATE SKIP LOCKED`, cho phép nhiều instance chia việc mà không cùng claim một Saga; prepaid `PENDING_PAYMENT` không bị polling như một lỗi vì đang chờ Payment event hợp lệ.
+- Recovery riêng cho `COMPENSATING` tiếp tục release Inventory → Voucher bằng operation key cũ, nên restart giữa compensation không làm mất checkpoint hoặc đổi idempotency key.
+- V7 đồng thời sửa CHECK constraint `order_sagas.status` vốn chưa chứa `FINALIZING_RESERVATIONS` và `INVENTORY_COMMITTED`; nếu không sửa, PostgreSQL thật sẽ từ chối các checkpoint finalization dù unit test dùng mock vẫn đạt.
+- Thêm 9 test cho lease ownership/backoff, không đếm trùng attempt, compensation recovery và worker routing/failure isolation; toàn module đạt **135 test, 0 failure, 0 error, 0 skipped**. M6 đã đủ mã recovery nhưng vẫn giữ trạng thái đang thực hiện đến khi PostgreSQL smoke xác nhận migration/native claim query V1→V7.
+
+#### 2026-10-02
+
+- Đồng bộ remote và xác nhận `origin/main` chỉ có thêm commit ignore workspace, không có thay đổi nghiệp vụ cần merge vào nhánh Hiếu.
+- Bắt đầu lát cắt M7 bằng RabbitMQ consumer `paymentEvents` trên `dynamicmart.events`, dùng group riêng `order-service`.
+- Thêm contract envelope version 1 cho `PaymentSucceeded`, `PaymentFailed`, `PaymentExpired`; chỉ xử lý event từ `payment-service`, bỏ qua event không thuộc Payment trên destination dùng chung.
+- Mỗi event khóa Order/Saga, đối chiếu `paymentId`, `orderId`, amount, timing, method và correlation trước khi thay đổi dữ liệu; `processed_events` chặn tác động lặp và phát hiện tái sử dụng `eventId` sai metadata.
+- `PaymentSucceeded` trả trước chuyển Order sang `CONFIRMED` rồi tiếp tục finalization reservation ngoài local transaction; retry event tiếp tục checkpoint còn dở mà không lặp state transition.
+- `PaymentFailed`/`PaymentExpired` trả trước chuyển Order sang `CANCELLED`, ghi history/outbox và đưa Saga vào `COMPENSATING`; release Inventory/Voucher tiếp tục qua operation key cũ.
+- `PaymentSucceeded` trả sau đến sau `DELIVERED` chuyển Order sang `COMPLETED` và ghi `OrderCompleted` vào Outbox.
+- Thêm 9 test cho event validation, idempotency, transition, follow-up remote boundary và shared destination filtering; toàn module đạt **144 test, 0 failure, 0 error, 0 skipped** qua `clean verify`, đóng gói JAR thành công.
+- Chưa commit/push. RabbitMQ broker integration test, `OrderConfirmed` và API đọc danh sách/chi tiết/timeline vẫn là phần tiếp theo của M7/M8/M9.
+- Thêm `OrderLifecycleCommandService` và API idempotent cho admin `pack`, `ship`, `handover`; mọi transition khóa Order, đi qua state machine và ghi timeline với actor/correlation rõ ràng.
+- Admin chỉ phát `PaymentDue` khi Order trả sau bằng VNPay chuyển sang `HANDOVER_PENDING`; Customer là actor duy nhất được xác nhận nhận hàng.
+- Customer confirm-received kiểm tra ownership trực tiếp trong lock query, phát `ShipmentDelivered`, và chuyển tiếp `COMPLETED`/phát `OrderCompleted` trong cùng transaction khi điều kiện thanh toán đã đạt.
+- `order_operation_log` lưu response theo `Idempotency-Key`; retry cùng command trả response đã lưu, còn dùng lại key cho Order/command khác bị từ chối.
+- Thêm 11 test cho command, idempotency, timeline/outbox, ownership và phân quyền HTTP CUSTOMER/ADMIN. Toàn module đạt **155 test, 0 failure, 0 error, 0 skipped** qua `clean verify`, đóng gói JAR thành công.
+- Nối `OrderConfirmed` vào đúng checkpoint finalization: Inventory commit và Voucher consume thành công trước, sau đó mới enqueue Cart cleanup; `BUY_NOW` không phát lệnh dọn Cart.
+- Payload `OrderConfirmed` dùng đúng contract Cart hiện có gồm `eventId`, `correlationId`, `customerId`, `source` và từng CartItem `id/quantity/version`; Cart tự bỏ qua dòng đã bị sửa và chống xử lý trùng bằng `processed_events`.
+- Thêm Outbox publisher có retry/backoff và giới hạn 10 lần: `OrderConfirmed` gọi internal Cart contract idempotent, `PaymentDue` gửi destination `payment.due`, các Order event còn lại gửi envelope chuẩn vào `dynamicmart.events`.
+- Nếu tiến trình dừng sau khi enqueue nhưng trước khi đánh dấu Saga `COMPLETED`, deterministic operation checkpoint giúp retry dùng lại cùng event, không tạo cleanup lần hai.
+- Thêm 8 test cho enqueue/replay/BUY_NOW/invalid Cart snapshot và routing/backoff Outbox; toàn module đạt **163 test, 0 failure, 0 error, 0 skipped** qua `clean verify`, đóng gói JAR thành công.
+- Hoàn thành M8 với API list/detail/timeline cho Customer và Admin; Customer ownership nằm trong database query, Admin có filter `customerId`, mọi list có phân trang và sort allow-list ổn định.
+- Detail chỉ đọc snapshot Order đã đóng băng, trả `availableActions` theo role/trạng thái; timeline Customer che ID actor nội bộ và correlation kỹ thuật, Admin giữ audit đầy đủ.
+- Bổ sung error envelope ổn định cho path/query sai kiểu và 11 test M8; toàn module đạt **174 test, 0 failure, 0 error, 0 skipped** qua `clean verify`, đóng gói JAR thành công.
+- Chưa commit/push; `.idea/compiler.xml` tiếp tục được giữ ngoài phạm vi thay đổi dự kiến commit.
+- Cấu hình Rabbit consumer retry tối đa 5 lần rồi republish sang DLQ riêng; vô hiệu requeue vô hạn để
+  poison message không khóa luồng Payment event.
+- Thêm integration test bằng Spring Cloud Stream test binder cho deserialize Payment event, retry policy,
+  route `PaymentDue` và shared Order envelope; thêm test bind YAML vào đúng Rabbit binder contract và
+  terminal `FAILED` của Outbox sau lần lỗi thứ 10.
+- Toàn module đạt **180 test, 0 failure, 0 error, 0 skipped** qua `clean verify`, đóng gói JAR thành công.
+- Docker daemon và RabbitMQ local chưa hoạt động; PostgreSQL cổng 5432 đang mở nhưng không có bộ
+  credential/test database riêng trong workspace, nên chưa chạy migration smoke lên database hiện có để
+  tránh tác động nhầm dữ liệu ngoài phạm vi.
+- Bổ sung `PostgresRepositoryIntegrationIT` cho năm bất biến ở tầng database: cùng Checkout bị tuần tự hóa
+  bởi pessimistic lock, mỗi Checkout chỉ có một Saga, `Idempotency-Key` không được tái dùng cho Checkout
+  khác, recovery worker bỏ qua Saga đang khóa và Outbox publisher bỏ qua event đang khóa bằng
+  `FOR UPDATE SKIP LOCKED`.
+- Siết an toàn cho cả migration smoke và repository IT: chỉ khởi động khi `ORDER_DATABASE_SMOKE=true` và
+  `DB_URL` có tên database chứa `test`; sau kết nối vẫn kiểm tra lại `current_database()` như lớp phòng vệ hai.
+- Cô lập hai PostgreSQL IT khỏi RabbitMQ bằng Spring Cloud Stream test binder. `test-compile` đạt với 42 test
+  source; `clean verify` mặc định tiếp tục đạt **180 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- Gọi đích danh hai lớp IT khi chưa bật biến môi trường cho kết quả **6/6 test bị skip trước khi Spring context
+  khởi động**, xác nhận guard không đụng database mặc định.
+- Chưa chạy năm repository test trên PostgreSQL thật vì chưa có credential/database test riêng; thay đổi lát
+  cắt này vẫn chưa commit.
+- Bổ sung 10 HTTP contract test cho Identity Address, Cart Checkout Selection, Catalog Variant validation và
+  Cart `OrderConfirmed`; kiểm tra cả internal API key, URL, payload, mapping response và lỗi dependency.
+- Sửa Checkout Selection adapter không còn tự thay trọng lượng/kích thước thiếu bằng `1`; dữ liệu giao hàng
+  thiếu/sai giờ fail-fast `502 CHECKOUT_SOURCE_CONTRACT_INVALID`, đúng nguyên tắc không tạo snapshot giả.
+- Adapter kiểm tra `cartId`, CartItem ID/version, Variant ID duy nhất, tập Variant trả về và giữ thứ tự dòng Cart
+  kể cả khi Catalog trả response khác thứ tự. Lỗi mạng Catalog/Cart là `503`, tách khỏi lỗi nghiệp vụ `422`.
+- Address adapter kiểm tra ID và toàn bộ trường snapshot bắt buộc; phân biệt địa chỉ không hợp lệ `422`, Identity
+  lỗi/chậm `503` và response sai contract `502`.
+- `OrderConfirmed` contract test xác nhận gửi CartItem ID/version và phản hồi rỗng không được coi là thành công,
+  nhờ đó Outbox còn retry.
+- Bổ sung 5 contract test còn thiếu cho Inventory reserve/release và Voucher preview/reserve/release; xác nhận
+  `Idempotency-Key`, operation/Saga identity, thời hạn giữ chỗ, payload tiền và mapping reservation ID khớp
+  controller/DTO hiện tại của Catalog và Cart.
+- `clean verify` đạt **195 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- Hoàn thiện contract test Payment/GHN cho tạo Shipping Quote và VNPay attempt; request chỉ dùng package
+  data server-side và giữ đúng internal API key.
+- Siết `HttpVoucherGateway`: response preview thiếu danh sách hoặc reservation response thiếu/sai ID trả
+  `502 CART_VOUCHER_CONTRACT_INVALID`, không còn rơi vào `NullPointerException` hoặc lưu checkpoint ID rỗng.
+- Contract hiện tại của Payment Service vẫn chưa trả `requestFingerprint` trong `ShippingQuoteResponse`; đây là
+  blocker E2E thuộc chủ sở hữu Payment, Order tiếp tục yêu cầu contract đúng và fail-fast thay vì tự tính fingerprint.
+- M4 được đánh dấu hoàn thành trong phạm vi Order Service; phần xác minh kết nối service thật thuộc M10.
+  `clean verify` đạt **199 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- Phát hiện race khi nhiều instance cùng quét một Outbox row `PENDING`; migration V8 bổ sung
+  `processing_owner`, `processing_lease_until` và partial index phục vụ claim.
+- `OrderOutboxClaimService` claim event trong transaction ngắn bằng `FOR UPDATE SKIP LOCKED`, sau đó mới gửi
+  HTTP/RabbitMQ ngoài transaction. Worker chỉ được finalize claim của chính mình; lease hết hạn được worker khác
+  tiếp quản để không làm mất event khi instance dừng giữa chừng.
+- Retry trả event về `PENDING` với backoff, lần lỗi thứ 10 chuyển `FAILED`; gửi thành công chuyển `PUBLISHED` và
+  xóa lease. Crash sau khi broker nhận nhưng trước khi commit vẫn có thể phát lại, nên consumer idempotency tiếp tục
+  là bắt buộc theo mô hình at-least-once.
+- Bổ sung 7 unit test owner/lease/reclaim/backoff và PostgreSQL IT cho hai publisher dùng `SKIP LOCKED`.
+  `clean verify` đạt **206 test, 0 failure, 0 error, 0 skipped** và đóng gói JAR thành công.
+- PostgreSQL local yêu cầu mật khẩu nhưng workspace không có `.env`, DB environment hoặc `pgpass`; không thử
+  credential đoán và không chạm `order_db`. Hai lớp IT hiện xác nhận **6/6 test skip an toàn** khi chưa cấu hình.
+- Bổ sung `docs/ORDER_SERVICE_RUNBOOK.md` gồm cấu hình môi trường, ba mức kiểm thử, thứ tự khởi động,
+  kịch bản E2E Checkout/Payment/lifecycle, truy vấn đối chiếu database, RabbitMQ/DLQ smoke, ma trận nghiệm thu,
+  phân loại owner lỗi tích hợp và Definition of Done cho phần Hiếu.
+- Chạy lại trên working tree hiện tại: `clean verify` đạt **206 test, 0 failure, 0 error, 0 skipped** và đóng gói
+  JAR thành công; gọi đích danh hai PostgreSQL IT khi chưa cấu hình tiếp tục skip an toàn **6/6 test**.
+
+#### 2026-10-03
+
+- Fetch lại remote: nhánh Hiếu đang hơn `origin/main` 12 commit và chậm 1 commit chỉ sửa `.gitignore`; không có
+  thay đổi Payment/Order mới cần ghép. `ShippingQuoteResponse` trên `origin/main` vẫn thiếu `requestFingerprint`.
+- Bổ sung toàn bộ biến Saga recovery/Outbox lease vào `.env.example` và script
+  `services/order-service/scripts/order-e2e-smoke.ps1` để tự động kiểm tra health, Checkout/Preview, công thức
+  tiền, Create Order replay, xung đột key và ownership chéo khi các service phụ thuộc sẵn sàng.
+- Siết contract Inventory: reserve/commit/release chỉ được checkpoint khi Catalog trả đúng `reservationId` và
+  trạng thái tương ứng `RESERVED`/`COMMITTED`/`RELEASED`; response sai trả
+  `502 CATALOG_RESERVATION_CONTRACT_INVALID`. Voucher preview có phần tử null cũng trả contract error rõ ràng.
+- Bổ sung 2 HTTP contract test cho hai trường hợp trên; `clean verify` đạt **208 test, 0 failure, 0 error,
+  0 skipped** và đóng gói JAR thành công.
+- Tạo cụm PostgreSQL 13 tạm độc lập trên cổng `55432`, database `order_service_test`; Flyway áp đủ V1→V8,
+  Hibernate validate thành công và **6/6 test PostgreSQL đạt**: unique Checkout/Saga, unique idempotency key,
+  pessimistic Checkout lock, Saga recovery `SKIP LOCKED` và Outbox claim `SKIP LOCKED`.
+- Không chạm PostgreSQL hiện hữu ở cổng 5432. Cụm tạm đã dừng; môi trường công cụ chặn thao tác xóa đệ quy nên
+  thư mục tạm còn tại `%TEMP%\dynamicmart-order-pgtest-20261003-a1f3` và có thể xóa thủ công sau khi kiểm tra.
+- Sau khi Docker Desktop được người dùng khởi động, chạy RabbitMQ 3.13.7 tạm trên `5673/15673`; Order Service
+  health `UP`, consumer kết nối và toàn bộ exchange/queue/binding/DLX/DLQ được provision đúng.
+- Outbox envelope thường tới `dynamicmart.events`; `PaymentDue` tới `payment.due`; database chuyển `PUBLISHED`
+  và xóa processing lease. Poison JSON retry đủ 5 lần rồi vào DLQ với routing key
+  `order-service.payment.failed`, giữ payload và metadata gốc.
+- Payment event broker thật chuyển Order `DELIVERED → COMPLETED`. Phát lại cùng `eventId` không nhân đôi:
+  `processed_events=1`, history `=1`, Outbox `=1`.
+- Dừng broker giữa lúc có Outbox event khiến record giữ `PENDING` và tăng attempt/backoff; sau khi RabbitMQ lên
+  lại, Order tự nối lại, topology tự phục hồi và event chuyển `PUBLISHED`. M7 và M9 được đánh dấu hoàn thành.
+
+#### 2026-10-05
+
+- Theo yêu cầu chỉ dùng thành phần thật, loại bỏ profile/adapter in-memory `standalone`; khôi phục sáu HTTP
+  component làm runtime duy nhất cho Identity, Cart, Catalog và Payment.
+- Thêm Dockerfile multi-stage, `compose.local.yml` và `order-local.ps1` cho PostgreSQL 16, RabbitMQ 3.13 và
+  Order Service. PostgreSQL/RabbitMQ có volume riêng; cổng host `5434/5674/15674` tránh xung đột dự án khác.
+- Docker Compose runtime đã chạy thật: cả ba container healthy; Flyway áp V1→V8, Hibernate validate thành công
+  và schema có 16 bảng. Script không tự ký JWT; API xác thực chờ token do Identity Service thật cấp.
+- RabbitMQ đã tạo `dynamicmart.events`, DLX, queue consumer và DLQ; Order consumer kết nối bằng AMQP thật.
+- `clean verify` trở lại baseline **208 test, 0 failure, 0 error, 0 skipped**. E2E Checkout/Create Order chưa
+  được ghi nhận cho đến khi Identity/Catalog/Cart/Payment thật cùng chạy và contract Payment fingerprint được sửa.

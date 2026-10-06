@@ -1,5 +1,6 @@
 package com.dynamicmart.catalog_service.query;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -7,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -38,11 +40,14 @@ class CatalogProductQueryRepositoryTest {
         repository.search(criteria);
 
         ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
-        verify(jdbcTemplate).query(sql.capture(), any(MapSqlParameterSource.class),
+        ArgumentCaptor<MapSqlParameterSource> parameters =
+                ArgumentCaptor.forClass(MapSqlParameterSource.class);
+        verify(jdbcTemplate).query(sql.capture(), parameters.capture(),
                 org.mockito.ArgumentMatchers.<RowMapper<UUID>>any());
         assertTrue(sql.getValue().startsWith("WITH RECURSIVE selected_categories"));
         assertTrue(sql.getValue().contains("variant_attribute_values"));
         assertTrue(sql.getValue().contains("inventory.on_hand_qty - inventory.reserved_qty > 0"));
         assertTrue(sql.getValue().contains("ORDER BY ("));
+        assertInstanceOf(Timestamp.class, parameters.getValue().getValue("now"));
     }
 }
