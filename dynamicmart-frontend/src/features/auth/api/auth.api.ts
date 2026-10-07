@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/client";
+import { isCatalogStandaloneDemo } from "@/lib/api/config";
 import { setAnonymousSession, setAuthenticatedSession, type SessionUser } from "@/lib/auth/session";
 
 export type AuthenticatedUser = SessionUser;
@@ -24,30 +25,35 @@ async function saveSession(request: Promise<AuthResponse>) {
   return response;
 }
 
+function authPath(path: string) {
+  const base = isCatalogStandaloneDemo() ? "/api/v1/catalog/demo/auth" : "/api/v1/auth";
+  return `${base}/${path}`;
+}
+
 export function login(input: LoginInput) {
-  return saveSession(apiClient.post<AuthResponse>("/api/v1/auth/login", input));
+  return saveSession(apiClient.post<AuthResponse>(authPath("login"), input));
 }
 
 export function register(input: RegisterInput) {
-  return saveSession(apiClient.post<AuthResponse>("/api/v1/auth/register", input));
+  return saveSession(apiClient.post<AuthResponse>(authPath("register"), input));
 }
 
 export function refreshSession() {
-  return saveSession(apiClient.post<AuthResponse>("/api/v1/auth/refresh"));
+  return saveSession(apiClient.post<AuthResponse>(authPath("refresh")));
 }
 
 export async function logout() {
   try {
-    await apiClient.post<void>("/api/v1/auth/logout");
+    await apiClient.post<void>(authPath("logout"));
   } finally {
     setAnonymousSession();
   }
 }
 
 export function requestPasswordReset(email: string) {
-  return apiClient.post<void>("/api/v1/auth/password/forgot", { email });
+  return apiClient.post<void>(authPath("password/forgot"), { email });
 }
 
 export function resetPassword(token: string, password: string) {
-  return apiClient.post<void>("/api/v1/auth/password/reset", { token, password });
+  return apiClient.post<void>(authPath("password/reset"), { token, password });
 }

@@ -22,3 +22,8 @@ export function getApiFallbackUrl(baseUrl = getApiBaseUrl()): string | undefined
 export function getInternalApiBaseUrl(): string {
   return (process.env.API_GATEWAY_INTERNAL_URL ?? getApiBaseUrl()).replace(/\/$/, "");
 }
+
+/** Chỉ bật khi trình diễn catalog-service độc lập, không dùng trong môi trường tích hợp. */
+export function isCatalogStandaloneDemo(): boolean {
+  return process.env.NEXT_PUBLIC_CATALOG_STANDALONE_DEMO === "true";
+}

@@ -7,6 +7,7 @@ import { BadgePercent, Check, Minus, PackageCheck, Plus, ShieldCheck, ShoppingBa
 import { formatVnd } from "@/components/common/Price";
 import { useToast } from "@/components/ui/Toast";
 import { isApiError } from "@/lib/api/error";
+import { isCatalogStandaloneDemo } from "@/lib/api/config";
 import { WishlistButton } from "@/features/wishlist";
 import { addVariantToCart, createBuyNowSession } from "../api/purchase.api";
 import type { AttributeValue, ProductDetail, ProductImage, ProductVariant } from "../types";
@@ -103,7 +104,8 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
     try {
       setPendingAction("buy"); setError(undefined);
       const session = await createBuyNowSession(selectedVariant.id, quantity);
-      router.push(`/checkout?sessionId=${encodeURIComponent(session.id)}`);
+      const checkoutPath = isCatalogStandaloneDemo() ? "/catalog-demo/checkout" : "/checkout";
+      router.push(`${checkoutPath}?sessionId=${encodeURIComponent(session.id)}`);
     } catch (caught) {
       if (isApiError(caught) && caught.status === 401) {
         router.push(`/login?returnTo=${encodeURIComponent(loginReturnTo(pathname, selectedVariant.id, quantity))}`);
