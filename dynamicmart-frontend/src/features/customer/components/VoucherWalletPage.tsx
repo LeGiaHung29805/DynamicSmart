@@ -1,82 +1,98 @@
 "use client";
 
-import { CalendarClock, Copy, History, TicketPercent } from "lucide-react";
-import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/common/PageHeader";
-import { SurfacePanel } from "@/components/common/SurfacePanel";
-import { StatusBadge } from "@/components/common/StatusBadge";
+import { useCallback, useEffect, useState } from "react";
+import { Check, Clock3, Copy, History, ShoppingBag, Sparkles, TicketPercent } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { EmptyState, ErrorState, LoadingState } from "@/components/common/PageState";
+import { Price } from "@/components/common/Price";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
+import { isApiError } from "@/lib/api/error";
 import { useAuthSession } from "@/lib/auth/session";
 import { customerApi } from "../api/customer.api";
 import type { VoucherUsageHistory, VoucherWalletItem } from "../types/customer.types";
 
-export function VoucherWalletPage() {
-  const session = useAuthSession();
-  const [items, setItems] = useState<VoucherWalletItem[]>([]);
-  const [history, setHistory] = useState<VoucherUsageHistory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [copied, setCopied] = useState("");
-  const [copyError, setCopyError] = useState("");
-  const [activeTab, setActiveTab] = useState<"wallet" | "history">("wallet");
+type Tab = "wallet" | "history";
 
-  useEffect(() => {
-    if (session.status !== "authenticated") return;
-    let active = true;
-    Promise.all([customerApi.vouchers(), customerApi.voucherHistory()])
-      .then(([wallet, usageHistory]) => { if (active) { setItems(wallet); setHistory(usageHistory); setError(false); } })
-      .catch(() => { if (active) setError(true); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [session.status]);
-
-  const copy = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopyError(""); setCopied(code); window.setTimeout(() => setCopied(""), 1800);
-    } catch { setCopyError("Không thể sao chép tự động. Hãy bôi đen mã và sao chép thủ công."); }
-  };
-
-  return <div className="space-y-7"><PageHeader eyebrow="Ưu đãi dành cho bạn" title="Kho voucher" description="Xem voucher đang có hoặc chuyển sang lịch sử để theo dõi những mã đã sử dụng." />
-    <div aria-label="Nội dung voucher" className="inline-flex w-full rounded-2xl border border-stone-200 bg-white p-1.5 shadow-sm sm:w-auto" role="tablist">
-      <button aria-controls="voucher-wallet-panel" aria-selected={activeTab === "wallet"} className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black transition sm:flex-none ${activeTab === "wallet" ? "bg-rose-600 text-white shadow-sm" : "text-stone-600 hover:bg-stone-100 hover:text-stone-950"}`} onClick={() => setActiveTab("wallet")} role="tab" type="button"><TicketPercent className="size-4" />Voucher của tôi<span className={`rounded-full px-2 py-0.5 text-xs ${activeTab === "wallet" ? "bg-white/20" : "bg-stone-100"}`}>{items.length}</span></button>
-      <button aria-controls="voucher-history-panel" aria-selected={activeTab === "history"} className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black transition sm:flex-none ${activeTab === "history" ? "bg-rose-600 text-white shadow-sm" : "text-stone-600 hover:bg-stone-100 hover:text-stone-950"}`} onClick={() => setActiveTab("history")} role="tab" type="button"><History className="size-4" />Lịch sử sử dụng<span className={`rounded-full px-2 py-0.5 text-xs ${activeTab === "history" ? "bg-white/20" : "bg-stone-100"}`}>{history.length}</span></button>
-    </div>
-
-    {session.status === "anonymous" ? <SurfacePanel className="text-amber-700">Vui lòng đăng nhập để xem voucher của bạn.</SurfacePanel> : loading ? <SurfacePanel>Đang tải voucher…</SurfacePanel> : error ? <SurfacePanel className="text-red-600">Không thể tải dữ liệu voucher.</SurfacePanel> : activeTab === "wallet" ? <div className="space-y-7" id="voucher-wallet-panel" role="tabpanel">
-      <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-rose-700 via-rose-600 to-orange-500 px-6 py-8 text-white shadow-lg sm:px-10"><p className="text-sm font-bold uppercase tracking-[0.2em] text-rose-100">DynamicMart Rewards</p><h2 className="mt-2 text-3xl font-black tracking-tight">Ưu đãi dành riêng cho bạn</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-rose-50">Voucher mặc định và voucher được cấp riêng sẽ xuất hiện tại đây. Mã chưa đủ điều kiện vẫn hiển thị kèm lý do.</p></div>
-      {copyError ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{copyError}</p> : null}
-      {items.length === 0 ? <SurfacePanel>Ví voucher hiện đang trống.</SurfacePanel> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{items.map((voucher) => <article className={`relative flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-white shadow-sm ${voucher.eligible ? "border-stone-200" : "border-amber-200"}`} key={voucher.id}><span className="absolute -left-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-stone-50" /><span className="absolute -right-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-stone-50" /><div className="flex-1 border-b border-dashed border-stone-200 p-5"><div className="flex items-start justify-between gap-3"><StatusBadge label={voucher.eligible ? "Có thể dùng" : "Chưa đủ điều kiện"} tone={voucher.eligible ? "success" : "warning"} /><span className="rounded-2xl bg-rose-50 p-3 text-rose-600"><TicketPercent /></span></div><h2 className="mt-4 text-lg font-black text-stone-950">{voucher.name}</h2><p className="mt-2 text-sm leading-6 text-stone-500">{voucher.description || discountDescription(voucher)}</p><div className="mt-5 grid gap-3 rounded-xl bg-stone-50 p-4 text-sm"><div><p className="text-xs font-bold uppercase text-stone-400">Mã voucher</p><p className="mt-1 truncate font-black tracking-wide text-rose-600">{voucher.code}</p></div><div><p className="text-xs font-bold uppercase text-stone-400">Phạm vi</p><p className="mt-1 font-black text-stone-900">{scopeLabel(voucher.scope)}</p></div><div className="flex items-start gap-2"><CalendarClock className="mt-0.5 size-4 shrink-0 text-stone-400" /><p className="text-stone-600">Hạn dùng {new Date(voucher.endsAt).toLocaleDateString("vi-VN")}</p></div></div>{voucher.ineligibleReason ? <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">{voucher.ineligibleReason}</p> : null}</div><div className="p-4"><Button className="w-full" size="lg" variant={voucher.eligible ? "default" : "outline"} onClick={() => void copy(voucher.code)}><Copy />{copied === voucher.code ? "Đã sao chép" : "Sao chép mã"}</Button></div></article>)}</div>}
-    </div> : <div id="voucher-history-panel" role="tabpanel"><SurfacePanel className="overflow-hidden p-0">
-      <div className="flex items-center gap-3 border-b border-stone-200 px-5 py-4 sm:px-6"><span className="rounded-xl bg-slate-100 p-2 text-slate-700"><History className="size-5" /></span><div><h2 className="font-black text-stone-950">Lịch sử sử dụng voucher</h2><p className="text-sm text-stone-500">Theo dõi voucher đã dùng, đang giữ hoặc đã được hoàn lượt.</p></div></div>
-      {history.length === 0 ? <p className="px-5 py-8 text-sm text-stone-500 sm:px-6">Bạn chưa có lịch sử sử dụng voucher.</p> : <div className="divide-y divide-stone-100">{history.map((entry) => <div className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6" key={entry.id}><div><div className="flex flex-wrap items-center gap-2"><p className="font-black text-stone-950">{entry.voucherName}</p>{entry.voucherCode ? <code className="rounded bg-rose-50 px-2 py-1 text-xs font-black text-rose-700">{entry.voucherCode}</code> : null}<StatusBadge label={historyStatus(entry.status).label} tone={historyStatus(entry.status).tone} /></div><p className="mt-1 text-sm text-stone-500">{historyDate(entry)}{entry.orderId ? ` · Đơn #${entry.orderId.slice(0, 8).toUpperCase()}` : ""}</p>{entry.releaseReason ? <p className="mt-1 text-xs text-stone-400">Lý do: {releaseReason(entry.releaseReason)}</p> : null}</div><p className="font-black text-emerald-700">-{(entry.discountAmountVnd + entry.shippingDiscountVnd).toLocaleString("vi-VN")}đ</p></div>)}</div>}
-    </SurfacePanel></div>}
-  </div>;
-}
-
-function discountDescription(voucher: VoucherWalletItem) {
-  if (voucher.discountMethod === "PERCENTAGE") return `Giảm ${(voucher.discountRateBps ?? 0) / 100}%${voucher.maxDiscountVnd ? `, tối đa ${voucher.maxDiscountVnd.toLocaleString("vi-VN")}đ` : ""}.`;
-  return `Giảm ${(voucher.fixedDiscountVnd ?? 0).toLocaleString("vi-VN")}đ.`;
+function discountLabel(voucher: VoucherWalletItem) {
+  if (voucher.discountMethod === "PERCENTAGE") return `Giảm ${(voucher.discountRateBps ?? 0) / 100}%`;
+  return `Giảm ${new Intl.NumberFormat("vi-VN").format(voucher.fixedDiscountVnd ?? 0)}₫`;
 }
 
 function scopeLabel(scope: string) {
-  return ({ SHIPPING_DISCOUNT: "Phí giao hàng", ORDER_DISCOUNT: "Toàn đơn", PRODUCT_DISCOUNT: "Sản phẩm", PRODUCT_LIST_DISCOUNT: "Danh sách sản phẩm", CATEGORY_DISCOUNT: "Danh mục" } as Record<string, string>)[scope] ?? scope;
+  return ({ ORDER_DISCOUNT: "Toàn đơn", SHIPPING_DISCOUNT: "Phí vận chuyển", PRODUCT_DISCOUNT: "Sản phẩm", PRODUCT_LIST_DISCOUNT: "Nhóm sản phẩm", CATEGORY_DISCOUNT: "Danh mục" } as Record<string, string>)[scope] ?? scope;
 }
 
-function historyStatus(status: VoucherUsageHistory["status"]): { label: string; tone: "neutral" | "success" | "warning" | "danger" } {
-  switch (status) {
-    case "CONSUMED": return { label: "Đã sử dụng", tone: "success" };
-    case "RESERVED": return { label: "Đang giữ", tone: "warning" };
-    case "RELEASED": return { label: "Đã hoàn lượt", tone: "neutral" };
-    case "EXPIRED": return { label: "Hết thời gian giữ", tone: "danger" };
+export function VoucherWalletPage() {
+  const router = useRouter();
+  const session = useAuthSession();
+  const [tab, setTab] = useState<Tab>("wallet");
+  const [vouchers, setVouchers] = useState<VoucherWalletItem[]>([]);
+  const [history, setHistory] = useState<VoucherUsageHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+  const { showToast } = useToast();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const [walletResult, historyResult] = await Promise.allSettled([customerApi.vouchers(), customerApi.voucherHistory()]);
+    if (walletResult.status === "fulfilled") setVouchers(walletResult.value);
+    else setError(isApiError(walletResult.reason) ? walletResult.reason.message : "Không thể tải kho voucher.");
+    if (historyResult.status === "fulfilled") setHistory(historyResult.value);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (session.status !== "authenticated") return;
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load, session.status]);
+
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
+      showToast(`Đã sao chép mã ${code}.`, "success");
+      window.setTimeout(() => setCopied(""), 1600);
+    } catch { showToast("Không thể sao chép tự động. Hãy chọn mã và sao chép.", "error"); }
   }
-}
 
-function historyDate(entry: VoucherUsageHistory) {
-  const value = entry.consumedAt ?? entry.releasedAt ?? entry.createdAt;
-  return new Date(value).toLocaleString("vi-VN");
-}
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-7 px-4 py-10 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-700 px-6 py-9 text-white sm:px-9">
+        <div className="flex flex-wrap items-end justify-between gap-6"><div><p className="text-xs font-black tracking-[0.2em] text-emerald-300 uppercase">Ưu đãi dành cho bạn</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Kho voucher</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-100/80 sm:text-base">Xem điều kiện, sao chép mã và kiểm tra lịch sử voucher đã sử dụng.</p></div><span className="grid size-20 place-items-center rounded-3xl bg-white/10 ring-1 ring-white/15"><TicketPercent className="size-9 text-emerald-200" /></span></div>
+      </div>
 
-function releaseReason(reason: string) {
-  return ({ PAYMENT_FAILED: "Thanh toán thất bại", RESERVATION_EXPIRED: "Hết thời gian giữ voucher" } as Record<string, string>)[reason] ?? reason;
+      <div className="flex w-fit rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm" role="tablist">
+        <button className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${tab === "wallet" ? "bg-emerald-800 text-white" : "text-slate-500 hover:bg-slate-50"}`} onClick={() => setTab("wallet")} role="tab" aria-selected={tab === "wallet"} type="button"><Sparkles className="size-4" />Voucher của tôi <span className={`rounded-full px-2 py-0.5 text-xs ${tab === "wallet" ? "bg-white/15" : "bg-slate-100"}`}>{vouchers.length}</span></button>
+        <button className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${tab === "history" ? "bg-emerald-800 text-white" : "text-slate-500 hover:bg-slate-50"}`} onClick={() => setTab("history")} role="tab" aria-selected={tab === "history"} type="button"><History className="size-4" />Lịch sử sử dụng</button>
+      </div>
+
+      {session.status === "loading" ? <LoadingState /> : session.status === "anonymous" ? <div className="rounded-3xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm"><TicketPercent className="mx-auto size-12 text-emerald-700" /><h2 className="mt-4 text-xl font-black text-slate-950">Đăng nhập để xem kho voucher</h2><p className="mt-2 text-sm text-slate-500">Voucher và lịch sử sử dụng được lưu riêng theo tài khoản.</p><Button className="mt-6 bg-emerald-800 text-white hover:bg-emerald-700" onClick={() => router.push("/login?returnTo=%2Fvouchers")}>Đăng nhập</Button></div> : loading ? <LoadingState /> : error && vouchers.length === 0 ? <ErrorState description={error} onAction={load} /> : tab === "wallet" ? (
+        vouchers.length === 0 ? <EmptyState title="Chưa có voucher" description="Voucher phù hợp sẽ xuất hiện tại đây." /> : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{vouchers.map((voucher) => (
+            <article className="relative flex min-h-72 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-950/5" key={voucher.id}>
+              <div className="absolute -top-10 -right-10 size-28 rounded-full bg-emerald-50" />
+              <div className="relative flex items-start justify-between gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-emerald-800 text-white"><TicketPercent className="size-5" /></span><span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${voucher.eligible ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{voucher.eligible ? "Dùng được" : "Có điều kiện"}</span></div>
+              <p className="mt-5 text-xs font-black tracking-[0.14em] text-emerald-700 uppercase">{scopeLabel(voucher.scope)}</p>
+              <h2 className="mt-1 line-clamp-2 text-lg font-black text-slate-950">{voucher.name}</h2>
+              <p className="mt-2 text-2xl font-black text-emerald-800">{discountLabel(voucher)}</p>
+              <div className="mt-3 space-y-1 text-xs leading-5 text-slate-500"><p>{voucher.description || "Ưu đãi dành cho tài khoản của bạn"}</p><p className="flex items-center gap-1"><Clock3 className="size-3.5" />Hạn {new Date(voucher.endsAt).toLocaleDateString("vi-VN")}</p></div>
+              {!voucher.eligible && voucher.ineligibleReason ? <p className="mt-2 line-clamp-2 text-xs text-amber-700">{voucher.ineligibleReason}</p> : null}
+              <div className="mt-auto pt-5"><div className="flex items-center justify-between gap-2 rounded-2xl border border-dashed border-emerald-300 bg-emerald-50/60 p-2"><code className="truncate px-2 text-sm font-black text-emerald-900">{voucher.code}</code><Button aria-label={`Sao chép ${voucher.code}`} size="icon" variant="ghost" onClick={() => void copyCode(voucher.code)}>{copied === voucher.code ? <Check className="text-emerald-700" /> : <Copy />}</Button></div></div>
+            </article>
+          ))}</div>
+        )
+      ) : history.length === 0 ? <EmptyState title="Chưa sử dụng voucher" description="Voucher đã dùng khi đặt hàng sẽ được lưu tại đây." /> : (
+        <div className="space-y-4">{history.map((item) => (
+          <article className="flex flex-wrap items-center justify-between gap-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" key={item.id}>
+            <div className="flex min-w-0 items-center gap-4"><span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-600"><History className="size-5" /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="font-black">{item.voucherName}</h2><code className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">{item.voucherCode}</code></div><p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><ShoppingBag className="size-3.5" />{item.orderId ? `Đơn hàng ${item.orderId.slice(0, 8)} · ` : ""}{new Date(item.consumedAt ?? item.releasedAt ?? item.createdAt).toLocaleString("vi-VN")}</p></div></div>
+            <div className="text-right"><p className="text-xs text-slate-500">Tổng ưu đãi</p><p className="mt-1 text-lg font-black text-emerald-700">-<Price value={item.discountAmountVnd + item.shippingDiscountVnd} /></p></div>
+          </article>
+        ))}</div>
+      )}
+    </div>
+  );
 }
