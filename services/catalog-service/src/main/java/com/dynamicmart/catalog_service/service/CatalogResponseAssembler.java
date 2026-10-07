@@ -95,6 +95,7 @@ public class CatalogResponseAssembler {
         return new ProductDetailResponse(product.getId(), product.getName(), product.getSlug(),
                 product.getShortDescription(), product.getDescription(),
                 categoryBrief(requireCategory(product, loaded)), product.isFeatured(),
+                product.getAverageRating(), product.getReviewCount(),
                 product.getPublishedAt(), productAttributes(product.getId(), loaded),
                 productImages(product.getId(), loaded), variants);
     }
@@ -126,7 +127,8 @@ public class CatalogResponseAssembler {
                     representative.getId(), loaded.prices().get(representative.getId()),
                     minimum, maximum, true, product.isFeatured(),
                     bestSellerProductIds.contains(product.getId()),
-                    voucherEligibleProductIds.contains(product.getId()), product.getPublishedAt()));
+                    voucherEligibleProductIds.contains(product.getId()), 
+                    product.getAverageRating(), product.getReviewCount(), product.getPublishedAt()));
         }
         return summaries;
     }

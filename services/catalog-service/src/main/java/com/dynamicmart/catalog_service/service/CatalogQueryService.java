@@ -12,7 +12,9 @@ import com.dynamicmart.catalog_service.exception.CatalogException;
 import com.dynamicmart.catalog_service.query.CatalogProductQueryRepository;
 import com.dynamicmart.catalog_service.query.ProductAttributeFilter;
 import com.dynamicmart.catalog_service.query.ProductIdPage;
+import com.dynamicmart.catalog_service.client.EngagementReportClient;
 import com.dynamicmart.catalog_service.query.ProductSearchCriteria;
+import com.dynamicmart.catalog_service.query.ProductSort;
 import com.dynamicmart.catalog_service.repository.CategoryRepository;
 import com.dynamicmart.catalog_service.repository.ProductRepository;
 import com.dynamicmart.catalog_service.repository.ProductVariantRepository;
@@ -39,22 +41,31 @@ public class CatalogQueryService {
     private final ProductVariantRepository variantRepository;
     private final CategoryRepository categoryRepository;
     private final CatalogResponseAssembler responseAssembler;
+    private final EngagementReportClient reportClient;
 
     public CatalogQueryService(CatalogProductQueryRepository queryRepository,
                                ProductRepository productRepository,
                                ProductVariantRepository variantRepository,
                                CategoryRepository categoryRepository,
-                               CatalogResponseAssembler responseAssembler) {
+                               CatalogResponseAssembler responseAssembler,
+                               EngagementReportClient reportClient) {
         this.queryRepository = queryRepository;
         this.productRepository = productRepository;
         this.variantRepository = variantRepository;
         this.categoryRepository = categoryRepository;
         this.responseAssembler = responseAssembler;
+        this.reportClient = reportClient;
     }
 
     @Transactional(readOnly = true)
     public PageResponse<ProductSummaryResponse> search(ProductSearchCriteria criteria) {
         validateCriteria(criteria);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<UUID> bestSellerIds = reportClient.getBestSellers(today.minusDays(30), today, 100);
+        if (criteria.sort() == ProductSort.BEST_SELLER
+                && !bestSellerIds.isEmpty()) {
+            return bestSellerSearch(criteria, bestSellerIds);
+        }
         ProductIdPage result = queryRepository.search(criteria);
         Map<UUID, Product> productsById = new HashMap<>();
         productRepository.findAllById(result.productIds())
@@ -63,11 +74,39 @@ public class CatalogQueryService {
                 .map(productsById::get)
                 .filter(java.util.Objects::nonNull)
                 .toList();
+        Set<UUID> bestSellerProductIds = new java.util.HashSet<>(bestSellerIds);
+        
         List<ProductSummaryResponse> content = responseAssembler.productSummaries(
-                ordered, Set.of(), Set.of());
+                ordered, bestSellerProductIds, Set.of());
         int totalPages = result.totalElements() == 0 ? 0
                 : (int) Math.ceil((double) result.totalElements() / criteria.size());
         return new PageResponse<>(content, criteria.page(), criteria.size(), result.totalElements(),
+                totalPages, criteria.page() == 0, criteria.page() + 1 >= totalPages);
+    }
+
+    private PageResponse<ProductSummaryResponse> bestSellerSearch(ProductSearchCriteria criteria,
+                                                                  List<UUID> bestSellerIds) {
+        ProductSearchCriteria broadCriteria = new ProductSearchCriteria(criteria.keyword(), criteria.categoryId(),
+                criteria.minimumPriceVnd(), criteria.maximumPriceVnd(), criteria.featured(),
+                criteria.attributes(), ProductSort.NEWEST, 0, 1000);
+        Set<UUID> matchingIds = new HashSet<>(queryRepository.search(broadCriteria).productIds());
+        List<UUID> orderedIds = bestSellerIds.stream()
+                .filter(matchingIds::contains)
+                .toList();
+        int fromIndex = Math.min(Math.multiplyExact(criteria.page(), criteria.size()), orderedIds.size());
+        int toIndex = Math.min(fromIndex + criteria.size(), orderedIds.size());
+        List<UUID> pageIds = orderedIds.subList(fromIndex, toIndex);
+        Map<UUID, Product> productsById = new HashMap<>();
+        productRepository.findAllById(pageIds).forEach(product -> productsById.put(product.getId(), product));
+        List<Product> ordered = pageIds.stream()
+                .map(productsById::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        List<ProductSummaryResponse> content = responseAssembler.productSummaries(
+                ordered, new HashSet<>(bestSellerIds), Set.of());
+        int totalPages = orderedIds.isEmpty() ? 0
+                : (int) Math.ceil((double) orderedIds.size() / criteria.size());
+        return new PageResponse<>(content, criteria.page(), criteria.size(), orderedIds.size(),
                 totalPages, criteria.page() == 0, criteria.page() + 1 >= totalPages);
     }
 

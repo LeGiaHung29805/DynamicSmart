@@ -29,4 +29,27 @@ public class Review {
     @Column(name = "hidden_at") private Instant hiddenAt;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+
+    public Review(UUID orderItemId, UUID orderId, UUID customerId, UUID productId,
+                  UUID variantId, short rating, String content, Instant now) {
+        this.id = UUID.randomUUID();
+        this.orderItemId = orderItemId;
+        this.orderId = orderId;
+        this.customerId = customerId;
+        this.productId = productId;
+        this.variantId = variantId;
+        this.rating = rating;
+        this.content = content;
+        this.status = "VISIBLE";
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public void hide(UUID adminId, String reason, Instant now) {
+        this.status = "HIDDEN";
+        this.hiddenBy = adminId;
+        this.hiddenReason = reason;
+        this.hiddenAt = now;
+        this.updatedAt = now;
+    }
 }

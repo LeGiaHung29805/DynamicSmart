@@ -106,6 +106,32 @@ public class OrderQueryService {
         return new OrderTimelineResponse(order.getId(), timeline(order.getId(), true));
     }
 
+    @Transactional(readOnly = true)
+    public com.dynamicmart.order_service.controller.OrderInternalController.ReviewEligibility checkReviewEligibility(UUID customerId, UUID orderItemId) {
+        requireId(customerId);
+        requireId(orderItemId);
+
+        OrderItem item = items.findById(orderItemId).orElse(null);
+        if (item == null) {
+            return new com.dynamicmart.order_service.controller.OrderInternalController.ReviewEligibility(
+                    false, null, orderItemId, customerId, null, null, "Không tìm thấy dòng đơn hàng.");
+        }
+
+        CustomerOrder order = orders.findById(item.getOrderId()).orElse(null);
+        if (order == null || !order.getCustomerId().equals(customerId)) {
+            return new com.dynamicmart.order_service.controller.OrderInternalController.ReviewEligibility(
+                    false, item.getOrderId(), orderItemId, customerId, item.getProductId(), item.getVariantId(), "Sản phẩm không thuộc đơn hàng của bạn.");
+        }
+
+        if (order.getStatus() != OrderStatus.COMPLETED) {
+            return new com.dynamicmart.order_service.controller.OrderInternalController.ReviewEligibility(
+                    false, order.getId(), orderItemId, customerId, item.getProductId(), item.getVariantId(), "Đơn hàng chưa hoàn thành.");
+        }
+
+        return new com.dynamicmart.order_service.controller.OrderInternalController.ReviewEligibility(
+                true, order.getId(), orderItemId, customerId, item.getProductId(), item.getVariantId(), null);
+    }
+
     private OrderPageResponse list(Query rawQuery, UUID customerId) {
         Query query = rawQuery == null ? Query.defaults() : rawQuery;
         validate(query);

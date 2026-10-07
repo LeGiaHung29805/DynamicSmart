@@ -56,7 +56,7 @@ public class CreateOrderFacade {
     private CreateOrderResponse response(CreationResult result) {
         return new CreateOrderResponse(
                 result.orderId(), result.orderNumber(), result.status(), result.sagaId(),
-                result.paymentId(), result.paymentDueAt(), result.redirectUrl(), result.replay());
+                result.paymentId(), result.paymentDueAt(), result.replay());
     }
 
     private void requireIdempotencyKey(UUID idempotencyKey) {

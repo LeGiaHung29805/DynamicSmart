@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AdminOrderWorkspace } from "@/features/order";
+import { AdminSectionPage } from "@/features/admin";
 
 export const metadata: Metadata = { title: "Quản lý đơn hàng" };
 
 export default function AdminOrdersPage() {
-  return <AdminOrderWorkspace />;
+  return <AdminSectionPage section="orders" />;
 }

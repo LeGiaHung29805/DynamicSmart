@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { BadgePercent, Check, Minus, PackageCheck, Plus, ShieldCheck, ShoppingBag, Zap } from "lucide-react";
+import { BadgePercent, Check, Minus, PackageCheck, Plus, ShieldCheck, ShoppingBag, Star, Zap } from "lucide-react";
 import { formatVnd } from "@/components/common/Price";
 import { useToast } from "@/components/ui/Toast";
 import { isApiError } from "@/lib/api/error";
@@ -69,6 +69,8 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
   const selectedImage = images.find((image) => image.id === selectedImageId) ?? primaryImage(images);
   const maxQuantity = selectedVariant?.inventory.availableQuantity ?? 0;
   const canPurchase = Boolean(selectedVariant?.purchasable && quantity >= 1 && quantity <= maxQuantity);
+  const reviewCount = product.reviewCount ?? 0;
+  const averageRating = product.averageRating ?? 0;
 
   function selectAttribute(code: string, value: string) {
     const next = { ...selections, [code]: value };
@@ -122,7 +124,7 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
       </div>
 
       <div className="space-y-6 lg:py-2">
-        <div><p className="text-xs font-black tracking-[0.18em] text-brand uppercase">{product.category.name}</p><h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">{product.name}</h1><p className="mt-3 text-sm leading-6 text-slate-500">{product.shortDescription}</p></div>
+        <div><p className="text-xs font-black tracking-[0.18em] text-brand uppercase">{product.category.name}</p><h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">{product.name}</h1>{reviewCount > 0 ? <p className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-amber-700"><Star className="size-4 fill-current" /> {averageRating.toFixed(1)} <span className="font-medium text-slate-500">({reviewCount} đánh giá)</span></p> : null}<p className="mt-3 text-sm leading-6 text-slate-500">{product.shortDescription}</p></div>
         <div className="flex flex-wrap items-end gap-3 border-y border-slate-200 py-5">
           {currentPrice ? <><span className="text-3xl font-black text-emerald-800">{formatVnd(currentPrice.salePriceVnd ?? currentPrice.listPriceVnd)}</span>{currentPrice.salePriceVnd !== null && currentPrice.salePriceVnd !== undefined ? <del className="pb-1 text-sm text-slate-400">{formatVnd(currentPrice.listPriceVnd)}</del> : null}</> : <span className="text-sm font-semibold text-slate-500">Chọn đủ thuộc tính để xem giá</span>}
         </div>

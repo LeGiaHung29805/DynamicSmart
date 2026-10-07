@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AdminSectionPage } from "@/features/admin";
+import { AdminReportDashboard } from "@/features/engagement";
 
 export const metadata: Metadata = { title: "Báo cáo" };
 
 export default function AdminReportsPage() {
-  return <AdminSectionPage section="reports" />;
+  return <AdminReportDashboard />;
 }

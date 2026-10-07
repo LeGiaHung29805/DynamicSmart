@@ -3,6 +3,7 @@ package com.dynamicmart.order_service.service;
 import com.dynamicmart.order_service.client.PaymentClient;
 import com.dynamicmart.order_service.dto.response.OrderCommandResponse;
 import com.dynamicmart.order_service.entity.CustomerOrder;
+import com.dynamicmart.order_service.entity.OrderItem;
 import com.dynamicmart.order_service.entity.OrderActorType;
 import com.dynamicmart.order_service.entity.OrderOperationLog;
 import com.dynamicmart.order_service.entity.OrderStatus;
@@ -12,6 +13,7 @@ import com.dynamicmart.order_service.entity.PaymentMethod;
 import com.dynamicmart.order_service.entity.PaymentTiming;
 import com.dynamicmart.order_service.exception.OrderException;
 import com.dynamicmart.order_service.repository.CustomerOrderRepository;
+import com.dynamicmart.order_service.repository.OrderItemRepository;
 import com.dynamicmart.order_service.repository.OrderOperationLogRepository;
 import com.dynamicmart.order_service.repository.OrderStatusHistoryRepository;
 import com.dynamicmart.order_service.repository.OutboxEventRepository;
@@ -34,6 +36,7 @@ public class OrderLifecycleCommandService {
     private static final String CUSTOMER_CONFIRM_RECEIVED = "CUSTOMER_CONFIRM_RECEIVED";
 
     private final CustomerOrderRepository orders;
+    private final OrderItemRepository items;
     private final OrderOperationLogRepository operationLogs;
     private final OrderStatusHistoryRepository histories;
     private final OutboxEventRepository outbox;
@@ -44,6 +47,7 @@ public class OrderLifecycleCommandService {
 
     public OrderLifecycleCommandService(
             CustomerOrderRepository orders,
+            OrderItemRepository items,
             OrderOperationLogRepository operationLogs,
             OrderStatusHistoryRepository histories,
             OutboxEventRepository outbox,
@@ -52,6 +56,7 @@ public class OrderLifecycleCommandService {
             ObjectMapper objectMapper,
             Clock clock) {
         this.orders = orders;
+        this.items = items;
         this.operationLogs = operationLogs;
         this.histories = histories;
         this.outbox = outbox;
@@ -164,10 +169,30 @@ public class OrderLifecycleCommandService {
         var payload = new LifecycleCommandPayload(
                 order.getId(), order.getOrderNumber(), order.getCustomerId(), order.getStatus(),
                 order.getPaymentTiming(), order.getPaymentMethod(), order.getPaymentSucceededAt(),
-                order.getShipmentDeliveredAt(), now);
+                order.getShipmentDeliveredAt(), order.getFinalTotalVnd(), order.getItemsListSubtotalVnd(),
+                discountValue(order), order.getShippingFeeVnd(), order.getCurrency(),
+                order.getCancelReason(), now, itemPayloads(order.getId()));
         outbox.save(OutboxEvent.pending(
                 UUID.randomUUID(), "ORDER", order.getId(), eventType, 1,
                 objectMapper.writeValueAsString(payload), correlationId, now));
+    }
+
+    private long discountValue(CustomerOrder order) {
+        return order.getDirectSaleDiscountVnd()
+                + order.getProductDiscountVnd()
+                + order.getOrderDiscountVnd()
+                + order.getShippingDiscountVnd();
+    }
+
+    private List<LifecycleCommandItemPayload> itemPayloads(UUID orderId) {
+        return items.findAllByOrderId(orderId).stream()
+                .map(item -> new LifecycleCommandItemPayload(item.getProductId(), item.getVariantId(),
+                        item.getQuantity(), grossSales(item), item.getLineTotalVnd()))
+                .toList();
+    }
+
+    private long grossSales(OrderItem item) {
+        return Math.multiplyExact(item.getListPriceVnd(), item.getQuantity());
     }
 
     private OrderCommandResponse record(
@@ -223,6 +248,21 @@ public class OrderLifecycleCommandService {
             PaymentMethod paymentMethod,
             Instant paymentSucceededAt,
             Instant shipmentDeliveredAt,
-            Instant occurredAt) {
+            long finalTotalVnd,
+            long grossItemSalesVnd,
+            long discountValueVnd,
+            long shippingFeeVnd,
+            String currency,
+            String cancelReason,
+            Instant occurredAt,
+            List<LifecycleCommandItemPayload> items) {
+    }
+
+    private record LifecycleCommandItemPayload(
+            UUID productId,
+            UUID variantId,
+            int quantity,
+            long grossSalesVnd,
+            long netItemSalesVnd) {
     }
 }

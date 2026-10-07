@@ -130,6 +130,12 @@ public class ProductManagementService {
         return responseAssembler.adminProduct(requireProduct(productId));
     }
 
+    @Transactional
+    public void updateRating(UUID productId, double averageRating, int reviewCount) {
+        Product product = requireProduct(productId);
+        product.updateRating(averageRating, reviewCount);
+    }
+
     @Transactional(readOnly = true)
     public PageResponse<AdminProductResponse> listProducts(String keyword, ProductStatus status,
                                                            int page, int size) {

@@ -52,12 +52,18 @@ public class GatewaySecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/locations/provinces",
                                 "/api/v1/locations/wards",
-                                "/api/v1/catalog/categories/**",
                                 "/api/v1/catalog/products/**",
-                                "/api/v1/catalog/variants/**").permitAll()
+                                "/api/v1/catalog/categories/**",
+                                "/api/v1/catalog/variants/**",
+                                "/api/v1/reviews/products/**",
+                                "/api/v1/product-questions/products/**",
+                                "/api/v1/reports/products/best-sellers").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/engagement/internal/events/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments", "/api/v1/payments/*/callback-audits", "/api/v1/payments/*/attempts").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/admin/users/**", "/api/v1/cart/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/users/**", "/api/v1/cart/admin/**",
+                                "/api/v1/admin/reviews/**", "/api/v1/admin/product-questions/**",
+                                "/api/v1/admin/support/conversations/**", "/api/v1/reports/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .addFilterAfter(sessionValidationFilter, BearerTokenAuthenticationFilter.class)

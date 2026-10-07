@@ -71,7 +71,7 @@ class OrderCreationControllerTests {
         when(orderCreation.create(CUSTOMER_ID, SESSION_ID, IDEMPOTENCY_KEY)).thenReturn(
                 new CreationResult(
                         ORDER_ID, "ORD-NEW", OrderStatus.PENDING_PAYMENT, SAGA_ID,
-                        PAYMENT_ID, PAYMENT_DUE_AT, null, false));
+                        PAYMENT_ID, PAYMENT_DUE_AT, false));
 
         mockMvc.perform(post("/api/v1/checkout/sessions/{sessionId}/orders", SESSION_ID)
                         .with(customerJwt())
@@ -90,7 +90,7 @@ class OrderCreationControllerTests {
         when(orderCreation.create(CUSTOMER_ID, SESSION_ID, IDEMPOTENCY_KEY)).thenReturn(
                 new CreationResult(
                         ORDER_ID, "ORD-EXISTING", OrderStatus.PENDING_PAYMENT, SAGA_ID,
-                        PAYMENT_ID, PAYMENT_DUE_AT, null, true));
+                        PAYMENT_ID, PAYMENT_DUE_AT, true));
 
         mockMvc.perform(post("/api/v1/checkout/sessions/{sessionId}/orders", SESSION_ID)
                         .with(customerJwt())

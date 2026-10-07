@@ -118,6 +118,8 @@ export interface ProductSummary {
   featured: boolean;
   bestSeller: boolean;
   voucherEligible: boolean;
+  averageRating?: number | null;
+  reviewCount?: number | null;
   publishedAt: string;
 }
 
@@ -129,6 +131,8 @@ export interface ProductDetail {
   description?: string | null;
   category: CategoryBrief;
   featured: boolean;
+  averageRating?: number | null;
+  reviewCount?: number | null;
   publishedAt: string;
   attributes: AttributeValue[];
   images: ProductImage[];

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BadgePercent, PackageCheck } from "lucide-react";
+import { ArrowUpRight, BadgePercent, PackageCheck, Star } from "lucide-react";
 import { formatVnd } from "@/components/common/Price";
 import { WishlistButton } from "@/features/wishlist";
 import type { ProductSummary } from "../types";
@@ -8,6 +8,8 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
   const price = product.representativePrice;
   const effectivePrice = price.salePriceVnd ?? price.listPriceVnd;
   const hasRange = product.minimumListPriceVnd !== product.maximumListPriceVnd;
+  const reviewCount = product.reviewCount ?? 0;
+  const averageRating = product.averageRating ?? 0;
   const badge = price.salePriceVnd !== null && price.salePriceVnd !== undefined
     ? `Giảm ${price.directSalePercent ?? 0}%`
     : product.bestSeller ? "Bán chạy" : product.featured ? "Nổi bật" : "Mới";
@@ -37,7 +39,7 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
         </div>
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500 sm:text-xs">
           <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><PackageCheck className="size-3.5" /> Còn hàng</span>
-          {product.voucherEligible ? <span className="inline-flex items-center gap-1 font-semibold text-amber-700"><BadgePercent className="size-3.5" /> Có voucher</span> : null}
+          {reviewCount > 0 ? <span className="inline-flex items-center gap-1 font-semibold text-amber-700"><Star className="size-3.5 fill-current" /> {averageRating.toFixed(1)} <span className="text-slate-400">({reviewCount})</span></span> : product.voucherEligible ? <span className="inline-flex items-center gap-1 font-semibold text-amber-700"><BadgePercent className="size-3.5" /> Có voucher</span> : null}
         </div>
       </div>
     </article>

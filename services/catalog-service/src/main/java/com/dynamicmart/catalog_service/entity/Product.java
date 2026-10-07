@@ -33,6 +33,8 @@ public class Product {
     @Column(name = "default_length_cm") private Integer defaultLengthCm;
     @Column(name = "default_width_cm") private Integer defaultWidthCm;
     @Column(name = "default_height_cm") private Integer defaultHeightCm;
+    @Column(name = "average_rating") private Double averageRating;
+    @Column(name = "review_count") private Integer reviewCount;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
 
@@ -50,6 +52,8 @@ public class Product {
         this.defaultLengthCm = defaultLengthCm;
         this.defaultWidthCm = defaultWidthCm;
         this.defaultHeightCm = defaultHeightCm;
+        this.averageRating = 0.0;
+        this.reviewCount = 0;
     }
 
     public void update(UUID categoryId, String name, String slug, String shortDescription,
@@ -79,6 +83,11 @@ public class Product {
     public void deactivate() { status = ProductStatus.INACTIVE; }
     public void archive() { status = ProductStatus.ARCHIVED; }
     public void markFeatured(boolean value) { featured = value; }
+
+    public void updateRating(double averageRating, int reviewCount) {
+        this.averageRating = averageRating;
+        this.reviewCount = reviewCount;
+    }
 
     public boolean isPublicAt(Instant now) {
         return status == ProductStatus.ACTIVE && publishedAt != null && !publishedAt.isAfter(now);

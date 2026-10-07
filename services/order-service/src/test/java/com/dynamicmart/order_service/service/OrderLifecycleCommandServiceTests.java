@@ -19,6 +19,7 @@ import com.dynamicmart.order_service.entity.PaymentMethod;
 import com.dynamicmart.order_service.entity.PaymentTiming;
 import com.dynamicmart.order_service.exception.OrderException;
 import com.dynamicmart.order_service.repository.CustomerOrderRepository;
+import com.dynamicmart.order_service.repository.OrderItemRepository;
 import com.dynamicmart.order_service.repository.OrderOperationLogRepository;
 import com.dynamicmart.order_service.repository.OrderStatusHistoryRepository;
 import com.dynamicmart.order_service.repository.OutboxEventRepository;
@@ -149,6 +150,7 @@ class OrderLifecycleCommandServiceTests {
 
     private Fixture fixture(CustomerOrder order) {
         CustomerOrderRepository orders = Mockito.mock(CustomerOrderRepository.class);
+        OrderItemRepository items = Mockito.mock(OrderItemRepository.class);
         OrderOperationLogRepository operationLogs = Mockito.mock(OrderOperationLogRepository.class);
         OrderStatusHistoryRepository histories = Mockito.mock(OrderStatusHistoryRepository.class);
         OutboxEventRepository outbox = Mockito.mock(OutboxEventRepository.class);
@@ -158,7 +160,7 @@ class OrderLifecycleCommandServiceTests {
         when(orders.findOwnedForUpdate(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.of(order));
         when(operationLogs.findById(OPERATION_KEY)).thenReturn(Optional.empty());
         OrderLifecycleCommandService service = new OrderLifecycleCommandService(
-                orders, operationLogs, histories, outbox, payments, new OrderStateMachine(), objectMapper,
+                orders, items, operationLogs, histories, outbox, payments, new OrderStateMachine(), objectMapper,
                 Clock.fixed(NOW, ZoneOffset.UTC));
         return new Fixture(service, order, orders, operationLogs, histories, outbox, payments, objectMapper);
     }

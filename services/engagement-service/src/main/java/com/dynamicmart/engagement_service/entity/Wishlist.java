@@ -19,4 +19,15 @@ public class Wishlist {
     @Column(name = "customer_id", nullable = false) private UUID customerId;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+
+    public Wishlist(UUID customerId, Instant now) {
+        this.id = UUID.randomUUID();
+        this.customerId = customerId;
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public void touch(Instant now) {
+        this.updatedAt = now;
+    }
 }

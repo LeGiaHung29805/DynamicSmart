@@ -20,4 +20,12 @@ public class ReviewImage {
     @Column(name = "image_url", nullable = false, length = 1000) private String imageUrl;
     @Column(name = "sort_order", nullable = false) private int sortOrder;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+
+    public ReviewImage(UUID reviewId, String imageUrl, int sortOrder, Instant now) {
+        this.id = UUID.randomUUID();
+        this.reviewId = reviewId;
+        this.imageUrl = imageUrl;
+        this.sortOrder = sortOrder;
+        this.createdAt = now;
+    }
 }

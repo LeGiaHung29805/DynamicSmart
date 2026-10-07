@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Package, UserRound } from "lucide-react";
+import { Bell, Heart, MapPin, MessageCircle, Package, TicketPercent, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const accountLinks = [
   ["Hồ sơ", "/customer/account/profile", UserRound],
   ["Sổ địa chỉ", "/customer/account/addresses", MapPin],
   ["Đơn hàng", "/customer/account/orders", Package],
+  ["Mã giảm giá", "/customer/account/vouchers", TicketPercent],
+  ["Yêu thích", "/customer/account/wishlist", Heart],
+  ["Thông báo", "/customer/account/notifications", Bell],
+  ["Hỗ trợ", "/customer/account/support", MessageCircle],
 ] as const;
 
 export function CustomerLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -21,7 +25,7 @@ export function CustomerLayout({ children }: Readonly<{ children: React.ReactNod
         </div>
         <nav aria-label="Điều hướng tài khoản" className="mt-5 flex gap-2 overflow-x-auto lg:flex-col">
           {accountLinks.map(([label, href, Icon]) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const active = pathname === href;
             return <Link aria-current={active ? "page" : undefined} className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${active ? "bg-rose-600 text-white" : "text-stone-300 hover:bg-stone-800 hover:text-white"}`} href={href} key={href}>
               <Icon className="size-4" />{label}
             </Link>;

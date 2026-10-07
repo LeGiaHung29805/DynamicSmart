@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MessageSquareText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { ErrorState } from "@/components/common/PageState";
-import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { getProductDetail, getProducts } from "@/features/catalog/api/catalog.api";
 import { CatalogProductCard } from "@/features/catalog/components/CatalogProductCard";
 import { ProductDetailExperience, ProductSpecifications } from "@/features/catalog/components/ProductDetailExperience";
+import { ProductEngagementPanel } from "@/features/engagement";
 import { isApiError } from "@/lib/api/error";
 
 export async function generateMetadata({ params }: Readonly<{ params: Promise<{ id: string }> }>): Promise<Metadata> {
@@ -43,7 +43,7 @@ export default async function ProductDetailPage({ params, searchParams }: Readon
       <ProductDetailExperience initialQuantity={initialQuantity} initialVariantId={query.variant} product={product} />
       <div className="grid gap-6 border-t border-slate-200 pt-9 lg:grid-cols-[1.3fr_.7fr]">
         <section className="space-y-5"><div><p className="text-xs font-black tracking-[0.18em] text-brand uppercase">Thông tin sản phẩm</p><h2 className="mt-2 text-2xl font-black text-slate-950">Mô tả & thông số</h2></div>{product.description ? <p className="whitespace-pre-line text-sm leading-7 text-slate-600">{product.description}</p> : null}<ProductSpecifications attributes={product.attributes} /></section>
-        <SurfacePanel className="h-fit"><MessageSquareText className="size-6 text-brand" /><h2 className="mt-4 text-lg font-black">Đánh giá sản phẩm</h2><p className="mt-2 text-sm leading-6 text-slate-500">Đánh giá đã duyệt sẽ hiển thị tại đây khi Engagement API của Tùng được nối vào contract chung.</p></SurfacePanel>
+        <ProductEngagementPanel productId={product.id} productName={product.name} />
       </div>
       {suggestions.length ? <section className="space-y-5 border-t border-slate-200 pt-9"><h2 className="text-2xl font-black tracking-tight text-slate-950">Sản phẩm cùng danh mục</h2><div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">{suggestions.map((item) => <CatalogProductCard key={item.id} product={item} />)}</div></section> : null}
     </div>

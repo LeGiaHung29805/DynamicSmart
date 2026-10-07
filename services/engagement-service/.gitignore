@@ -35,3 +35,4 @@ build/
 # Local secrets; commit .env.example only.
 .env
 .env.local
+*.log

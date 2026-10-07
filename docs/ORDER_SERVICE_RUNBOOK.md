@@ -25,7 +25,7 @@ Không dùng database `order_db` đang có dữ liệu để chạy integration 
 
 | Hạng mục | Trạng thái hiện tại |
 |---|---|
-| Build và test mặc định | `209` test đạt, `0` failure, `0` error, JAR đóng gói thành công |
+| Build và test mặc định | `208` test đạt, `0` failure, `0` error, JAR đóng gói thành công |
 | Flyway | Có migration từ `V1` đến `V8` |
 | PostgreSQL integration suite | `6/6` test đạt trên database test riêng; Flyway V1→V8 và Hibernate validation thành công |
 | HTTP contract test | Đã có cho Identity Address, Cart selection/confirmation/voucher, Catalog inventory và Payment/shipping |
@@ -146,11 +146,11 @@ Set-Location .\services\order-service
 Kết quả chấp nhận:
 
 - build trả exit code `0`;
-- `209` test đạt;
+- `208` test đạt;
 - không có failure/error;
 - tạo được `target/order-service-0.0.1-SNAPSHOT.jar`.
 
-Nếu số test tăng do bổ sung test mới thì chấp nhận số lớn hơn `209`; không chấp nhận test bị vô hiệu hóa để làm build xanh.
+Nếu số test tăng do bổ sung test mới thì chấp nhận số lớn hơn `208`; không chấp nhận test bị vô hiệu hóa để làm build xanh.
 
 ### Mức B — PostgreSQL migration và locking thật
 
