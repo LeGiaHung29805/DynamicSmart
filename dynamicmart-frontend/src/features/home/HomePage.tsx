@@ -100,7 +100,7 @@ export async function HomePage() {
   return (
     <div className="overflow-hidden bg-[#f7f8f6]">
       <div className="border-b border-emerald-900/20 bg-emerald-950 text-emerald-50">
-        <div className="mx-auto flex min-h-9 max-w-7xl items-center justify-center px-4 text-center text-[11px] font-semibold tracking-wide sm:justify-between sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-10 max-w-7xl items-center justify-center px-4 text-center text-xs font-semibold tracking-normal sm:justify-between sm:px-6 lg:px-8">
           <span>Miễn phí vận chuyển cho đơn từ 499.000₫</span>
           <span className="hidden sm:block">Hàng chính hãng · Đổi trả 7 ngày · Hỗ trợ mỗi ngày</span>
         </div>

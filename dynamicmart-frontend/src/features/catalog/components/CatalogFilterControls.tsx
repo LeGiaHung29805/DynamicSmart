@@ -188,7 +188,7 @@ export function CatalogFilterControls({ categories, definitions, filters, total,
         </div>
         <aside className="hidden lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:block">
           <div className="sticky top-24 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-4"><p className="text-[11px] font-black tracking-[0.15em] text-brand uppercase">Tùy chọn mua sắm</p><h2 className="mt-1 text-lg font-black">Lọc sản phẩm</h2></div>
+            <div className="border-b border-slate-100 px-5 py-4"><p className="text-xs font-bold tracking-[0.12em] text-brand uppercase">Tùy chọn mua sắm</p><h2 className="mt-1 text-lg font-black">Lọc sản phẩm</h2></div>
             <div className="filter-sidebar-scroll max-h-[calc(100vh-15rem)] overflow-y-auto px-5"><FilterFields categories={categories} definitions={definitions} draft={draft} setDraft={setDraft} /></div>
             <div className="border-t border-slate-100 p-4"><button className="w-full rounded-xl bg-emerald-950 px-4 py-3 text-sm font-bold text-white disabled:opacity-60" disabled={pending} onClick={() => submit()} type="button">{pending ? "Đang lọc..." : "Áp dụng bộ lọc"}</button></div>
           </div>

@@ -233,7 +233,7 @@ export function CustomerNotificationsPage() {
                           {item.content}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          {date(item.createdAt)} · <span className="font-mono text-[11px]">{item.type}</span>
+                          {date(item.createdAt)} · <span className="font-mono text-xs">{item.type}</span>
                         </p>
                       </div>
                     </div>
