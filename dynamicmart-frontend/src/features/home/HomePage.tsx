@@ -108,13 +108,11 @@ export async function HomePage() {
 
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <p className="hidden shrink-0 text-xs font-bold tracking-wide text-slate-500 uppercase lg:block">Tìm nhanh sản phẩm bạn yêu thích</p>
           <form action="/products" className="group flex min-w-0 flex-1 items-center rounded-2xl border border-slate-200 bg-slate-50 p-1.5 transition focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/10">
             <Search className="ml-2.5 size-4 shrink-0 text-slate-400 transition group-focus-within:text-brand" />
             <input aria-label="Tìm sản phẩm" className="min-w-0 flex-1 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-slate-400" name="q" placeholder="Tìm sản phẩm, thương hiệu và danh mục..." />
             <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand" type="submit">Tìm kiếm</button>
           </form>
-          <Link className="hidden shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 hover:text-brand lg:block" href="/vouchers">Kho voucher</Link>
         </div>
       </section>
 

@@ -43,7 +43,7 @@ function errorMessage(cause: unknown, fallback: string) {
   return isApiError(cause) ? cause.message : fallback;
 }
 
-export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?: string }>) {
+export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ initialSessionId?: string; initialVoucherId?: string }>) {
   const router = useRouter();
   const auth = useAuthSession();
   const [step, setStep] = useState<Step>("address");
@@ -106,6 +106,10 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
         setSession(nextSession);
         setAddresses(nextAddresses);
         setVouchers(nextVouchers);
+        if (initialVoucherId) {
+          const initialVoucher = nextVouchers.find((item) => item.id === initialVoucherId && item.scope !== "SHIPPING_DISCOUNT");
+          if (initialVoucher) setMerchandiseVoucherId(initialVoucher.id);
+        }
         setAddressId(nextSession.addressId ?? nextAddresses.find((item) => item.defaultAddress)?.id ?? nextAddresses[0]?.id ?? "");
         setPaymentMethod(nextSession.paymentMethod ?? "COD");
         setPaymentTiming(nextSession.paymentTiming ?? "POSTPAID");
@@ -118,7 +122,7 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
     }
     void load();
     return () => { ignored = true; };
-  }, [auth.status, initialSessionId, router]);
+  }, [auth.status, initialSessionId, initialVoucherId, router]);
 
   function invalidateDraft() {
     setPreview(null);
