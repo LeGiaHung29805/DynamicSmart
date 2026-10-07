@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { engagementApi } from "../api/engagement.api";
 import type { ChatConversationItem } from "../types/engagement.types";
-import { Status } from "./EngagementShared";
+import { engagementStatusLabel, Status } from "./EngagementShared";
 
 export function CustomerSupportPage() {
   const [conversations, setConversations] = useState<ChatConversationItem[]>([]);
@@ -168,7 +168,7 @@ export function CustomerSupportPage() {
                           : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {conversation.status}
+                      {engagementStatusLabel(conversation.status)}
                     </span>
                   </div>
                   <span className="mt-1 block text-xs text-slate-500 truncate">

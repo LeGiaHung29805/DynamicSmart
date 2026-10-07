@@ -137,7 +137,7 @@ public class OrderLifecycleCommandService {
         Instant now = Instant.now(clock);
         applyTransitions(order, transitions, OrderActorType.ADMIN, adminId,
                 operationType, operationKey, null, now);
-        if (ADMIN_HANDOVER.equals(operationType) && order.getPaymentMethod() == PaymentMethod.VNPAY) {
+        if (ADMIN_HANDOVER.equals(operationType) && order.getPaymentMethod().isOnline()) {
             emit(order, "PaymentDue", operationKey, now);
         }
         return record(operationKey, operationType, order, transitions, now);

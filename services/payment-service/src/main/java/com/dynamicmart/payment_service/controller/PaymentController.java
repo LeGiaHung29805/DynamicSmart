@@ -52,6 +52,22 @@ public class PaymentController {
     @GetMapping("/orders/{orderId}")
     public PaymentResponse getByOrder(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID orderId) { internalApi.require(apiKey); return paymentService.getByOrderId(orderId); }
 
+    /** Customer read model scoped by the authenticated identity injected by the Gateway. */
+    @GetMapping("/my-orders/{orderId}")
+    public PaymentResponse getCustomerPaymentByOrder(
+            @RequestHeader("X-Authenticated-User-Id") UUID customerId,
+            @PathVariable UUID orderId) {
+        return paymentService.getCustomerPaymentByOrder(orderId, customerId);
+    }
+
+    /** Reuses a live provider attempt or creates a new one without trusting payment data from the browser. */
+    @PostMapping("/my-orders/{orderId}/attempts")
+    public PaymentResponse createCustomerAttempt(
+            @RequestHeader("X-Authenticated-User-Id") UUID customerId,
+            @PathVariable UUID orderId) {
+        return paymentService.createCustomerOnlineAttempt(orderId, customerId);
+    }
+
     /** Customer-facing authoritative state for the browser return page; TxnRef alone is never sufficient without JWT ownership. */
     @GetMapping("/vnpay/return-status")
     public PaymentResponse returnStatus(@RequestHeader("X-Authenticated-User-Id") UUID customerId, @RequestParam("vnp_TxnRef") String reference) {

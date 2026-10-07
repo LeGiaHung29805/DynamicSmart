@@ -15,7 +15,7 @@ import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { engagementApi } from "../api/engagement.api";
 import type { NotificationItem } from "../types/engagement.types";
-import { date } from "./EngagementShared";
+import { date, notificationTypeLabel } from "./EngagementShared";
 
 export function CustomerNotificationsPage() {
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -233,7 +233,7 @@ export function CustomerNotificationsPage() {
                           {item.content}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          {date(item.createdAt)} · <span className="font-mono text-[11px]">{item.type}</span>
+                          {date(item.createdAt)} · <span className="text-[11px]">{notificationTypeLabel(item.type)}</span>
                         </p>
                       </div>
                     </div>

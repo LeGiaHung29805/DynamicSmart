@@ -43,7 +43,7 @@ export function AdminCatalogWorkspace() {
       <PageHeader
         description="Quản lý danh mục, thuộc tính động, sản phẩm, biến thể, hình ảnh và tồn kho trên cùng một không gian làm việc."
         eyebrow="Catalog & inventory"
-        title="Quản trị kho sản phẩm"
+        title="Quản lý sản phẩm"
       />
       <nav aria-label="Khu vực quản trị catalog" className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         {tabs.map(({ id, label, icon: Icon }) => (

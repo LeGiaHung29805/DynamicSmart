@@ -70,6 +70,20 @@ class OrderLifecycleCommandServiceTests {
     }
 
     @Test
+    void everyPostpaidOnlineMethodEmitsPaymentDueAtHandover() {
+        for (PaymentMethod method : List.of(PaymentMethod.ZALOPAY, PaymentMethod.PAYOS, PaymentMethod.BANK_QR)) {
+            Fixture fixture = fixture(order(OrderStatus.SHIPPING, PaymentTiming.POSTPAID, method));
+
+            fixture.service.adminHandover(ADMIN_ID, ORDER_ID, OPERATION_KEY);
+
+            ArgumentCaptor<com.dynamicmart.order_service.entity.OutboxEvent> event =
+                    ArgumentCaptor.forClass(com.dynamicmart.order_service.entity.OutboxEvent.class);
+            verify(fixture.outbox).save(event.capture());
+            assertEquals("PaymentDue", event.getValue().getEventType());
+        }
+    }
+
+    @Test
     void codReceiptMarksPaymentAndCompletesOrder() {
         Fixture fixture = fixture(order(
                 OrderStatus.HANDOVER_PENDING, PaymentTiming.POSTPAID, PaymentMethod.COD));

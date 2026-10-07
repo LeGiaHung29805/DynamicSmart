@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -159,6 +160,50 @@ class PaymentServiceTest {
 
         assertEquals(payment.getId(), response.id());
         assertEquals(attempt.getRedirectUrl(), response.redirectUrl());
+    }
+
+    @Test
+    void customerCanReadOnlyTheirOrderPayment() {
+        Payment payment = payment("POSTPAID", "PAYOS", "PENDING");
+        PaymentAttempt attempt = attempt(payment);
+        attempt.setProvider("PAYOS");
+        attempt.setRedirectUrl("https://payos.test/pay");
+        when(payments.findByOrderId(payment.getOrderId())).thenReturn(Optional.of(payment));
+        when(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId())).thenReturn(List.of(attempt));
+
+        var response = service.getCustomerPaymentByOrder(payment.getOrderId(), payment.getCustomerId());
+
+        assertEquals("https://payos.test/pay", response.redirectUrl());
+        PaymentException denied = assertThrows(PaymentException.class,
+                () -> service.getCustomerPaymentByOrder(payment.getOrderId(), UUID.randomUUID()));
+        assertEquals("PAYMENT_OWNERSHIP_DENIED", denied.getCode());
+    }
+
+    @Test
+    void customerReadDoesNotExposeAnExpiredRedirectUrl() {
+        Payment payment = payment("PREPAID", "VNPAY", "PENDING");
+        PaymentAttempt expired = attempt(payment);
+        expired.setRedirectUrl("https://provider.test/expired");
+        expired.setExpiresAt(Instant.now().minusSeconds(1));
+        when(payments.findByOrderId(payment.getOrderId())).thenReturn(Optional.of(payment));
+        when(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId())).thenReturn(List.of(expired));
+
+        var response = service.getCustomerPaymentByOrder(payment.getOrderId(), payment.getCustomerId());
+
+        assertNull(response.redirectUrl());
+    }
+
+    @Test
+    void customerCannotStartPostpaidPaymentBeforeHandover() {
+        Payment payment = payment("POSTPAID", "VNPAY", "PENDING");
+        when(payments.findByOrderId(payment.getOrderId())).thenReturn(Optional.of(payment));
+        when(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId())).thenReturn(List.of());
+
+        PaymentException error = assertThrows(PaymentException.class,
+                () -> service.createCustomerOnlineAttempt(payment.getOrderId(), payment.getCustomerId()));
+
+        assertEquals("PAYMENT_NOT_DUE", error.getCode());
+        verify(gateways, never()).create(any(), any(), any(), any(), anyLong(), anyInt(), any());
     }
 
     @Test

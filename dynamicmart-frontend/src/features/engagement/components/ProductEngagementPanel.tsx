@@ -31,11 +31,11 @@ export function ProductEngagementPanel({
   // Lấy review thật và hỏi đáp thật theo productId nếu có
   useEffect(() => {
     if (!productId) return;
-    setLoadError("");
     Promise.all([
       engagementApi.reviews.getByProduct(productId, 0, 10),
       engagementApi.questions.getByProduct(productId, 0, 10),
     ]).then(([reviewResult, questionResult]) => {
+      setLoadError("");
       setReviews(reviewResult.content ?? []);
       setQuestions(questionResult.content ?? []);
     }).catch(() => setLoadError("Không thể tải đánh giá và hỏi đáp. Vui lòng thử lại sau."));

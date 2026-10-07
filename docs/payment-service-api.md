@@ -14,6 +14,8 @@ Các API đều đi qua Gateway. Browser chỉ gọi API công khai lấy địa
 | `GET /api/v1/payments/orders/{orderId}` | Order Service | Lấy trạng thái Payment và attempt online mới nhất, dùng để hiển thị thanh toán trả sau sau event `PaymentDue`. |
 | `POST /api/v1/payments/{id}/attempts` | Order Service | Tạo URL/QR cho VNPay, ZaloPay, PayOS hoặc QR ngân hàng khi Payment còn `PENDING`. |
 | `POST /api/v1/payments/{id}/vnpay-attempt` | Order Service | Alias tương thích ngược của API tạo attempt. |
+| `GET /api/v1/payments/my-orders/{orderId}` | Customer order UI | Đọc Payment thuộc chính customer, kèm URL attempt còn hiệu lực nếu có. Gateway tự gắn danh tính xác thực; frontend không gửi `customerId`. |
+| `POST /api/v1/payments/my-orders/{orderId}/attempts` | Customer order UI | Tiếp tục hoặc tạo lại URL/QR online bằng dữ liệu Payment phía server. Trả sau chỉ dùng được sau khi `PaymentDue` đã tạo attempt đầu tiên. |
 | `GET/POST /api/v1/payments/vnpay/ipn` | VNPay | Xác minh IPN, audit và ghi Payment đúng một lần. `GET` là phương thức callback chuẩn; `POST` được giữ để dễ kiểm thử/tương thích. |
 | `POST /api/v1/payments/zalopay/callback` | ZaloPay | Kiểm tra HMAC bằng Key2, amount/reference và xử lý callback đúng một lần. |
 | `POST /api/v1/payments/payos/webhook` | PayOS | Kiểm tra checksum webhook trước khi ghi nhận thanh toán. |
@@ -31,8 +33,8 @@ Các API service-to-service yêu cầu header `X-Internal-Api-Key`, với giá t
 
 Biến URL thanh toán ưu tiên `VNPAY_PAYMENT_URL`; cấu hình Laravel cũ dùng `VNPAY_URL` vẫn được chấp nhận để chuyển đổi thuận tiện. `VNPAY_IPN_URL` được khai báo tại cổng VNPay và phải trỏ tới Gateway/public tunnel ở đường dẫn `/api/v1/payments/vnpay/ipn`; Payment Service không cần đọc biến này để tạo URL thanh toán.
 
-Frontend wizard ở `/checkout/payment` chia thành: địa chỉ → báo giá GHN → phương thức thanh toán → xác nhận. Wizard đã nối Checkout Preview của Cart Service và Create Order của Order Service; mọi giá, tồn kho, voucher, quote và Payment context vẫn được các service xác minh lại ở máy chủ. Trang `/customer/orders/{id}` hiện là trang bàn giao tạm, giữ ổn định đường dẫn từ kết quả thanh toán cho tới khi read model chi tiết đơn hàng của Order Service được nối vào.
+Frontend tại `/checkout` và `/checkout/payment` dùng cùng wizard: địa chỉ → báo giá GHN/mã giảm giá → phương thức thanh toán → xác nhận. Wizard đã nối Checkout Session/Preview và Create Order của Order Service; mọi giá, tồn kho, voucher, quote và Payment context đều được các service xác minh lại ở máy chủ. Trang `/customer/account/orders/{id}` hiển thị read model thật, trạng thái Payment, URL còn hiệu lực và thao tác tạo lại attempt được bảo vệ theo ownership.
 
-Payment Service đã sẵn sàng nhận `PaymentDue` và phát các event thanh toán qua Outbox. Phần phát `PaymentDue` khi Order online trả sau đi vào `HANDOVER_PENDING`, cùng consumer cập nhật Order từ `PaymentSucceeded`/`PaymentFailed`/`PaymentExpired`, thuộc Order Service và chưa có runtime implementation trong snapshot hiện tại.
+Payment Service nhận `PaymentDue` và phát các event thanh toán qua Outbox. Order Service phát `PaymentDue` cho mọi phương thức online trả sau khi đơn đi vào `HANDOVER_PENDING`, đồng thời xử lý `PaymentSucceeded`/`PaymentFailed`/`PaymentExpired` theo state machine đã chốt.
 
 GHN tổ chức Ward dưới District. Payment Service vì vậy cache `ghn_location_districts` và `ghn_ward_code` làm metadata nội bộ để gọi API fee, nhưng contract Address vẫn chỉ công khai `provinceId` và `wardId`; trình duyệt không chọn hoặc lưu District.

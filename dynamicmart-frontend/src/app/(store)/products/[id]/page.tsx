@@ -36,6 +36,8 @@ export default async function ProductDetailPage({ params, searchParams }: Readon
   const related = await getProducts({ categoryId: product.category.id, size: 5 }).catch(() => null);
   const suggestions = related?.content.filter((item) => item.id !== product.id).slice(0, 4) ?? [];
   const resumeDeadline = query.resumeUntil ? Number(query.resumeUntil) : null;
+  // The signed-in Buy Now hand-off is time-bound; server rendering must compare it with request time.
+  // eslint-disable-next-line react-hooks/purity
   const resumeValid = resumeDeadline === null || (Number.isFinite(resumeDeadline) && resumeDeadline >= Date.now());
   const initialQuantity = resumeValid ? Math.max(Number.parseInt(query.quantity ?? "1", 10) || 1, 1) : 1;
   const initialVariantId = resumeValid ? query.variant : undefined;

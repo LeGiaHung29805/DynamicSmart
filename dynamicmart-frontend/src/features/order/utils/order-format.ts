@@ -1,4 +1,4 @@
-import type { OrderStatus } from "../types/order.types";
+import type { OrderStatus, PaymentMethod, PaymentTiming } from "../types/order.types";
 
 const labels: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "Chờ thanh toán",
@@ -13,6 +13,39 @@ const labels: Record<OrderStatus, string> = {
 
 export function orderStatusLabel(status: OrderStatus) {
   return labels[status];
+}
+
+const paymentMethods: Record<PaymentMethod, string> = {
+  VNPAY: "VNPay",
+  ZALOPAY: "ZaloPay",
+  PAYOS: "PayOS",
+  BANK_QR: "Chuyển khoản QR",
+  COD: "Thanh toán khi nhận hàng (COD)",
+  FREE: "Không cần thanh toán",
+};
+
+const paymentTimings: Record<PaymentTiming, string> = {
+  PREPAID: "Thanh toán trước",
+  POSTPAID: "Thanh toán khi bàn giao",
+  NOT_REQUIRED: "Không cần thanh toán",
+};
+
+export function paymentMethodLabel(method: PaymentMethod | string) {
+  return paymentMethods[method as PaymentMethod] ?? "Phương thức khác";
+}
+
+export function paymentTimingLabel(timing: PaymentTiming | string) {
+  return paymentTimings[timing as PaymentTiming] ?? "Chưa xác định";
+}
+
+export function orderActorLabel(actor: string) {
+  const actors: Record<string, string> = {
+    CUSTOMER: "Khách hàng",
+    ADMIN: "Quản trị viên",
+    SYSTEM: "Hệ thống",
+    PAYMENT: "Dịch vụ thanh toán",
+  };
+  return actors[actor] ?? "Hệ thống";
 }
 
 export function orderStatusTone(status: OrderStatus): "neutral" | "success" | "warning" | "danger" {

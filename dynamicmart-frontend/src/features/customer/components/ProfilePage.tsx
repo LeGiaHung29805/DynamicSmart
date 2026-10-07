@@ -12,6 +12,8 @@ import { useAuthSession } from "@/lib/auth/session";
 import { customerApi } from "../api/customer.api";
 import type { Profile } from "../types/customer.types";
 
+const accountStatusLabel = (status: string) => ({ ACTIVE: "Đang hoạt động", LOCKED: "Đã khóa", DISABLED: "Đã vô hiệu hóa" } as Record<string, string>)[status] ?? "Chưa xác định";
+
 export function ProfilePage() {
   const session = useAuthSession();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -42,7 +44,7 @@ export function ProfilePage() {
         <div className="bg-gradient-to-r from-stone-950 via-stone-900 to-rose-950 px-6 py-7 text-white sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <span className="grid size-16 shrink-0 place-items-center rounded-full bg-rose-600 text-2xl font-black ring-4 ring-white/10" aria-hidden="true">{profile.fullName.trim().charAt(0).toUpperCase() || "D"}</span>
-            <div className="min-w-0"><h2 className="truncate text-2xl font-black">{profile.fullName}</h2><p className="mt-1 break-all text-sm text-stone-300">{profile.email}</p><div className="mt-3 flex flex-wrap gap-2"><StatusBadge label={profile.status === "ACTIVE" ? "Đang hoạt động" : profile.status} tone={profile.status === "ACTIVE" ? "success" : "warning"} /><StatusBadge label={profile.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"} tone="neutral" /></div></div>
+            <div className="min-w-0"><h2 className="truncate text-2xl font-black">{profile.fullName}</h2><p className="mt-1 break-all text-sm text-stone-300">{profile.email}</p><div className="mt-3 flex flex-wrap gap-2"><StatusBadge label={accountStatusLabel(profile.status)} tone={profile.status === "ACTIVE" ? "success" : "warning"} /><StatusBadge label={profile.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"} tone="neutral" /></div></div>
           </div>
         </div>
         <dl className="grid gap-px bg-stone-200 sm:grid-cols-2 lg:grid-cols-4">
@@ -55,7 +57,7 @@ export function ProfilePage() {
       <SurfacePanel>
         <div className="flex items-start gap-3"><span className="rounded-xl bg-rose-50 p-2.5 text-rose-600"><UserRound className="size-5" /></span><div><h2 className="text-lg font-black text-stone-950">Thông tin cá nhân</h2><p className="mt-1 text-sm text-stone-500">Email, quyền và trạng thái tài khoản chỉ có thể thay đổi qua đúng quy trình bảo mật.</p></div></div>
         <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-          <Input disabled label="Email" value={profile.email} /><Input disabled label="Trạng thái" value={profile.status} />
+          <Input disabled label="Email" value={profile.email} /><Input disabled label="Trạng thái" value={accountStatusLabel(profile.status)} />
           <Input label="Họ và tên" value={profile.fullName} onChange={(event) => { setState("idle"); setProfile({ ...profile, fullName: event.target.value }); }} required />
           <Input label="Số điện thoại" value={profile.phone ?? ""} onChange={(event) => { setState("idle"); setProfile({ ...profile, phone: event.target.value }); }} pattern="[0-9+() .-]{8,20}" placeholder="0912345678" required />
           <div className="flex flex-wrap items-center gap-3 border-t border-stone-200 pt-5 sm:col-span-2 sm:justify-end">{state === "saved" ? <StatusBadge label="Đã lưu thay đổi" tone="success" /> : null}{state === "error" ? <span className="text-sm font-semibold text-red-600">Thao tác thất bại. Vui lòng kiểm tra dữ liệu và thử lại.</span> : null}<Button size="lg" type="submit" disabled={state === "saving"}>{state === "saving" ? "Đang lưu…" : "Cập nhật hồ sơ"}</Button></div>
