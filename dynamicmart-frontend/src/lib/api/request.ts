@@ -1,6 +1,6 @@
 import type { ApiErrorPayload, ApiResponse } from "@/contracts/api/common";
 import { isApiResponse } from "@/contracts/api/common";
-import { getApiBaseUrl } from "./config";
+import { getApiBaseUrl, getApiFallbackUrl } from "./config";
 import { ApiError } from "./error";
 
 export type ApiRequestOptions = Omit<RequestInit, "body"> & {
@@ -22,16 +22,36 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     ? JSON.stringify(body)
     : (body as BodyInit | null | undefined);
 
+  const fetchFrom = (targetBaseUrl: string) => fetch(`${targetBaseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`, {
+    ...init,
+    body: requestBody,
+    credentials: "include",
+    headers: requestHeaders,
+  });
+
+  const fallbackUrl = getApiFallbackUrl(baseUrl);
   let response: Response;
   try {
-    response = await fetch(`${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`, {
-      ...init,
-      body: requestBody,
-      credentials: "include",
-      headers: requestHeaders,
-    });
+    response = await fetchFrom(baseUrl);
   } catch {
-    throw new ApiError(0, { code: "NETWORK_ERROR", message: "Không thể kết nối đến hệ thống. Vui lòng thử lại." });
+    if (!fallbackUrl || fallbackUrl === baseUrl) {
+      throw new ApiError(0, { code: "NETWORK_ERROR", message: "Không thể kết nối đến hệ thống. Vui lòng thử lại." });
+    }
+    try {
+      response = await fetchFrom(fallbackUrl);
+    } catch {
+      throw new ApiError(0, { code: "NETWORK_ERROR", message: "Không thể kết nối API Gateway tại cổng 8080 hoặc 28080." });
+    }
+  }
+
+  // Nếu 8080 thuộc một ứng dụng khác, trình duyệt thường nhận 404 HTML hoặc lỗi CORS.
+  // Chỉ retry 404 không phải JSON để không che mất lỗi 404 hợp lệ từ DynamicMart.
+  if (fallbackUrl && response.status === 404 && !response.headers.get("content-type")?.includes("application/json")) {
+    try {
+      response = await fetchFrom(fallbackUrl);
+    } catch {
+      // Giữ response ban đầu để phía dưới trả lỗi có ngữ cảnh thay vì mất hoàn toàn phản hồi.
+    }
   }
 
   if (response.status === 204) return undefined as T;

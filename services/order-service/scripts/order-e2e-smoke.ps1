@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$GatewayBaseUrl = 'http://localhost:18080',
+    [string]$GatewayBaseUrl = 'http://localhost:8080',
     [string]$OrderBaseUrl = 'http://localhost:8084',
 
     [Parameter(Mandatory = $true)]

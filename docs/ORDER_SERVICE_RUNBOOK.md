@@ -71,7 +71,7 @@ Kiểm tra nhanh:
 ```powershell
 java -version
 Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-    Where-Object LocalPort -In 5432,5672,8081,8082,8083,8084,8085,18080 |
+    Where-Object LocalPort -In 5432,5672,8081,8082,8083,8084,8085,28080 |
     Select-Object LocalAddress,LocalPort,OwningProcess
 ```
 
@@ -192,7 +192,7 @@ Khởi động theo thứ tự để dễ chẩn đoán:
 4. Cart (`8083`).
 5. Payment (`8085`).
 6. Order (`8084`).
-7. API Gateway (`18080` trên máy đang dùng; máy khác có thể là `8080`).
+7. API Gateway (ưu tiên `8080`, dùng `28080` khi `8080` bị chiếm).
 
 Chạy Order:
 
@@ -225,7 +225,7 @@ Trước demo cần có:
 Đăng nhập qua Gateway:
 
 ```powershell
-$gateway = 'http://localhost:18080'
+$gateway = 'http://localhost:8080'
 $login = Invoke-RestMethod -Method Post `
     -Uri "$gateway/api/v1/auth/login" `
     -ContentType 'application/json' `

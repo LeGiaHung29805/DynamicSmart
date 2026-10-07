@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-Mở `http://localhost:3000`. Chỉ đổi `NEXT_PUBLIC_API_BASE_URL` thành URL của API Gateway; không đặt URL từng business service hoặc bất kỳ secret nào tại frontend.
+Mở `http://localhost:3000`. Frontend ưu tiên API Gateway tại `http://localhost:8080` và tự thử `http://localhost:28080` khi cổng chính không kết nối được. Chỉ đặt URL của API Gateway trong `NEXT_PUBLIC_API_BASE_URL`/`NEXT_PUBLIC_API_FALLBACK_URL`; không đặt URL từng business service hoặc bất kỳ secret nào tại frontend.
 
 ## Những phần dùng chung đã có
 

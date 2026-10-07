@@ -48,7 +48,8 @@ public class GatewaySecurityConfig {
                                 "/api/v1/shipping/quotes/*/validate").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/locations/validate",
-                                "/api/v1/payments/orders/*").permitAll()
+                                "/api/v1/payments/orders/*",
+                                "/api/v1/payments/*").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/locations/provinces",
                                 "/api/v1/locations/wards",
