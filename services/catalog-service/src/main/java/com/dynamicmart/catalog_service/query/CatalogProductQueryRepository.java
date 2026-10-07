@@ -82,14 +82,18 @@ public class CatalogProductQueryRepository {
             sql.append(" AND candidate.price_vnd <= :maximumPrice\n");
         }
         if (criteria.keyword() != null && !criteria.keyword().isBlank()) {
-            parameters.addValue("keyword", "%" + criteria.keyword().trim().toLowerCase(Locale.ROOT) + "%");
+            String keyword = criteria.keyword().trim();
+            parameters.addValue("searchQuery", keyword);
+            parameters.addValue("keywordLike", "%" + keyword.toLowerCase(Locale.ROOT) + "%");
             sql.append("""
                      AND (
-                            LOWER(p.name) LIKE :keyword
-                         OR LOWER(p.slug) LIKE :keyword
-                         OR LOWER(COALESCE(p.short_description, '')) LIKE :keyword
-                         OR LOWER(candidate.sku) LIKE :keyword
-                         OR LOWER(COALESCE(candidate.name, '')) LIKE :keyword
+                            to_tsvector('simple',
+                                COALESCE(p.name, '') || ' ' ||
+                                COALESCE(p.slug, '') || ' ' ||
+                                COALESCE(p.short_description, ''))
+                                @@ websearch_to_tsquery('simple', :searchQuery)
+                         OR LOWER(candidate.sku) LIKE :keywordLike
+                         OR LOWER(COALESCE(candidate.name, '')) LIKE :keywordLike
                      )
                     """);
         }

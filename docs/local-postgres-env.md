@@ -33,3 +33,7 @@ Sau đó chạy từng service. Flyway tạo bảng và ghi lịch sử vào b�
 Quy ước local là ưu tiên `8080`. Nếu một ứng dụng khác giữ `8080`, Gateway tự chọn `28080`; frontend sẽ thử cổng dự phòng khi không kết nối được cổng chính. Nếu cả hai cổng đều bị chiếm, Gateway dừng với thông báo rõ ràng thay vì chọn một cổng ngẫu nhiên.
 
 Các `.env.example` đã có giá trị JWT dùng thử để copy cho local/dev. Vì khóa mẫu được chia sẻ trong repository, không dùng nó khi triển khai thật: tạo khóa ngẫu nhiên riêng, đặt giống nhau ở identity và gateway, giữ ngoài Git. Đổi khóa làm access token cũ không còn hợp lệ. `PASSWORD_RESET_TOKEN_TTL_MINUTES` trong file mẫu hiện chưa được nối vào chức năng quên mật khẩu backend; đặt biến này không làm chức năng đó hoạt động.
+
+## Nạp dữ liệu demo cho toàn bộ dự án
+
+Quy trình Flyway một lệnh, danh sách dữ liệu mẫu và các UUID liên dịch vụ được mô tả tại [`LOCAL_DEMO_SEED.md`](./LOCAL_DEMO_SEED.md). Seeder chỉ dành cho database local và không được chạy trên môi trường thật.

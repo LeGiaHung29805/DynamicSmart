@@ -1,0 +1,28 @@
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed/local
+  cloud:
+    stream:
+      output-bindings: ""
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+      direct:
+        auto-startup: false
+
+management:
+  health:
+    rabbit:
+      enabled: false
+
+app:
+  clients:
+    best-seller-fallback-product-ids: 40000000-0000-0000-0000-000000000001,40000000-0000-0000-0000-000000000002
+  outbox:
+    enabled: false
+  promotion:
+    mode: DEMO
+  demo:
+    password: ${CATALOG_DEMO_PASSWORD:Demo@123}
+    token-ttl-seconds: ${CATALOG_DEMO_TOKEN_TTL_SECONDS:3600}

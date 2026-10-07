@@ -11,12 +11,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@ConditionalOnProperty(name = "app.outbox.enabled", havingValue = "true", matchIfMissing = true)
 public class CatalogOutboxPublisher {
     private static final Logger LOGGER = LoggerFactory.getLogger(CatalogOutboxPublisher.class);
     private static final String OUTPUT_BINDING = "catalogEvents-out-0";

@@ -31,14 +31,19 @@ export function ProductEngagementPanel({
   // Lấy review thật và hỏi đáp thật theo productId nếu có
   useEffect(() => {
     if (!productId) return;
-    setLoadError("");
+    let cancelled = false;
     Promise.all([
       engagementApi.reviews.getByProduct(productId, 0, 10),
       engagementApi.questions.getByProduct(productId, 0, 10),
     ]).then(([reviewResult, questionResult]) => {
+      if (cancelled) return;
+      setLoadError("");
       setReviews(reviewResult.content ?? []);
       setQuestions(questionResult.content ?? []);
-    }).catch(() => setLoadError("Không thể tải đánh giá và hỏi đáp. Vui lòng thử lại sau."));
+    }).catch(() => {
+      if (!cancelled) setLoadError("Không thể tải đánh giá và hỏi đáp. Vui lòng thử lại sau.");
+    });
+    return () => { cancelled = true; };
   }, [productId]);
 
   const handleReviewSuccess = (newReview: ReviewItem) => {

@@ -13,15 +13,22 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 public class EngagementReportClient {
     private final RestClient restClient;
+    private final List<UUID> fallbackBestSellerIds;
 
     public EngagementReportClient(@Value("${app.clients.engagement-service-url:http://localhost:8086}") String engagementServiceUrl,
                                   @Value("${app.internal.api-key:}") String internalApiKey,
+                                  @Value("${app.clients.best-seller-fallback-product-ids:}") String fallbackProductIds,
                                   RestClient.Builder builder) {
         RestClient.Builder clientBuilder = builder.baseUrl(engagementServiceUrl);
         if (internalApiKey != null && !internalApiKey.isBlank()) {
             clientBuilder.defaultHeader("X-Internal-Api-Key", internalApiKey);
         }
         this.restClient = clientBuilder.build();
+        this.fallbackBestSellerIds = java.util.Arrays.stream(fallbackProductIds.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(UUID::fromString)
+                .toList();
     }
 
     public List<UUID> getBestSellers(LocalDate from, LocalDate to, int limit) {
@@ -40,10 +47,14 @@ public class EngagementReportClient {
             if (response != null && response.data() != null) {
                 return response.data().stream().map(BestSellerResponse::productId).toList();
             }
-            return List.of();
+            return fallback(limit);
         } catch (RestClientException exception) {
-            return List.of();
+            return fallback(limit);
         }
+    }
+
+    private List<UUID> fallback(int limit) {
+        return fallbackBestSellerIds.stream().limit(Math.max(limit, 0)).toList();
     }
 
     public record ApiResponse<T>(T data) {}
