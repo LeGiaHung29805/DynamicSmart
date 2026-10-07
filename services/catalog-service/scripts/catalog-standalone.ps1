@@ -59,6 +59,70 @@ function Invoke-Run {
     }
 }
 
+function Invoke-AdminAdjustment {
+    param(
+        [string]$ServiceUrl,
+        [hashtable]$AuthorizationHeaders,
+        [string]$VariantId,
+        [int]$QuantityDelta,
+        [string]$Reason
+    )
+    if ($QuantityDelta -eq 0) { return }
+    $headers = @{
+        Authorization = $AuthorizationHeaders.Authorization
+        "Idempotency-Key" = [guid]::NewGuid().ToString()
+    }
+    $body = @{ quantityDelta = $QuantityDelta; reason = $Reason } | ConvertTo-Json
+    Invoke-RestMethod -Method Post `
+        -Uri "$ServiceUrl/api/v1/catalog/admin/inventory/$VariantId/adjustments" `
+        -Headers $headers -ContentType "application/json" -Body $body | Out-Null
+}
+
+function Invoke-ConcurrentReserve {
+    param(
+        [string]$ServiceUrl,
+        [string]$InternalApiKey,
+        [string]$VariantId
+    )
+    $attempts = @()
+    foreach ($index in 1..2) {
+        $client = [System.Net.Http.HttpClient]::new()
+        $request = [System.Net.Http.HttpRequestMessage]::new(
+            [System.Net.Http.HttpMethod]::Post,
+            "$ServiceUrl/api/v1/catalog/internal/inventory/reservations")
+        $request.Headers.Add("X-Internal-Api-Key", $InternalApiKey)
+        $request.Headers.Add("Idempotency-Key", [guid]::NewGuid().ToString())
+        $body = @{
+            checkoutSessionId = [guid]::NewGuid().ToString()
+            expiresAt = [DateTimeOffset]::UtcNow.AddMinutes(15).ToString("o")
+            items = @(@{ variantId = $VariantId; quantity = 1 })
+        } | ConvertTo-Json -Depth 4
+        $request.Content = [System.Net.Http.StringContent]::new(
+            $body, [System.Text.Encoding]::UTF8, "application/json")
+        $attempts += @{
+            Client = $client
+            Request = $request
+            Task = $client.SendAsync($request)
+        }
+    }
+
+    $results = @()
+    foreach ($attempt in $attempts) {
+        try {
+            $response = $attempt.Task.GetAwaiter().GetResult()
+            $content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            $results += @{
+                Status = [int]$response.StatusCode
+                Body = $content
+            }
+        } finally {
+            $attempt.Request.Dispose()
+            $attempt.Client.Dispose()
+        }
+    }
+    return $results
+}
+
 function Invoke-Smoke {
     Import-CatalogEnv
     $health = Invoke-RestMethod -Method Get -Uri "$BaseUrl/actuator/health"
@@ -73,8 +137,13 @@ function Invoke-Smoke {
         throw "Giá direct-sale demo chưa được áp dụng."
     }
 
+    $filterProduct = $products.data.content |
+        Where-Object { $_.id -eq "40000000-0000-0000-0000-000000000001" } |
+        Select-Object -First 1
+    if ($null -eq $filterProduct) { throw "Catalog demo thiếu sản phẩm điện thoại dùng để kiểm tra bộ lọc." }
+
     $combined = Invoke-RestMethod -Method Get -Uri `
-        "$BaseUrl/api/v1/catalog/products?keyword=Dynamic&categoryId=$($first.category.id)&minimumPriceVnd=1&maximumPriceVnd=50000000&attribute=BRAND:SAMSUNG&sort=PRICE_ASC&size=10"
+        "$BaseUrl/api/v1/catalog/products?keyword=Dynamic&categoryId=$($filterProduct.category.id)&minimumPriceVnd=1&maximumPriceVnd=50000000&attribute=BRAND:SAMSUNG&sort=PRICE_ASC&size=10"
     if ($combined.data.content.Count -lt 1) { throw "Tìm kiếm/lọc kết hợp không trả dữ liệu mong đợi." }
 
     $customerBody = @{ email = "demo@dynamicmart.local"; password = "Demo@123" } | ConvertTo-Json
@@ -139,7 +208,98 @@ function Invoke-Smoke {
         -Headers $adminHeaders
     if ($inventory.data.content.Count -lt 1) { throw "Trang quản trị chưa đọc được tồn kho." }
 
-    Write-Host "SMOKE PASS: search/filter, direct-sale, bestseller, auth, cart/buy-now, inventory idempotency và admin."
+    # Chốt tồn gửi lặp chỉ trừ đúng một lần, sau đó bù lại bằng nghiệp vụ điều chỉnh Admin.
+    $stockBeforeCommit = $inventory.data.content | Where-Object { $_.variantId -eq $first.representativeVariantId } `
+        | Select-Object -First 1
+    if ($null -eq $stockBeforeCommit -or $stockBeforeCommit.availableQuantity -lt 1) {
+        throw "Variant demo không còn tồn khả dụng để kiểm tra commit."
+    }
+    $commitReserveHeaders = @{
+        "X-Internal-Api-Key" = $env:INTERNAL_API_KEY
+        "Idempotency-Key" = [guid]::NewGuid().ToString()
+    }
+    $commitReserveBody = @{
+        checkoutSessionId = [guid]::NewGuid().ToString()
+        expiresAt = [DateTimeOffset]::UtcNow.AddMinutes(15).ToString("o")
+        items = @(@{ variantId = $first.representativeVariantId; quantity = 1 })
+    } | ConvertTo-Json -Depth 4
+    $commitReservation = Invoke-RestMethod -Method Post `
+        -Uri "$BaseUrl/api/v1/catalog/internal/inventory/reservations" `
+        -Headers $commitReserveHeaders -ContentType "application/json" -Body $commitReserveBody
+    $commitHeaders = @{
+        "X-Internal-Api-Key" = $env:INTERNAL_API_KEY
+        "Idempotency-Key" = [guid]::NewGuid().ToString()
+    }
+    $commitBody = @{ orderId = [guid]::NewGuid().ToString() } | ConvertTo-Json
+    $committed = Invoke-RestMethod -Method Post `
+        -Uri "$BaseUrl/api/v1/catalog/internal/inventory/reservations/$($commitReservation.data.reservationId)/commit" `
+        -Headers $commitHeaders -ContentType "application/json" -Body $commitBody
+    $commitReplay = Invoke-RestMethod -Method Post `
+        -Uri "$BaseUrl/api/v1/catalog/internal/inventory/reservations/$($commitReservation.data.reservationId)/commit" `
+        -Headers $commitHeaders -ContentType "application/json" -Body $commitBody
+    if ($committed.data.status -ne "COMMITTED" -or
+        $committed.data.reservationId -ne $commitReplay.data.reservationId) {
+        throw "Commit lặp lại chưa bảo đảm idempotency."
+    }
+    Invoke-AdminAdjustment -ServiceUrl $BaseUrl -AuthorizationHeaders $adminHeaders `
+        -VariantId $first.representativeVariantId -QuantityDelta 1 `
+        -Reason "Khôi phục tồn sau standalone smoke commit"
+
+    # Ép tồn khả dụng về đúng 1 rồi bắn đồng thời hai yêu cầu: phải có đúng một 201 và một 409.
+    $inventoryBeforeRace = Invoke-RestMethod -Method Get `
+        -Uri "$BaseUrl/api/v1/catalog/admin/inventory?size=100" -Headers $adminHeaders
+    $raceStock = $inventoryBeforeRace.data.content `
+        | Where-Object { $_.variantId -eq $first.representativeVariantId } | Select-Object -First 1
+    $originalOnHand = [int]$raceStock.onHandQuantity
+    $originalReserved = [int]$raceStock.reservedQuantity
+    $targetOnHand = $originalReserved + 1
+    Invoke-AdminAdjustment -ServiceUrl $BaseUrl -AuthorizationHeaders $adminHeaders `
+        -VariantId $first.representativeVariantId -QuantityDelta ($targetOnHand - $originalOnHand) `
+        -Reason "Chuẩn bị kiểm tra tranh sản phẩm cuối"
+
+    $raceWinnerIds = @()
+    try {
+        $raceResults = Invoke-ConcurrentReserve -ServiceUrl $BaseUrl `
+            -InternalApiKey $env:INTERNAL_API_KEY -VariantId $first.representativeVariantId
+        $raceWinnerIds = @($raceResults | Where-Object { $_.Status -eq 201 } | ForEach-Object {
+            (($_.Body | ConvertFrom-Json).data.reservationId)
+        })
+        if (@($raceResults | Where-Object { $_.Status -eq 201 }).Count -ne 1 -or
+            @($raceResults | Where-Object { $_.Status -eq 409 }).Count -ne 1) {
+            $raceSummary = $raceResults | ConvertTo-Json -Depth 5 -Compress
+            throw "Kiểm tra đồng thời thất bại: cần đúng một 201 và một 409. Kết quả: $raceSummary"
+        }
+    } finally {
+        foreach ($reservationId in $raceWinnerIds) {
+            $raceReleaseHeaders = @{
+                "X-Internal-Api-Key" = $env:INTERNAL_API_KEY
+                "Idempotency-Key" = [guid]::NewGuid().ToString()
+            }
+            Invoke-RestMethod -Method Post `
+                -Uri "$BaseUrl/api/v1/catalog/internal/inventory/reservations/$reservationId/release" `
+                -Headers $raceReleaseHeaders -ContentType "application/json" `
+                -Body (@{ reason = "STANDALONE_CONCURRENCY_SMOKE" } | ConvertTo-Json) | Out-Null
+        }
+        $inventoryAfterRace = Invoke-RestMethod -Method Get `
+            -Uri "$BaseUrl/api/v1/catalog/admin/inventory?size=100" -Headers $adminHeaders
+        $restoredStock = $inventoryAfterRace.data.content `
+            | Where-Object { $_.variantId -eq $first.representativeVariantId } | Select-Object -First 1
+        Invoke-AdminAdjustment -ServiceUrl $BaseUrl -AuthorizationHeaders $adminHeaders `
+            -VariantId $first.representativeVariantId `
+            -QuantityDelta ($originalOnHand - [int]$restoredStock.onHandQuantity) `
+            -Reason "Khôi phục tồn sau standalone smoke concurrency"
+    }
+
+    $inventoryRestored = Invoke-RestMethod -Method Get `
+        -Uri "$BaseUrl/api/v1/catalog/admin/inventory?size=100" -Headers $adminHeaders
+    $finalStock = $inventoryRestored.data.content `
+        | Where-Object { $_.variantId -eq $first.representativeVariantId } | Select-Object -First 1
+    if ([int]$finalStock.onHandQuantity -ne $originalOnHand -or
+        [int]$finalStock.reservedQuantity -ne $originalReserved) {
+        throw "Standalone smoke chưa khôi phục đúng tồn kho ban đầu."
+    }
+
+    Write-Host "SMOKE PASS: search/filter, direct-sale, bestseller, auth, cart/buy-now, reserve/commit/release idempotency, concurrency và admin."
     Write-Host "Product: $($first.name) | Checkout session: $($checkout.data.id)"
 }
 

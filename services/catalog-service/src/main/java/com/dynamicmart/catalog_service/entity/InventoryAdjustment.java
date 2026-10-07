@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,5 +40,5 @@ public class InventoryAdjustment {
     }
 
     @PrePersist
-    void onCreate() { createdAt = Instant.now(); }
+    void onCreate() { createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS); }
 }

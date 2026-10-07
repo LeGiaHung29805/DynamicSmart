@@ -39,7 +39,18 @@ Terminal thứ hai, chạy kiểm thử xuyên suốt:
 .\services\catalog-service\scripts\catalog-standalone.ps1 smoke
 ```
 
-Kết quả hợp lệ kết thúc bằng `SMOKE PASS`.
+Kết quả hợp lệ kết thúc bằng `SMOKE PASS`. Bài smoke tự kiểm tra cả reserve/commit/release
+gửi lặp và hai yêu cầu đồng thời tranh sản phẩm cuối; tồn kho demo được khôi phục sau khi kiểm tra.
+
+Kiểm thử tự động PostgreSQL thật (Docker/Testcontainers):
+
+```powershell
+Set-Location .\services\catalog-service
+.\mvnw.cmd test
+```
+
+Nếu Docker đang chạy, bộ test tạo PostgreSQL 16 tách biệt, chạy Flyway và kiểm tra cạnh tranh,
+idempotency, hết hạn giữ tồn cùng giới hạn điều chỉnh tồn. Database `catalog_db` của máy không bị sửa.
 
 ## 3. Chạy frontend
 

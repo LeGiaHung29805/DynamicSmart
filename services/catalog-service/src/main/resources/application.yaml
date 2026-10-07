@@ -38,6 +38,9 @@ app:
   clients:
     cart-service-url: ${CART_SERVICE_BASE_URL:http://localhost:8083}
     engagement-service-url: ${ENGAGEMENT_SERVICE_BASE_URL:http://localhost:8086}
+    engagement-connect-timeout-ms: ${ENGAGEMENT_SERVICE_CONNECT_TIMEOUT_MS:1000}
+    engagement-read-timeout-ms: ${ENGAGEMENT_SERVICE_READ_TIMEOUT_MS:1500}
+    best-seller-fallback-product-ids: ${BEST_SELLER_FALLBACK_PRODUCT_IDS:}
   cors:
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
   security:
