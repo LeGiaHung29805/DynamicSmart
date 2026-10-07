@@ -91,10 +91,11 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
         if (initialSessionId) {
           sessionPromise = checkoutApi.getSession(initialSessionId);
         } else {
-          cartBootstrap.current ??= cartApi
+          const bootstrap = cartBootstrap.current ?? cartApi
             .get()
             .then((cart) => checkoutApi.createSession({ source: "CART", cartId: cart.id }));
-          sessionPromise = cartBootstrap.current;
+          cartBootstrap.current = bootstrap;
+          sessionPromise = bootstrap;
         }
         const [nextSession, nextAddresses, nextVouchers] = await Promise.all([
           sessionPromise,

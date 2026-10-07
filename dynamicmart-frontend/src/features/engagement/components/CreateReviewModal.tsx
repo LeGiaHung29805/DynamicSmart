@@ -1,7 +1,8 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, ImagePlus, Star, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { engagementApi } from "../api/engagement.api";
@@ -39,12 +40,6 @@ export function CreateReviewModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-
-  useEffect(() => {
-    if (defaultOrderItemId) {
-      setOrderItemId(defaultOrderItemId);
-    }
-  }, [defaultOrderItemId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -168,9 +163,9 @@ export function CreateReviewModal({
                 />
                 <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
                   <span>Chỉ dòng đơn hoàn tất (COMPLETED) mới được đánh giá.</span>
-                  <a className="font-semibold text-brand hover:underline" href="/customer/account/orders">
+                  <Link className="font-semibold text-brand hover:underline" href="/customer/account/orders">
                     Vào trang Đơn hàng →
-                  </a>
+                  </Link>
                 </div>
               </div>
             ) : (
