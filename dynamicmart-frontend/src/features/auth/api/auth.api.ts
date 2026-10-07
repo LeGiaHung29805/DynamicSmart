@@ -45,6 +45,8 @@ export function refreshSession() {
 export async function logout() {
   try {
     await apiClient.post<void>(authPath("logout"));
+  } catch {
+    // Thu hồi phiên phía máy chủ có thể thất bại do mất mạng; vẫn phải xóa token khỏi trình duyệt.
   } finally {
     setAnonymousSession();
   }
