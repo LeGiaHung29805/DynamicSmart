@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartNoAxesCombined, CreditCard, House, LayoutDashboard, Package, ShoppingBag, TicketPercent, UsersRound } from "lucide-react";
+import { ChartNoAxesCombined, CreditCard, House, LayoutDashboard, MessageSquareText, Package, ShoppingBag, TicketPercent, UsersRound } from "lucide-react";
 
 const adminLinks = [
   { label: "Tổng quan", href: "/admin", icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const adminLinks = [
   { label: "Khuyến mãi", href: "/admin/promotions", icon: TicketPercent },
   { label: "Đơn hàng", href: "/admin/orders", icon: ShoppingBag },
   { label: "Thanh toán", href: "/admin/payments", icon: CreditCard },
+  { label: "Tương tác", href: "/admin/engagement", icon: MessageSquareText },
   { label: "Báo cáo", href: "/admin/reports", icon: ChartNoAxesCombined },
 ] as const;
 

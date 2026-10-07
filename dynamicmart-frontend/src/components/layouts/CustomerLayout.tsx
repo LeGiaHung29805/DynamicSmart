@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Package, UserRound } from "lucide-react";
+import { Bell, Heart, MapPin, MessageCircle, Package, TicketPercent, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const accountLinks = [
   ["Hồ sơ", "/customer/account/profile", UserRound],
   ["Sổ địa chỉ", "/customer/account/addresses", MapPin],
   ["Đơn hàng", "/customer/account/orders", Package],
+  ["Mã giảm giá", "/customer/account/vouchers", TicketPercent],
+  ["Yêu thích", "/customer/account/wishlist", Heart],
+  ["Thông báo", "/customer/account/notifications", Bell],
+  ["Hỗ trợ", "/customer/account/support", MessageCircle],
 ] as const;
 
 export function CustomerLayout({ children }: Readonly<{ children: React.ReactNode }>) {

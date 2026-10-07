@@ -1,4 +1,3 @@
--- Runs after V6 creates order_sagas.
 ALTER TABLE order_sagas
     ADD COLUMN idempotency_key UUID,
     ADD COLUMN request_hash CHAR(64);

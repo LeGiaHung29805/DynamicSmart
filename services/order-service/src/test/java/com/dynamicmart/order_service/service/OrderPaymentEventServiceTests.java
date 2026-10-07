@@ -20,6 +20,7 @@ import com.dynamicmart.order_service.exception.OrderException;
 import com.dynamicmart.order_service.messaging.PaymentEventEnvelope;
 import com.dynamicmart.order_service.messaging.PaymentEventEnvelope.PaymentPayload;
 import com.dynamicmart.order_service.repository.CustomerOrderRepository;
+import com.dynamicmart.order_service.repository.OrderItemRepository;
 import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import com.dynamicmart.order_service.repository.OrderStatusHistoryRepository;
 import com.dynamicmart.order_service.repository.OutboxEventRepository;
@@ -150,6 +151,7 @@ class OrderPaymentEventServiceTests {
             PaymentTiming timing,
             PaymentMethod method) {
         CustomerOrderRepository orders = Mockito.mock(CustomerOrderRepository.class);
+        OrderItemRepository items = Mockito.mock(OrderItemRepository.class);
         OrderSagaRepository sagas = Mockito.mock(OrderSagaRepository.class);
         OrderStatusHistoryRepository histories = Mockito.mock(OrderStatusHistoryRepository.class);
         OutboxEventRepository outbox = Mockito.mock(OutboxEventRepository.class);
@@ -170,7 +172,7 @@ class OrderPaymentEventServiceTests {
         when(processedEvents.findById(EVENT_ID)).thenReturn(Optional.empty());
         ObjectMapper objectMapper = new ObjectMapper();
         OrderPaymentEventService service = new OrderPaymentEventService(
-                orders, sagas, histories, outbox, processedEvents, new OrderStateMachine(), objectMapper,
+                orders, items, sagas, histories, outbox, processedEvents, new OrderStateMachine(), objectMapper,
                 Clock.fixed(NOW, ZoneOffset.UTC));
         assertNotNull(service);
         return new Fixture(service, order, saga, histories, outbox, processedEvents);
@@ -188,7 +190,7 @@ class OrderPaymentEventServiceTests {
             PaymentMethod method) {
         return new PaymentEventEnvelope(
                 EVENT_ID, type, 1, "payment-service", PAYMENT_ID, OCCURRED_AT, CORRELATION_ID,
-                new PaymentPayload(PAYMENT_ID, ORDER_ID, amount, timing.name(), method.name(), status));
+                new PaymentPayload(PAYMENT_ID, ORDER_ID, CUSTOMER_ID, amount, timing.name(), method.name(), status));
     }
 
     private record Fixture(

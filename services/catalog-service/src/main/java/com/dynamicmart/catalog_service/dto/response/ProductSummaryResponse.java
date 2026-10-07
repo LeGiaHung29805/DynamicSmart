@@ -18,6 +18,8 @@ public record ProductSummaryResponse(
         boolean featured,
         boolean bestSeller,
         boolean voucherEligible,
+        Double averageRating,
+        Integer reviewCount,
         Instant publishedAt
 ) {
 }

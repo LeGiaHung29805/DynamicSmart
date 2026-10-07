@@ -1,0 +1,3 @@
+ALTER TABLE products
+    ADD COLUMN average_rating DOUBLE PRECISION DEFAULT 0.0,
+    ADD COLUMN review_count INTEGER DEFAULT 0;

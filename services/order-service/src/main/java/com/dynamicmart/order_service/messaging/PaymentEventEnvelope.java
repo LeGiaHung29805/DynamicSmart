@@ -17,6 +17,7 @@ public record PaymentEventEnvelope(
     public record PaymentPayload(
             UUID paymentId,
             UUID orderId,
+            UUID customerId,
             long amountVnd,
             String timing,
             String method,

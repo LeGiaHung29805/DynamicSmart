@@ -55,8 +55,8 @@ services:
       RABBITMQ_USERNAME: order_user
       RABBITMQ_PASSWORD: order_password
       JWT_ISSUER: dynamicmart-identity-service
-      JWT_HMAC_SECRET_BASE64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
-      INTERNAL_API_KEY: local-internal-key
+      JWT_HMAC_SECRET_BASE64: CiYZjVClqyvwboeDW62WjNYyVrBx0rnxn1H5RqWOfCY=
+      INTERNAL_API_KEY: dynamicmart-local-internal-key-2026
       IDENTITY_SERVICE_BASE_URL: ${IDENTITY_SERVICE_BASE_URL:-http://host.docker.internal:8081}
       CATALOG_SERVICE_BASE_URL: ${CATALOG_SERVICE_BASE_URL:-http://host.docker.internal:8082}
       CART_SERVICE_BASE_URL: ${CART_SERVICE_BASE_URL:-http://host.docker.internal:8083}

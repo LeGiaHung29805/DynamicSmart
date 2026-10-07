@@ -2,6 +2,7 @@ package com.dynamicmart.order_service.service;
 
 import com.dynamicmart.order_service.entity.CustomerOrder;
 import com.dynamicmart.order_service.entity.OrderActorType;
+import com.dynamicmart.order_service.entity.OrderItem;
 import com.dynamicmart.order_service.entity.OrderSaga;
 import com.dynamicmart.order_service.entity.OrderStatus;
 import com.dynamicmart.order_service.entity.OrderStatusHistory;
@@ -14,6 +15,7 @@ import com.dynamicmart.order_service.exception.OrderException;
 import com.dynamicmart.order_service.messaging.PaymentEventEnvelope;
 import com.dynamicmart.order_service.messaging.PaymentEventEnvelope.PaymentPayload;
 import com.dynamicmart.order_service.repository.CustomerOrderRepository;
+import com.dynamicmart.order_service.repository.OrderItemRepository;
 import com.dynamicmart.order_service.repository.OrderSagaRepository;
 import com.dynamicmart.order_service.repository.OrderStatusHistoryRepository;
 import com.dynamicmart.order_service.repository.OutboxEventRepository;
@@ -40,6 +42,7 @@ public class OrderPaymentEventService {
             PAYMENT_SUCCEEDED, PAYMENT_FAILED, PAYMENT_EXPIRED);
 
     private final CustomerOrderRepository orders;
+    private final OrderItemRepository items;
     private final OrderSagaRepository sagas;
     private final OrderStatusHistoryRepository histories;
     private final OutboxEventRepository outbox;
@@ -50,6 +53,7 @@ public class OrderPaymentEventService {
 
     public OrderPaymentEventService(
             CustomerOrderRepository orders,
+            OrderItemRepository items,
             OrderSagaRepository sagas,
             OrderStatusHistoryRepository histories,
             OutboxEventRepository outbox,
@@ -58,6 +62,7 @@ public class OrderPaymentEventService {
             ObjectMapper objectMapper,
             Clock clock) {
         this.orders = orders;
+        this.items = items;
         this.sagas = sagas;
         this.histories = histories;
         this.outbox = outbox;
@@ -161,11 +166,30 @@ public class OrderPaymentEventService {
             Instant now) {
         var payload = new OrderLifecyclePayload(
                 order.getId(), order.getOrderNumber(), order.getCustomerId(), order.getStatus(),
-                order.getCheckoutSessionId(), order.getFinalTotalVnd(), order.getCurrency(),
-                order.getCancelReason(), now);
+                order.getCheckoutSessionId(), order.getFinalTotalVnd(), order.getItemsListSubtotalVnd(),
+                discountValue(order), order.getShippingFeeVnd(), order.getCurrency(),
+                order.getCancelReason(), order.getCancelReason(), now, itemPayloads(order.getId()));
         outbox.save(OutboxEvent.pending(
                 UUID.randomUUID(), "ORDER", order.getId(), eventType, 1,
                 objectMapper.writeValueAsString(payload), correlationId, now));
+    }
+
+    private long discountValue(CustomerOrder order) {
+        return order.getDirectSaleDiscountVnd()
+                + order.getProductDiscountVnd()
+                + order.getOrderDiscountVnd()
+                + order.getShippingDiscountVnd();
+    }
+
+    private List<OrderLifecycleItemPayload> itemPayloads(UUID orderId) {
+        return items.findAllByOrderId(orderId).stream()
+                .map(item -> new OrderLifecycleItemPayload(item.getProductId(), item.getVariantId(),
+                        item.getQuantity(), grossSales(item), item.getLineTotalVnd()))
+                .toList();
+    }
+
+    private long grossSales(OrderItem item) {
+        return Math.multiplyExact(item.getListPriceVnd(), item.getQuantity());
     }
 
     private PaymentEventResult resultForCurrentState(
@@ -289,8 +313,21 @@ public class OrderPaymentEventService {
             OrderStatus status,
             UUID checkoutSessionId,
             long finalTotalVnd,
+            long grossItemSalesVnd,
+            long discountValueVnd,
+            long shippingFeeVnd,
             String currency,
             String reason,
-            Instant occurredAt) {
+            String cancelReason,
+            Instant occurredAt,
+            List<OrderLifecycleItemPayload> items) {
+    }
+
+    private record OrderLifecycleItemPayload(
+            UUID productId,
+            UUID variantId,
+            int quantity,
+            long grossSalesVnd,
+            long netItemSalesVnd) {
     }
 }

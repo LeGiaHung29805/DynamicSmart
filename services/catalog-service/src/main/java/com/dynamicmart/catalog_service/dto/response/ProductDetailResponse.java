@@ -12,6 +12,8 @@ public record ProductDetailResponse(
         String description,
         CategoryBriefResponse category,
         boolean featured,
+        Double averageRating,
+        Integer reviewCount,
         Instant publishedAt,
         List<AttributeValueResponse> attributes,
         List<ProductImageResponse> images,

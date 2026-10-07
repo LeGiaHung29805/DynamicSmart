@@ -9,7 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class CatalogQueryServiceTest {
-    private final CatalogQueryService service = new CatalogQueryService(null, null, null, null, null);
+    private final CatalogQueryService service = new CatalogQueryService(null, null, null, null, null, null);
 
     @Test
     void parsesAndDeduplicatesAttributeFilters() {
