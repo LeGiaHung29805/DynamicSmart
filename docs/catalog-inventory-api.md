@@ -13,7 +13,7 @@ Tài liệu này mô tả contract do `catalog-service` cung cấp cho frontend,
 
 ## Cấu trúc `catalog_db`
 
-Flyway tạo schema P0 trong `V1__initial_schema.sql` và bổ sung index/publication field trong `V2__catalog_publication_and_indexes.sql`.
+Flyway tạo schema P0 trong `V1__initial_schema.sql`, bổ sung index/publication field trong `V2__catalog_publication_and_indexes.sql` và số liệu rating tổng hợp trong `V3__add_rating_columns.sql`.
 
 | Nhóm | Bảng |
 |---|---|
@@ -45,7 +45,7 @@ Query của danh sách sản phẩm:
 - `sort=NEWEST|PRICE_ASC|PRICE_DESC|BEST_SELLER`.
 - `page` bắt đầu từ `0`, `size` từ `1` đến `100`.
 
-Chỉ Product `ACTIVE`, đã phát hành và có ít nhất một Variant `ACTIVE` còn tồn khả dụng được trả trong danh sách. `BEST_SELLER`, direct sale, voucher eligibility và rating có sẵn vị trí trong DTO nhưng cần nguồn dữ liệu thật từ owner Reporting/Cart/Engagement.
+Chỉ Product `ACTIVE`, đã phát hành và có ít nhất một Variant `ACTIVE` còn tồn khả dụng được trả trong danh sách. Với `BEST_SELLER`, Catalog lấy thứ tự từ Reporting thuộc Engagement Service và fallback an toàn khi service đó chưa sẵn sàng. Direct sale được Catalog lấy từ Cart Promotion API và fallback về giá niêm yết nếu Cart chậm/lỗi. Engagement cập nhật rating tổng hợp qua `PUT /api/v1/catalog/internal/products/{productId}/rating`; chi tiết review vẫn do Engagement sở hữu.
 
 ## API quản trị
 
@@ -125,11 +125,13 @@ Envelope gồm `eventId`, `aggregateType`, `aggregateId`, `eventType`, `eventVer
 3. Profile `local` nạp dữ liệu demo bằng `db/seed/local/R__seed_catalog_demo.sql` sau Flyway.
 4. Chạy test tại `services/catalog-service` bằng Maven; bộ hiện tại kiểm tra query động, trạng thái public, rule thuộc tính, oversell, khóa/điều chỉnh và idempotency reservation.
 
+Nếu các service của thành viên khác chưa sẵn sàng, dùng profile cô lập theo hướng dẫn tại [`services/catalog-service/README_STANDALONE_DEMO.md`](../services/catalog-service/README_STANDALONE_DEMO.md). Profile này cung cấp auth, direct-sale và cart/buy-now handoff chỉ dành cho demo; không được bật trong môi trường tích hợp.
+
 ## Điểm nối thuộc owner khác
 
 - Gateway đã whitelist `GET /api/v1/catalog/categories/**`, `GET /api/v1/catalog/products/**` và `GET /api/v1/catalog/variants/**`; endpoint admin vẫn cần JWT `ADMIN`.
-- Cart owner cung cấp API thêm giỏ và direct-sale/voucher; frontend Catalog hiện chỉ gửi `variantId`, `quantity`.
+- Cart owner cung cấp API thêm giỏ và direct-sale/voucher; Catalog đã gọi direct-sale contract và frontend chỉ gửi ID/số lượng, không gửi giá.
 - Order/Checkout owner cung cấp Buy Now session và giữ selection bằng cookie ký TTL 15 phút; frontend không gửi giá/tồn.
-- Reporting owner cung cấp thứ tự bán chạy chỉ từ Order `COMPLETED`.
-- Engagement owner cung cấp rating đã duyệt.
+- Reporting thuộc Engagement owner cung cấp thứ tự bán chạy chỉ từ Order `COMPLETED`.
+- Engagement owner lưu chi tiết đánh giá và đẩy rating tổng hợp sang Catalog qua internal contract.
 - Identity owner cung cấp forgot/reset password; frontend đã hoàn tất form và contract gọi API.
