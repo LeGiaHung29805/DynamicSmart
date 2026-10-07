@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { AdminCatalogWorkspace } from "@/features/catalog/components/admin/AdminCatalogWorkspace";
-
-export const metadata: Metadata = { title: "Quản lý catalog" };
+import { redirect } from "next/navigation";
 
 export default function AdminCatalogPage() {
-  return <AdminCatalogWorkspace />;
+  redirect("/admin/catalog/products");
 }

@@ -1,35 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Boxes, FolderTree, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ErrorState, LoadingState } from "@/components/common/PageState";
 import { useAuthSession } from "@/lib/auth/session";
-import { AdminAttributePanel } from "./AdminAttributePanel";
-import { AdminCategoryPanel } from "./AdminCategoryPanel";
-import { AdminInventoryPanel } from "./AdminInventoryPanel";
-import { AdminProductPanel } from "./AdminProductPanel";
 
 const tabs = [
-  { id: "products", label: "Sản phẩm", icon: PackageSearch },
-  { id: "categories", label: "Danh mục", icon: FolderTree },
-  { id: "attributes", label: "Thuộc tính", icon: SlidersHorizontal },
-  { id: "inventory", label: "Tồn kho", icon: Boxes },
+  { href: "/admin/catalog/products", label: "Sản phẩm", icon: PackageSearch },
+  { href: "/admin/catalog/categories", label: "Danh mục", icon: FolderTree },
+  { href: "/admin/catalog/attributes", label: "Thương hiệu & thuộc tính", icon: SlidersHorizontal },
+  { href: "/admin/catalog/inventory", label: "Tồn kho", icon: Boxes },
 ] as const;
 
-type TabId = (typeof tabs)[number]["id"];
-
-export function AdminCatalogWorkspace() {
+export function AdminCatalogWorkspace({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = useAuthSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabId>("products");
+  const pathname = usePathname();
 
   useEffect(() => {
     if (session.status === "anonymous") {
-      router.replace(`/login?returnTo=${encodeURIComponent("/admin/catalog")}`);
+      router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`);
     }
-  }, [router, session.status]);
+  }, [pathname, router, session.status]);
 
   if (session.status === "loading" || session.status === "anonymous") {
     return <LoadingState title="Đang xác minh quyền quản trị" />;
@@ -41,27 +36,24 @@ export function AdminCatalogWorkspace() {
   return (
     <div className="space-y-7">
       <PageHeader
-        description="Quản lý danh mục, thuộc tính động, sản phẩm, biến thể, hình ảnh và tồn kho trên cùng một không gian làm việc."
+        description="Mỗi nghiệp vụ có một không gian riêng để thao tác nhanh, rõ trạng thái và dễ quay lại công việc đang làm."
         eyebrow="Catalog & inventory"
         title="Quản trị kho sản phẩm"
       />
-      <nav aria-label="Khu vực quản trị catalog" className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            aria-current={activeTab === id ? "page" : undefined}
-            className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-black transition ${activeTab === id ? "bg-emerald-950 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-            key={id}
-            onClick={() => setActiveTab(id)}
-            type="button"
+      <nav aria-label="Khu vực quản trị catalog" className="sticky top-0 z-20 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+        {tabs.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          return <Link
+            aria-current={active ? "page" : undefined}
+            className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-black transition ${active ? "bg-emerald-950 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+            href={href}
+            key={href}
           >
             <Icon className="size-4" />{label}
-          </button>
-        ))}
+          </Link>;
+        })}
       </nav>
-      {activeTab === "products" ? <AdminProductPanel /> : null}
-      {activeTab === "categories" ? <AdminCategoryPanel /> : null}
-      {activeTab === "attributes" ? <AdminAttributePanel /> : null}
-      {activeTab === "inventory" ? <AdminInventoryPanel /> : null}
+      {children}
     </div>
   );
 }
