@@ -16,6 +16,8 @@ import type {
   WishlistResponse,
 } from "../types/engagement.types";
 
+const idempotencyOptions = () => ({ headers: { "Idempotency-Key": crypto.randomUUID() } });
+
 export const engagementApi = {
   // P0 - Đánh giá sản phẩm (Reviews)
   reviews: {
@@ -105,11 +107,12 @@ export const engagementApi = {
         `/api/v1/support/conversations/${conversationId}`
       ),
     createConversation: (content: string) =>
-      apiClient.post<ChatConversationItem>("/api/v1/support/conversations", { content }),
+      apiClient.post<ChatConversationItem>("/api/v1/support/conversations", { content }, idempotencyOptions()),
     customerSend: (conversationId: string, content: string) =>
       apiClient.post<ChatConversationItem>(
         `/api/v1/support/conversations/${conversationId}/messages`,
-        { content }
+        { content },
+        idempotencyOptions()
       ),
     adminConversations: (page = 0, size = 20) =>
       apiClient.get<PageResponse<ChatConversationItem>>(
@@ -126,7 +129,8 @@ export const engagementApi = {
     adminSend: (conversationId: string, content: string) =>
       apiClient.post<ChatConversationItem>(
         `/api/v1/admin/support/conversations/${conversationId}/messages`,
-        { content }
+        { content },
+        idempotencyOptions()
       ),
     adminClose: (conversationId: string) =>
       apiClient.patch<ChatConversationItem>(

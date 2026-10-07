@@ -71,7 +71,7 @@ class OrderCreationControllerTests {
         when(orderCreation.create(CUSTOMER_ID, SESSION_ID, IDEMPOTENCY_KEY)).thenReturn(
                 new CreationResult(
                         ORDER_ID, "ORD-NEW", OrderStatus.PENDING_PAYMENT, SAGA_ID,
-                        PAYMENT_ID, PAYMENT_DUE_AT, false));
+                        PAYMENT_ID, PAYMENT_DUE_AT, "https://pay.example/checkout", false));
 
         mockMvc.perform(post("/api/v1/checkout/sessions/{sessionId}/orders", SESSION_ID)
                         .with(customerJwt())
@@ -80,6 +80,7 @@ class OrderCreationControllerTests {
                 .andExpect(jsonPath("$.orderId").value(ORDER_ID.toString()))
                 .andExpect(jsonPath("$.status").value("PENDING_PAYMENT"))
                 .andExpect(jsonPath("$.paymentId").value(PAYMENT_ID.toString()))
+                .andExpect(jsonPath("$.redirectUrl").value("https://pay.example/checkout"))
                 .andExpect(jsonPath("$.replay").value(false));
 
         verify(orderCreation).create(CUSTOMER_ID, SESSION_ID, IDEMPOTENCY_KEY);
@@ -90,7 +91,7 @@ class OrderCreationControllerTests {
         when(orderCreation.create(CUSTOMER_ID, SESSION_ID, IDEMPOTENCY_KEY)).thenReturn(
                 new CreationResult(
                         ORDER_ID, "ORD-EXISTING", OrderStatus.PENDING_PAYMENT, SAGA_ID,
-                        PAYMENT_ID, PAYMENT_DUE_AT, true));
+                        PAYMENT_ID, PAYMENT_DUE_AT, null, true));
 
         mockMvc.perform(post("/api/v1/checkout/sessions/{sessionId}/orders", SESSION_ID)
                         .with(customerJwt())

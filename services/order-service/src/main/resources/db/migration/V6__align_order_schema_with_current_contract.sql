@@ -1,3 +1,4 @@
+-- V2 is already released as additional_payment_methods; keep new schema alignment in a later version.
 ALTER TABLE checkout_sessions
     ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 

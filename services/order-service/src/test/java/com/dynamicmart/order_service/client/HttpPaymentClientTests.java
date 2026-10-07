@@ -153,6 +153,22 @@ class HttpPaymentClientTests {
     }
 
     @Test
+    void reloadsExistingPaymentForIdempotentOrderRetry() {
+        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_ID))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpPaymentClient.INTERNAL_API_KEY_HEADER, INTERNAL_KEY))
+                .andRespond(withSuccess("""
+                        {"id":"00000000-0000-0000-0000-000000000004",
+                         "orderId":"00000000-0000-0000-0000-000000000003","amountVnd":120000,
+                         "timing":"PREPAID","method":"VNPAY","status":"PENDING",
+                         "redirectUrl":"https://sandbox.vnpayment.vn/pay","expiresAt":"2026-10-02T03:00:00Z"}
+                        """, MediaType.APPLICATION_JSON));
+
+        assertEquals("https://sandbox.vnpayment.vn/pay", client.getPayment(PAYMENT_ID).redirectUrl());
+        server.verify();
+    }
+
+    @Test
     void mapsPaymentClientErrorToStableOrderError() {
         server.expect(requestTo("http://payment.test/api/v1/shipping/quotes/" + QUOTE_ID + "/validate"))
                 .andRespond(withResourceNotFound());

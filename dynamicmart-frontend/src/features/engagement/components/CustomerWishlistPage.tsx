@@ -14,7 +14,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { engagementApi } from "../api/engagement.api";
-import { mockWishlist } from "../mock-data";
 import { date, money } from "./EngagementShared";
 
 interface DisplayWishlistItem {
@@ -29,6 +28,7 @@ export function CustomerWishlistPage() {
   const [items, setItems] = useState<DisplayWishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -36,47 +36,24 @@ export function CustomerWishlistPage() {
     let ignore = false;
     async function load() {
       try {
+        setErrorMsg("");
         const res = await engagementApi.wishlist.get();
         if (!ignore) {
-          if (res?.items && res.items.length > 0) {
-            setItems(
-              res.items.map((item) => ({
+          setItems(
+            (res.items ?? []).map((item) => ({
                 id: item.id,
                 productId: item.productId,
                 name: `Sản phẩm #${item.productId.slice(0, 8)}`,
-                price: 350000,
                 savedAt: item.createdAt,
               }))
-            );
-            setIsLive(true);
-          } else if (res?.items && res.items.length === 0) {
-            setItems([]);
-            setIsLive(true);
-          } else {
-            setItems(
-              mockWishlist.map((m) => ({
-                id: m.id,
-                productId: m.id,
-                name: m.name,
-                price: m.price,
-                savedAt: m.savedAt,
-              }))
-            );
-            setIsLive(false);
-          }
+          );
+          setIsLive(true);
         }
       } catch {
         if (!ignore) {
-          setItems(
-            mockWishlist.map((m) => ({
-              id: m.id,
-              productId: m.id,
-              name: m.name,
-              price: m.price,
-              savedAt: m.savedAt,
-            }))
-          );
+          setItems([]);
           setIsLive(false);
+          setErrorMsg("Không thể tải danh sách yêu thích.");
         }
       } finally {
         if (!ignore) {
@@ -94,13 +71,10 @@ export function CustomerWishlistPage() {
   const handleRemove = async (productId: string, itemId: string) => {
     setDeletingId(itemId);
     try {
-      if (isLive) {
-        await engagementApi.wishlist.remove(productId);
-      }
+      await engagementApi.wishlist.remove(productId);
       setItems((current) => current.filter((value) => value.id !== itemId));
     } catch {
-      // Xóa optimistic
-      setItems((current) => current.filter((value) => value.id !== itemId));
+      setErrorMsg("Không thể bỏ sản phẩm khỏi danh sách yêu thích.");
     } finally {
       setDeletingId(null);
     }
@@ -124,7 +98,7 @@ export function CustomerWishlistPage() {
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-sm">
               <AlertCircle className="size-3.5" />
-              Dữ liệu mô phỏng
+              Mất kết nối API
             </span>
           )}
 
@@ -144,6 +118,7 @@ export function CustomerWishlistPage() {
       </div>
 
       <SurfacePanel className="p-4 sm:p-6">
+        {errorMsg ? <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{errorMsg}</p> : null}
         {loading ? (
           <div className="py-12 text-center text-sm text-slate-500">
             <RefreshCw className="mx-auto size-6 animate-spin text-brand" />

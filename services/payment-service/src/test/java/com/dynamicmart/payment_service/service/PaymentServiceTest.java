@@ -55,7 +55,7 @@ class PaymentServiceTest {
     }
 
     @Test
-    void customerReceiptMarksCodPaidAndDuplicateIsIdempotent() {
+    void customerReceivedConfirmationMarksCodPaidAndDuplicateIsIdempotent() {
         Payment payment = payment("POSTPAID", "COD", "PENDING");
         when(payments.findByOrderIdForUpdate(payment.getOrderId())).thenReturn(Optional.of(payment));
         when(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId())).thenReturn(List.of());
@@ -70,7 +70,7 @@ class PaymentServiceTest {
     }
 
     @Test
-    void rejectsReceiptForNonCodPayment() {
+    void rejectsReceivedConfirmationForNonCodPayment() {
         Payment payment = payment("POSTPAID", "VNPAY", "PENDING");
         when(payments.findByOrderIdForUpdate(payment.getOrderId())).thenReturn(Optional.of(payment));
 

@@ -171,7 +171,8 @@ class OrderCreationOrchestratorTests {
         when(reservations.reserve(input)).thenReturn(reserved);
         when(persistence.persist(input, reserved)).thenReturn(persisted);
         when(paymentCreation.ensurePayment(any()))
-                .thenReturn(new PaymentCheckpoint(UUID.randomUUID(), Instant.now().plusSeconds(900), false));
+                .thenReturn(new PaymentCheckpoint(UUID.randomUUID(), Instant.now().plusSeconds(900),
+                        "https://pay.example/checkout", false));
         return new Fixture(
                 input, reserved, persisted, revalidation, reservations, quoteConsumption, persistence,
                 paymentCreation, reservationFinalization, sagas, orders,

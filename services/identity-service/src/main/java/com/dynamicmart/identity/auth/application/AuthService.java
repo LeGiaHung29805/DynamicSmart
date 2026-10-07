@@ -3,6 +3,8 @@ package com.dynamicmart.identity.auth.application;
 import com.dynamicmart.identity.auth.api.AuthResponse;
 import com.dynamicmart.identity.auth.api.LoginRequest;
 import com.dynamicmart.identity.auth.api.RegisterRequest;
+import com.dynamicmart.identity.auth.domain.PasswordResetToken;
+import com.dynamicmart.identity.auth.domain.PasswordResetTokenRepository;
 import com.dynamicmart.identity.auth.config.JwtProperties;
 import com.dynamicmart.identity.auth.domain.RefreshToken;
 import com.dynamicmart.identity.auth.domain.RefreshTokenRepository;
@@ -24,14 +26,19 @@ public class AuthService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final UserAccountRepository users;
     private final RefreshTokenRepository refreshTokens;
+    private final PasswordResetTokenRepository passwordResetTokens;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final JwtProperties jwtProperties;
+    private final PasswordResetDelivery passwordResetDelivery;
 
-    public AuthService(UserAccountRepository users, RefreshTokenRepository refreshTokens, PasswordEncoder passwordEncoder,
-                       JwtTokenService jwtTokenService, JwtProperties jwtProperties) {
+    public AuthService(UserAccountRepository users, RefreshTokenRepository refreshTokens,
+                       PasswordResetTokenRepository passwordResetTokens, PasswordEncoder passwordEncoder,
+                       JwtTokenService jwtTokenService, JwtProperties jwtProperties,
+                       PasswordResetDelivery passwordResetDelivery) {
         this.users = users; this.refreshTokens = refreshTokens; this.passwordEncoder = passwordEncoder;
-        this.jwtTokenService = jwtTokenService; this.jwtProperties = jwtProperties;
+        this.passwordResetTokens = passwordResetTokens; this.jwtTokenService = jwtTokenService;
+        this.jwtProperties = jwtProperties; this.passwordResetDelivery = passwordResetDelivery;
     }
 
     @Transactional
@@ -80,6 +87,31 @@ public class AuthService {
         refreshTokens.findByTokenHash(TokenHashing.sha256(rawRefreshToken)).ifPresent(token -> token.revoke(Instant.now()));
     }
 
+    @Transactional
+    public void requestPasswordReset(String email, String requesterIp) {
+        users.findByEmailNormalized(normalizeEmail(email)).ifPresent(user -> {
+            Instant now = Instant.now();
+            passwordResetTokens.invalidateUnusedByUserId(user.getId(), now);
+            String rawToken = randomToken();
+            String ipHash = requesterIp == null || requesterIp.isBlank() ? null : TokenHashing.sha256(requesterIp);
+            passwordResetTokens.save(new PasswordResetToken(UUID.randomUUID(), user, TokenHashing.sha256(rawToken),
+                    now.plusSeconds(900), ipHash, now));
+            passwordResetDelivery.deliver(user, rawToken);
+        });
+    }
+
+    @Transactional
+    public void resetPassword(String rawToken, String newPassword) {
+        Instant now = Instant.now();
+        PasswordResetToken token = passwordResetTokens.findByTokenHash(TokenHashing.sha256(rawToken))
+                .orElseThrow(this::invalidResetToken);
+        if (!token.isUsable(now) || token.getUser().getStatus() != UserStatus.ACTIVE) throw invalidResetToken();
+        token.markUsed(now);
+        token.getUser().resetPassword(passwordEncoder.encode(newPassword), now);
+        refreshTokens.revokeAllByUserId(token.getUser().getId(), now);
+        passwordResetTokens.invalidateUnusedByUserId(token.getUser().getId(), now);
+    }
+
     private AuthenticationResult authenticate(UserAccount user, Instant now, UUID familyId) {
         String rawRefreshToken = randomToken();
         UUID refreshId = UUID.randomUUID();
@@ -94,6 +126,10 @@ public class AuthService {
 
     private AuthException invalidCredentials() {
         return new AuthException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng.");
+    }
+    private AuthException invalidResetToken() {
+        return new AuthException(HttpStatus.BAD_REQUEST, "PASSWORD_RESET_TOKEN_INVALID",
+                "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
     }
     private String normalizeEmail(String email) { return email.trim().toLowerCase(Locale.ROOT); }
     private String randomToken() {

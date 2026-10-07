@@ -3,6 +3,7 @@ package com.dynamicmart.identity.auth.api;
 import com.dynamicmart.identity.auth.application.AuthService;
 import com.dynamicmart.identity.auth.application.AuthException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +57,21 @@ public class AuthController {
     public ResponseEntity<Void> logout(@CookieValue(value = REFRESH_COOKIE, required = false) String refreshToken,
                                        HttpServletResponse response) {
         authService.logout(refreshToken);
+        clearRefreshCookie(response);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password/forgot")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                               HttpServletRequest servletRequest) {
+        authService.requestPasswordReset(request.email(), servletRequest.getRemoteAddr());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request,
+                                              HttpServletResponse response) {
+        authService.resetPassword(request.token(), request.password());
         clearRefreshCookie(response);
         return ResponseEntity.noContent().build();
     }

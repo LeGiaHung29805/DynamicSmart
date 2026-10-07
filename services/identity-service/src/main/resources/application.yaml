@@ -27,3 +27,5 @@ app:
   clients:
     payment-service-url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
     internal-api-key: ${INTERNAL_API_KEY:local-internal-key}
+  password-reset:
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}

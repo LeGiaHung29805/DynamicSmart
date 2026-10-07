@@ -35,7 +35,7 @@ public class OrderCreationController {
         var result = orderCreation.create(currentCustomer.idFrom(jwt), sessionId, idempotencyKey);
         CreateOrderResponse response = new CreateOrderResponse(
                 result.orderId(), result.orderNumber(), result.status(), result.sagaId(),
-                result.paymentId(), result.paymentDueAt(), result.replay());
+                result.paymentId(), result.paymentDueAt(), result.redirectUrl(), result.replay());
         return ResponseEntity.status(result.replay() ? HttpStatus.OK : HttpStatus.CREATED).body(response);
     }
 

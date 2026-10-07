@@ -35,12 +35,15 @@ export default async function ProductDetailPage({ params, searchParams }: Readon
   }
   const related = await getProducts({ categoryId: product.category.id, size: 5 }).catch(() => null);
   const suggestions = related?.content.filter((item) => item.id !== product.id).slice(0, 4) ?? [];
-  const initialQuantity = Math.max(Number.parseInt(query.quantity ?? "1", 10) || 1, 1);
+  const resumeDeadline = query.resumeUntil ? Number(query.resumeUntil) : null;
+  const resumeValid = resumeDeadline === null || (Number.isFinite(resumeDeadline) && resumeDeadline >= Date.now());
+  const initialQuantity = resumeValid ? Math.max(Number.parseInt(query.quantity ?? "1", 10) || 1, 1) : 1;
+  const initialVariantId = resumeValid ? query.variant : undefined;
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-9 sm:px-6 lg:px-8 lg:py-14">
       <Link className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-brand" href="/products"><ArrowLeft className="size-4" /> Tất cả sản phẩm</Link>
-      <ProductDetailExperience initialQuantity={initialQuantity} initialVariantId={query.variant} product={product} />
+      <ProductDetailExperience initialQuantity={initialQuantity} initialVariantId={initialVariantId} product={product} />
       <div className="grid gap-6 border-t border-slate-200 pt-9 lg:grid-cols-[1.3fr_.7fr]">
         <section className="space-y-5"><div><p className="text-xs font-black tracking-[0.18em] text-brand uppercase">Thông tin sản phẩm</p><h2 className="mt-2 text-2xl font-black text-slate-950">Mô tả & thông số</h2></div>{product.description ? <p className="whitespace-pre-line text-sm leading-7 text-slate-600">{product.description}</p> : null}<ProductSpecifications attributes={product.attributes} /></section>
         <ProductEngagementPanel productId={product.id} productName={product.name} />

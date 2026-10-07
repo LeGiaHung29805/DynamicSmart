@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { CheckoutPaymentWizard } from "@/features/payment";
+import { CheckoutPage as CheckoutExperience } from "@/features/checkout";
 
 export const metadata: Metadata = { title: "Thanh toán" };
 
-export default function CheckoutPaymentPage() {
-  return <CheckoutPaymentWizard />;
+export default async function CheckoutPaymentPage({
+  searchParams,
+}: Readonly<{ searchParams: Promise<{ sessionId?: string }> }>) {
+  const { sessionId } = await searchParams;
+  return <CheckoutExperience initialSessionId={sessionId} />;
 }

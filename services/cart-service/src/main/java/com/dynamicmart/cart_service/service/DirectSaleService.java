@@ -9,6 +9,8 @@ import com.dynamicmart.cart_service.repository.DirectPricePromotionRepository;
 import com.dynamicmart.cart_service.repository.PromotionAuditRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -87,6 +89,38 @@ public class DirectSaleService {
         DirectPricePromotion p = active.get(0); long discount = p.discount(listPriceVnd);
         int percent = listPriceVnd == 0 ? 0 : (int) Math.min(100, discount * 100 / listPriceVnd);
         return new DirectSalePriceResponse(variantId, listPriceVnd, discount, listPriceVnd - discount, percent, p.getId(), p.getName(), p.getEndsAt());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DirectSalePriceResponse> resolveBatch(DirectSalePriceBatchRequest request) {
+        Map<UUID, Long> prices = new LinkedHashMap<>();
+        for (DirectSalePriceRequest item : request.variants()) {
+            if (item.listPriceVnd() < 0) throw invalid("LIST_PRICE_INVALID", "Giá niêm yết không được âm.");
+            if (prices.putIfAbsent(item.variantId(), item.listPriceVnd()) != null) {
+                throw invalid("DIRECT_SALE_VARIANT_DUPLICATED", "Mỗi Variant chỉ được xuất hiện một lần trong yêu cầu báo giá.");
+            }
+        }
+        Instant now = Instant.now();
+        Map<UUID, DirectPricePromotion> activeByVariant = new LinkedHashMap<>();
+        for (DirectPricePromotion promotion : promotions.findActiveForVariants(prices.keySet(), now)) {
+            for (UUID variantId : promotion.getVariantIds()) {
+                if (!prices.containsKey(variantId)) continue;
+                if (activeByVariant.putIfAbsent(variantId, promotion) != null) {
+                    throw new CartException(HttpStatus.CONFLICT, "DIRECT_SALE_OVERLAP", "Variant có nhiều chiến dịch đang hiệu lực.");
+                }
+            }
+        }
+        return prices.entrySet().stream().map(entry -> price(entry.getKey(), entry.getValue(), activeByVariant.get(entry.getKey()))).toList();
+    }
+
+    private DirectSalePriceResponse price(UUID variantId, long listPriceVnd, DirectPricePromotion promotion) {
+        if (promotion == null) {
+            return new DirectSalePriceResponse(variantId, listPriceVnd, 0, listPriceVnd, 0, null, null, null);
+        }
+        long discount = promotion.discount(listPriceVnd);
+        int percent = listPriceVnd == 0 ? 0 : (int) Math.min(100, discount * 100 / listPriceVnd);
+        return new DirectSalePriceResponse(variantId, listPriceVnd, discount, listPriceVnd - discount, percent,
+                promotion.getId(), promotion.getName(), promotion.getEndsAt());
     }
 
     private void validate(DirectSaleRequest r) {

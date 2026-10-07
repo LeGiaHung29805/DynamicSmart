@@ -80,4 +80,10 @@ public class UserAccount {
             this.updatedAt = now;
         }
     }
+
+    public void resetPassword(String passwordHash, Instant now) {
+        this.passwordHash = passwordHash;
+        this.authVersion++;
+        this.updatedAt = now;
+    }
 }

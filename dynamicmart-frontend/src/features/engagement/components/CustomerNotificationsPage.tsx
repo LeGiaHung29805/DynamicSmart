@@ -14,7 +14,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { engagementApi } from "../api/engagement.api";
-import { mockNotifications } from "../mock-data";
 import type { NotificationItem } from "../types/engagement.types";
 import { date } from "./EngagementShared";
 
@@ -22,6 +21,7 @@ export function CustomerNotificationsPage() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [filter, setFilter] = useState<"ALL" | "UNREAD">("ALL");
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -30,23 +30,17 @@ export function CustomerNotificationsPage() {
     let ignore = false;
     async function load() {
       try {
+        setErrorMsg("");
         const res = await engagementApi.notifications.list(0, 50);
         if (!ignore) {
-          if (res?.content && res.content.length > 0) {
-            setItems(res.content);
-            setIsLive(true);
-          } else if (res?.content && res.content.length === 0) {
-            setItems([]);
-            setIsLive(true);
-          } else {
-            setItems(mockNotifications);
-            setIsLive(false);
-          }
+          setItems(res.content ?? []);
+          setIsLive(true);
         }
       } catch {
         if (!ignore) {
-          setItems(mockNotifications);
+          setItems([]);
           setIsLive(false);
+          setErrorMsg("Không thể tải thông báo từ hệ thống.");
         }
       } finally {
         if (!ignore) {
@@ -64,9 +58,7 @@ export function CustomerNotificationsPage() {
   const handleMarkAsRead = async (notificationId: string) => {
     setMarkingId(notificationId);
     try {
-      if (isLive) {
-        await engagementApi.notifications.markRead(notificationId);
-      }
+      await engagementApi.notifications.markRead(notificationId);
       setItems((prev) =>
         prev.map((n) =>
           n.id === notificationId
@@ -75,14 +67,7 @@ export function CustomerNotificationsPage() {
         )
       );
     } catch {
-      // Cập nhật optimistic
-      setItems((prev) =>
-        prev.map((n) =>
-          n.id === notificationId
-            ? { ...n, read: true, readAt: new Date().toISOString() }
-            : n
-        )
-      );
+      setErrorMsg("Không thể đánh dấu thông báo đã đọc.");
     } finally {
       setMarkingId(null);
     }
@@ -92,14 +77,12 @@ export function CustomerNotificationsPage() {
     const unreadItems = items.filter((n) => !n.read && !n.readAt);
     if (unreadItems.length === 0) return;
 
-    for (const item of unreadItems) {
-      if (isLive) {
-        engagementApi.notifications.markRead(item.id).catch(() => {});
-      }
+    try {
+      await Promise.all(unreadItems.map((item) => engagementApi.notifications.markRead(item.id)));
+      setItems((prev) => prev.map((n) => ({ ...n, read: true, readAt: new Date().toISOString() })));
+    } catch {
+      setErrorMsg("Không thể đánh dấu toàn bộ thông báo đã đọc.");
     }
-    setItems((prev) =>
-      prev.map((n) => ({ ...n, read: true, readAt: new Date().toISOString() }))
-    );
   };
 
   const isItemRead = (item: NotificationItem) => Boolean(item.read || item.readAt);
@@ -129,7 +112,7 @@ export function CustomerNotificationsPage() {
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-sm">
               <AlertCircle className="size-3.5" />
-              Dữ liệu mô phỏng
+              Mất kết nối API
             </span>
           )}
 
@@ -148,6 +131,7 @@ export function CustomerNotificationsPage() {
       </div>
 
       <SurfacePanel className="p-4 sm:p-6">
+        {errorMsg ? <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{errorMsg}</p> : null}
         {/* Thanh công cụ lọc & Đánh dấu đọc tất cả */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div className="flex gap-2">

@@ -103,7 +103,7 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
     try {
       setPendingAction("buy"); setError(undefined);
       const session = await createBuyNowSession(selectedVariant.id, quantity);
-      router.push(`/checkout?sessionId=${encodeURIComponent(session.checkoutSessionId)}`);
+      router.push(`/checkout?sessionId=${encodeURIComponent(session.id)}`);
     } catch (caught) {
       if (isApiError(caught) && caught.status === 401) {
         router.push(`/login?returnTo=${encodeURIComponent(loginReturnTo(pathname, selectedVariant.id, quantity))}`);

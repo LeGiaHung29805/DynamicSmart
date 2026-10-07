@@ -15,7 +15,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { engagementApi } from "../api/engagement.api";
-import { mockBestSellers, mockSalesMetrics } from "../mock-data";
 import type { BestSellerItem, DailySalesMetric } from "../types/engagement.types";
 import { money } from "./EngagementShared";
 
@@ -45,6 +44,7 @@ export function AdminReportDashboard() {
     let ignore = false;
     async function load() {
       try {
+        setErrorMsg(null);
         const [salesData, bestSellersData] = await Promise.all([
           engagementApi.reports.sales(fromDate, toDate),
           engagementApi.reports.bestSellers(fromDate, toDate, 10),
@@ -64,7 +64,9 @@ export function AdminReportDashboard() {
       } catch {
         if (!ignore) {
           setIsLive(false);
-          setErrorMsg("Không thể kết nối Engagement API. Đang hiển thị dữ liệu mô phỏng.");
+          setSalesMetrics([]);
+          setBestSellers([]);
+          setErrorMsg("Không thể kết nối Engagement API. Không có dữ liệu nào được thay thế bằng dữ liệu mẫu.");
         }
       } finally {
         if (!ignore) {
@@ -86,24 +88,18 @@ export function AdminReportDashboard() {
   };
 
   // Tính toán số liệu thống kê
-  const hasRealSales = isLive && salesMetrics.length > 0;
-  const displaySales = hasRealSales
-    ? salesMetrics.map((item) => ({
+  const displaySales = salesMetrics.map((item) => ({
         date: item.metricDate,
         revenue: item.netRevenueVnd,
         orders: item.completedOrderCount,
-      }))
-    : mockSalesMetrics;
+      }));
 
-  const hasRealBestSellers = isLive && bestSellers.length > 0;
-  const displayBestSellers = hasRealBestSellers
-    ? bestSellers.map((item) => ({
+  const displayBestSellers = bestSellers.map((item) => ({
         product: `Sản phẩm #${item.productId.slice(0, 8)}`,
         variant: item.variantId ? `Biến thể #${item.variantId.slice(0, 6)}` : "Mặc định",
         quantity: item.quantitySold,
         revenue: item.netItemSalesVnd || item.grossSalesVnd,
-      }))
-    : mockBestSellers;
+      }));
 
   const totalRevenue = displaySales.reduce((sum, item) => sum + item.revenue, 0);
   const totalOrders = displaySales.reduce((sum, item) => sum + item.orders, 0);
@@ -129,7 +125,7 @@ export function AdminReportDashboard() {
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-sm">
               <AlertCircle className="size-3.5" />
-              Dữ liệu mô phỏng
+              Mất kết nối API
             </span>
           )}
         </div>

@@ -99,4 +99,4 @@ Quy tắc nghiệp vụ:
 - COD không yêu cầu admin nhập số tiền hoặc mã biên nhận. Khi khách hàng sở hữu đơn bấm **Đã nhận hàng**, Order Service gọi lệnh nội bộ để Payment chuyển `PENDING → PAID`, rồi đơn chuyển `DELIVERED → COMPLETED`.
 - Trạng thái thanh toán, thời điểm thanh toán và cách thanh toán phải thuộc các giá trị cho phép; giao diện không được sửa trực tiếp số tiền hay trường lịch sử.
 - Báo giá GHN phải kiểm tra phí không âm, cân nặng dương và kích thước hợp lệ. Khi tạo đơn, Hiếu lưu lại mã báo giá, dấu vết kiểm tra, kích thước kiện, dịch vụ và thời gian dự kiến.
-- Kiểm thử thêm: COD thiếu người xác nhận/biên nhận/sai số tiền bị từ chối; thông báo thanh toán COD trùng chỉ tạo một kết quả thành công.
+- Kiểm thử thêm: lệnh COD thiếu xác thực nội bộ hoặc sai đơn bị từ chối; khách xác nhận nhận hàng lặp lại vẫn chỉ tạo một kết quả thanh toán thành công.

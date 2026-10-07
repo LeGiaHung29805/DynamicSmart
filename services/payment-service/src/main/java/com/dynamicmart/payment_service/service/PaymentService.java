@@ -89,7 +89,8 @@ public class PaymentService {
         attempt.setId(UUID.randomUUID()); attempt.setPaymentId(payment.getId()); attempt.setAttemptNo(attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).size() + 1);
         attempt.setProvider("COD"); attempt.setProviderReference("CUSTOMER_RECEIVED_" + orderId); attempt.setAmountVnd(payment.getAmountVnd()); attempt.setStatus("SUCCEEDED"); attempt.setCreatedAt(now); attempt.setUpdatedAt(now);
         attempts.save(attempt);
-        payment.setStatus("PAID"); payment.setPaidAt(now); payment.setCodConfirmedAt(now); payment.setUpdatedAt(now); payments.save(payment);
+        payment.setStatus("PAID"); payment.setPaidAt(now); payment.setCodConfirmedBy(payment.getCustomerId());
+        payment.setCodConfirmedAt(now); payment.setUpdatedAt(now); payments.save(payment);
         publishSucceeded(payment); return response(payment, null);
     }
 

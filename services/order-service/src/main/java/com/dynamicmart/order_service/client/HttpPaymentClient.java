@@ -35,6 +35,28 @@ public class HttpPaymentClient implements PaymentClient {
     }
 
     @Override
+    public PaymentResponse getPayment(UUID paymentId) {
+        try {
+            PaymentResponse result = restClient.get().uri("/api/v1/payments/{paymentId}", paymentId)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (ignoredRequest, ignoredResponse) -> {
+                        throw new OrderException(HttpStatus.UNPROCESSABLE_CONTENT, "PAYMENT_REQUEST_REJECTED",
+                                "Payment Service từ chối dữ liệu do Order Service gửi.");
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (ignoredRequest, ignoredResponse) -> {
+                        throw unavailable();
+                    })
+                    .body(PaymentResponse.class);
+            if (result == null) throw unavailable();
+            return result;
+        } catch (OrderException exception) {
+            throw exception;
+        } catch (RestClientException exception) {
+            throw unavailable();
+        }
+    }
+
+    @Override
     public PaymentResponse createVnPayAttempt(UUID paymentId) {
         return post("/api/v1/payments/{paymentId}/vnpay-attempt", null, PaymentResponse.class, paymentId);
     }

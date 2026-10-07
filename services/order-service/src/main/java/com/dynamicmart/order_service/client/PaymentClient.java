@@ -13,6 +13,8 @@ public interface PaymentClient {
 
     PaymentResponse createPayment(OrderPaymentContextRequest request);
 
+    PaymentResponse getPayment(UUID paymentId);
+
     PaymentResponse createVnPayAttempt(UUID paymentId);
 
     PaymentResponse collectCodForReceivedOrder(UUID orderId);

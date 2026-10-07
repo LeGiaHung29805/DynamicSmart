@@ -35,6 +35,9 @@ server:
   port: ${SERVER_PORT:8082}
 
 app:
+  clients:
+    cart-service-url: ${CART_SERVICE_BASE_URL:http://localhost:8083}
+    engagement-service-url: ${ENGAGEMENT_SERVICE_BASE_URL:http://localhost:8086}
   security:
     jwt:
       issuer: ${JWT_ISSUER:dynamicmart-identity-service}

@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import type { Address, AdminUser, LocationOption, PageResult, Profile, VoucherUsageHistory, VoucherWalletItem, Wishlist } from "../types/customer.types";
+import type { Address, AdminUser, LocationOption, PageResult, Profile, VoucherUsageHistory, VoucherWalletItem } from "../types/customer.types";
 
 export const customerApi = {
   profile: () => apiClient.get<Profile>("/api/v1/profile"),
@@ -13,9 +13,6 @@ export const customerApi = {
   wards: (provinceId: number) => apiClient.get<LocationOption[]>(`/api/v1/locations/wards?provinceId=${provinceId}`),
   vouchers: () => apiClient.get<VoucherWalletItem[]>("/api/v1/cart/vouchers/wallet"),
   voucherHistory: () => apiClient.get<VoucherUsageHistory[]>("/api/v1/cart/vouchers/history"),
-  wishlist: () => apiClient.get<Wishlist>("/api/v1/wishlist"),
-  addToWishlist: (productId: string) => apiClient.put<Wishlist>(`/api/v1/wishlist/items/${productId}`),
-  removeFromWishlist: (productId: string) => apiClient.delete<Wishlist>(`/api/v1/wishlist/items/${productId}`),
   users: (query = "", status = "", role = "") => apiClient.get<PageResult<AdminUser>>(`/api/v1/admin/users?query=${encodeURIComponent(query)}${status ? `&status=${encodeURIComponent(status)}` : ""}${role ? `&role=${encodeURIComponent(role)}` : ""}&page=0&size=100`),
   user: (id: string) => apiClient.get<AdminUser>(`/api/v1/admin/users/${id}`),
   manageUser: (id: string, body: { role?: string; status?: string; reason: string }) => apiClient.patch<AdminUser>(`/api/v1/admin/users/${id}`, body, { headers: { "Idempotency-Key": crypto.randomUUID() } }),

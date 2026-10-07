@@ -14,55 +14,36 @@ import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { engagementApi } from "../api/engagement.api";
-import { mockConversations } from "../mock-data";
 import type { ChatConversationItem } from "../types/engagement.types";
 import { Status } from "./EngagementShared";
 
 export function CustomerSupportPage() {
-  const [conversations, setConversations] = useState<ChatConversationItem[]>(() =>
-    mockConversations.map((c) => ({
-      id: c.id,
-      customerId: "cust-current",
-      assignedAdminId: c.assignedAdmin,
-      status: c.status as "OPEN" | "CLOSED",
-      createdAt: new Date().toISOString(),
-      messages: c.messages.map((m, idx) => ({
-        id: `msg-${c.id}-${idx}`,
-        conversationId: c.id,
-        senderId: m.senderRole === "CUSTOMER" ? "cust-current" : "admin-1",
-        senderRole: m.senderRole as "CUSTOMER" | "ADMIN",
-        content: m.content,
-        createdAt: m.createdAt,
-      })),
-    }))
-  );
-
-  const [selectedId, setSelectedId] = useState<string>(
-    mockConversations[0]?.id ?? ""
-  );
+  const [conversations, setConversations] = useState<ChatConversationItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     let ignore = false;
     async function load() {
       try {
+        setErrorMsg("");
         const res = await engagementApi.support.customerConversations(0, 20);
         if (!ignore) {
-          if (res?.content && res.content.length > 0) {
-            setConversations(res.content);
-            setSelectedId((prev) => prev || res.content[0].id);
-            setIsLive(true);
-          } else {
-            setIsLive(false);
-          }
+          const content = res.content ?? [];
+          setConversations(content);
+          setSelectedId((prev) => prev || content[0]?.id || "");
+          setIsLive(true);
         }
       } catch {
         if (!ignore) {
           setIsLive(false);
+          setConversations([]);
+          setErrorMsg("Không thể tải hội thoại hỗ trợ.");
         }
       } finally {
         if (!ignore) {
@@ -82,43 +63,13 @@ export function CustomerSupportPage() {
 
   const handleCreateConversation = async () => {
     try {
-      if (isLive) {
-        const newConv = await engagementApi.support.createConversation("Hỗ trợ đơn hàng");
-        setConversations((prev) => [newConv, ...prev]);
-        setSelectedId(newConv.id);
-      } else {
-        const newId = `conv-${Date.now().toString().slice(-4)}`;
-        const localConv: ChatConversationItem = {
-          id: newId,
-          customerId: "cust-current",
-          status: "OPEN",
-          messages: [
-            {
-              id: `msg-${Date.now()}`,
-              conversationId: newId,
-              senderId: "cust-current",
-              senderRole: "CUSTOMER",
-              content: "Xin chào, tôi cần hỗ trợ về đơn hàng.",
-              createdAt: "Vừa xong",
-            },
-          ],
-          createdAt: new Date().toISOString(),
-        };
-        setConversations((prev) => [localConv, ...prev]);
-        setSelectedId(newId);
-      }
+      setErrorMsg("");
+      const newConv = await engagementApi.support.createConversation("Hỗ trợ đơn hàng");
+      setConversations((prev) => [newConv, ...prev]);
+      setSelectedId(newConv.id);
+      setIsLive(true);
     } catch {
-      // Fallback local
-      const newId = `conv-${Date.now().toString().slice(-4)}`;
-      const localConv: ChatConversationItem = {
-        id: newId,
-        customerId: "cust-current",
-        status: "OPEN",
-        messages: [],
-        createdAt: new Date().toISOString(),
-      };
-      setConversations((prev) => [localConv, ...prev]);
-      setSelectedId(newId);
+      setErrorMsg("Không thể tạo hội thoại hỗ trợ.");
     }
   };
 
@@ -129,46 +80,12 @@ export function CustomerSupportPage() {
 
     setSending(true);
     try {
-      if (isLive) {
-        const updatedConv = await engagementApi.support.customerSend(selected.id, content);
-        setConversations((prev) =>
-          prev.map((c) => (c.id === selected.id ? updatedConv : c))
-        );
-      } else {
-        const localMsg = {
-          id: `msg-${Date.now()}`,
-          conversationId: selected.id,
-          senderId: "cust-current",
-          senderRole: "CUSTOMER" as const,
-          content,
-          createdAt: "Vừa xong",
-        };
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === selected.id
-              ? { ...c, messages: [...(c.messages || []), localMsg] }
-              : c
-          )
-        );
-      }
+      setErrorMsg("");
+      const updatedConv = await engagementApi.support.customerSend(selected.id, content);
+      setConversations((prev) => prev.map((c) => (c.id === selected.id ? updatedConv : c)));
       setMessageInput("");
     } catch {
-      const localMsg = {
-        id: `msg-${Date.now()}`,
-        conversationId: selected.id,
-        senderId: "cust-current",
-        senderRole: "CUSTOMER" as const,
-        content,
-        createdAt: "Vừa xong",
-      };
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === selected.id
-            ? { ...c, messages: [...(c.messages || []), localMsg] }
-            : c
-        )
-      );
-      setMessageInput("");
+      setErrorMsg("Không thể gửi tin nhắn. Nội dung chưa được lưu.");
     } finally {
       setSending(false);
     }
@@ -192,7 +109,7 @@ export function CustomerSupportPage() {
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-sm">
               <AlertCircle className="size-3.5" />
-              Dữ liệu mô phỏng
+              Mất kết nối API
             </span>
           )}
 
@@ -212,6 +129,7 @@ export function CustomerSupportPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[290px_1fr]">
+        {errorMsg ? <p className="lg:col-span-2 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{errorMsg}</p> : null}
         {/* Danh sách các cuộc hội thoại */}
         <SurfacePanel className="p-4 sm:p-4 h-fit">
           <Button

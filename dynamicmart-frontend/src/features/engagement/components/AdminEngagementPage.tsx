@@ -15,7 +15,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { engagementApi } from "../api/engagement.api";
-import { mockConversations, mockQuestions, mockReviews } from "../mock-data";
 import type {
   ChatConversationItem,
   ProductQuestionItem,
@@ -27,68 +26,50 @@ import { Status } from "./EngagementShared";
 export function AdminEngagementPage() {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // 1. Quản lý Đánh giá (P0)
-  const [reviews, setReviews] = useState<ReviewItem[]>(() =>
-    mockReviews.map((r) => ({
-      id: r.id,
-      orderItemId: "order-item-" + r.id,
-      orderId: "order-" + r.id,
-      customerId: "cust-" + r.id,
-      customerName: r.customer,
-      productId: "prod-" + r.id,
-      rating: r.rating,
-      content: r.content,
-      status: r.status as "VISIBLE" | "HIDDEN",
-      createdAt: r.createdAt,
-    }))
-  );
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [selectedReviewForHide, setSelectedReviewForHide] = useState<ReviewItem | null>(null);
   const [isHideModalOpen, setIsHideModalOpen] = useState(false);
 
   // 2. Quản lý Hỏi đáp (P1)
   const [questions, setQuestions] = useState<
     { id: string; product: string; question: string; answer?: string; status: string }[]
-  >(mockQuestions);
+  >([]);
   const [answeringQuestionId, setAnsweringQuestionId] = useState<string | null>(null);
   const [answerInput, setAnswerInput] = useState("");
 
   // 3. Quản lý Hỗ trợ Chat (P2)
   const [conversations, setConversations] = useState<
     { id: string; customer: string; status: string; assignedAdmin?: string; messagesCount?: number }[]
-  >(
-    mockConversations.map((c) => ({
-      id: c.id,
-      customer: c.customer,
-      status: c.status,
-      assignedAdmin: c.assignedAdmin,
-      messagesCount: c.messages.length,
-    }))
-  );
+  >([]);
 
   useEffect(() => {
     let ignore = false;
     async function load() {
       let anyLive = false;
+      let hasError = false;
+      setErrorMsg("");
 
       // Tải danh sách Review
       try {
         const reviewRes = await engagementApi.reviews.getAdminReviews(0, 20);
-        if (!ignore && reviewRes?.content && reviewRes.content.length > 0) {
-          setReviews(reviewRes.content);
+        if (!ignore) {
+          setReviews(reviewRes.content ?? []);
           anyLive = true;
         }
       } catch {
-        // Fallback giữ nguyên
+        hasError = true;
       }
 
       // Tải danh sách Hỏi đáp
       try {
         const questionRes = await engagementApi.questions.getAdminQuestions(0, 20);
-        if (!ignore && questionRes?.content && questionRes.content.length > 0) {
+        if (!ignore) {
           setQuestions(
-            questionRes.content.map((q: ProductQuestionItem) => ({
+            (questionRes.content ?? []).map((q: ProductQuestionItem) => ({
               id: q.id,
               product: `Sản phẩm #${q.productId.slice(0, 8)}`,
               question: q.content,
@@ -99,15 +80,15 @@ export function AdminEngagementPage() {
           anyLive = true;
         }
       } catch {
-        // Fallback giữ nguyên
+        hasError = true;
       }
 
       // Tải danh sách Hội thoại Chat
       try {
         const chatRes = await engagementApi.support.adminConversations(0, 20);
-        if (!ignore && chatRes?.content && chatRes.content.length > 0) {
+        if (!ignore) {
           setConversations(
-            chatRes.content.map((c: ChatConversationItem) => ({
+            (chatRes.content ?? []).map((c: ChatConversationItem) => ({
               id: c.id,
               customer: `Khách #${c.customerId.slice(0, 8)}`,
               status: c.status,
@@ -118,11 +99,12 @@ export function AdminEngagementPage() {
           anyLive = true;
         }
       } catch {
-        // Fallback giữ nguyên
+        hasError = true;
       }
 
       if (!ignore) {
         setIsLive(anyLive);
+        if (hasError) setErrorMsg("Một số dữ liệu quản trị không tải được từ Engagement API.");
         setLoading(false);
       }
     }
@@ -153,9 +135,8 @@ export function AdminEngagementPage() {
     if (!trimmed) return;
 
     try {
-      if (isLive) {
-        await engagementApi.questions.answer(questionId, { content: trimmed });
-      }
+      setErrorMsg("");
+      await engagementApi.questions.answer(questionId, { content: trimmed });
       setQuestions((prev) =>
         prev.map((q) =>
           q.id === questionId ? { ...q, answer: trimmed, status: "ANSWERED" } : q
@@ -164,52 +145,36 @@ export function AdminEngagementPage() {
       setAnsweringQuestionId(null);
       setAnswerInput("");
     } catch {
-      setQuestions((prev) =>
-        prev.map((q) =>
-          q.id === questionId ? { ...q, answer: trimmed, status: "ANSWERED" } : q
-        )
-      );
-      setAnsweringQuestionId(null);
-      setAnswerInput("");
+      setErrorMsg("Không thể lưu câu trả lời.");
     }
   };
 
   // Hành động nhận hội thoại / đóng hội thoại
   const handleAssignConversation = async (conversationId: string) => {
     try {
-      if (isLive) {
-        await engagementApi.support.adminAssign(conversationId);
-      }
+      setErrorMsg("");
+      await engagementApi.support.adminAssign(conversationId);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId ? { ...c, assignedAdmin: "Bạn (Tôi)" } : c
         )
       );
     } catch {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId ? { ...c, assignedAdmin: "Bạn (Tôi)" } : c
-        )
-      );
+      setErrorMsg("Không thể nhận hội thoại.");
     }
   };
 
   const handleCloseConversation = async (conversationId: string) => {
     try {
-      if (isLive) {
-        await engagementApi.support.adminClose(conversationId);
-      }
+      setErrorMsg("");
+      await engagementApi.support.adminClose(conversationId);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId ? { ...c, status: "CLOSED" } : c
         )
       );
     } catch {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId ? { ...c, status: "CLOSED" } : c
-        )
-      );
+      setErrorMsg("Không thể đóng hội thoại.");
     }
   };
 
@@ -231,7 +196,7 @@ export function AdminEngagementPage() {
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-sm">
               <AlertCircle className="size-3.5" />
-              Dữ liệu mô phỏng
+              Mất kết nối API
             </span>
           )}
 
@@ -249,6 +214,8 @@ export function AdminEngagementPage() {
           </Button>
         </div>
       </div>
+
+      {errorMsg ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{errorMsg}</p> : null}
 
       <div className="grid gap-5 xl:grid-cols-3">
         {/* Cột 1: Đánh giá & Kiểm duyệt (P0 - UC-15) */}

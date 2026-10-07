@@ -6,5 +6,3 @@ export type LocationOption = { id: number; name: string };
 export type UserAudit = { id: string; action: string; oldRole?: string; newRole?: string; oldStatus?: string; newStatus?: string; reason: string; createdAt: string };
 export type AdminUser = { id: string; email: string; fullName: string; phone?: string; role: "CUSTOMER" | "ADMIN"; status: "ACTIVE" | "LOCKED" | "DISABLED"; lastLoginAt?: string; createdAt: string; audits?: UserAudit[] };
 export type PageResult<T> = { content: T[]; totalElements: number; totalPages: number; number: number; size: number };
-export type WishlistItem = { productId: string; createdAt: string };
-export type Wishlist = { items: WishlistItem[] };

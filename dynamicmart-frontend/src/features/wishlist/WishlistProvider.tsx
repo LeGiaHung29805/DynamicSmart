@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { customerApi } from "@/features/customer/api/customer.api";
-import type { WishlistItem } from "@/features/customer/types/customer.types";
+import { engagementApi } from "@/features/engagement/api/engagement.api";
+import type { WishlistItem } from "@/features/engagement/types/engagement.types";
 import { useAuthSession } from "@/lib/auth/session";
 
 type WishlistContextValue = {
@@ -25,7 +25,7 @@ export function WishlistProvider({ children }: Readonly<{ children: React.ReactN
     if (session.status === "loading") return;
     if (session.status === "anonymous") return;
     let cancelled = false;
-    customerApi.wishlist().then((value) => { if (!cancelled) setItems(value.items); })
+    engagementApi.wishlist.get().then((value) => { if (!cancelled) setItems(value.items); })
       .catch(() => { if (!cancelled) setItems([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -38,8 +38,14 @@ export function WishlistProvider({ children }: Readonly<{ children: React.ReactN
     const removing = favoriteIds.has(productId);
     setPending((current) => new Set(current).add(productId));
     try {
-      const value = removing ? await customerApi.removeFromWishlist(productId) : await customerApi.addToWishlist(productId);
-      setItems(value.items); return !removing;
+      if (removing) {
+        await engagementApi.wishlist.remove(productId);
+        setItems((current) => current.filter((item) => item.productId !== productId));
+        return false;
+      }
+      const value = await engagementApi.wishlist.add(productId);
+      setItems(value.items);
+      return true;
     } finally {
       setPending((current) => { const next = new Set(current); next.delete(productId); return next; });
     }

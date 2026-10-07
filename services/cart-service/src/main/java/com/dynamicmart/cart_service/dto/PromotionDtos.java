@@ -1,6 +1,7 @@
 package com.dynamicmart.cart_service.dto;
 
 import jakarta.validation.constraints.Future;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 public final class PromotionDtos {
@@ -25,6 +27,8 @@ public final class PromotionDtos {
                                      Instant startsAt, Instant endsAt, Set<UUID> variantIds, Instant updatedAt) { }
     public record DirectSalePriceResponse(UUID variantId, long listPriceVnd, long discountVnd, long salePriceVnd,
                                           Integer discountPercent, UUID promotionId, String promotionName, Instant endsAt) { }
+    public record DirectSalePriceRequest(@NotNull UUID variantId, @PositiveOrZero long listPriceVnd) { }
+    public record DirectSalePriceBatchRequest(@NotEmpty @Size(max = 200) List<@Valid @NotNull DirectSalePriceRequest> variants) { }
     public record PromotionAuditResponse(UUID id, UUID actorAdminId, String targetType, UUID targetId,
                                          String action, String reason, Instant createdAt) { }
 }

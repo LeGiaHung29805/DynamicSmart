@@ -31,6 +31,11 @@ public class PromotionController {
         return directSales.resolve(variantId, listPriceVnd);
     }
 
+    @PostMapping("/api/v1/cart/promotions/prices/resolve")
+    public List<DirectSalePriceResponse> prices(@Valid @RequestBody DirectSalePriceBatchRequest request) {
+        return directSales.resolveBatch(request);
+    }
+
     @GetMapping("/api/v1/cart/admin/direct-sales")
     public List<DirectSaleResponse> list() { return directSales.list(); }
     @GetMapping("/api/v1/cart/admin/direct-sales/{id}")

@@ -13,7 +13,7 @@ public final class PaymentMapper {
     public static PaymentResponse toResponse(Payment payment, String redirectUrl) {
         return new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getAmountVnd(),
                 payment.getTiming(), payment.getMethod(), payment.getStatus(), redirectUrl,
-                payment.getExpiresAt(), payment.getPaidAt(), payment.getCodReceiptNo(),
+                payment.getExpiresAt(), payment.getPaidAt(),
                 payment.getCodConfirmedBy(), payment.getCodConfirmedAt());
     }
 

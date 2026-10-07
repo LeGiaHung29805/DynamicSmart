@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { engagementApi } from "../api/engagement.api";
-import { mockQuestions, mockReviews } from "../mock-data";
 import type { ProductQuestionItem, ReviewItem } from "../types/engagement.types";
 import { CreateReviewModal } from "./CreateReviewModal";
 
@@ -18,42 +17,9 @@ export function ProductEngagementPanel({
   productId,
   productName,
 }: Readonly<ProductEngagementPanelProps>) {
-  const [reviews, setReviews] = useState<ReviewItem[]>(() =>
-    mockReviews.slice(0, 2).map((r) => ({
-      id: r.id,
-      orderItemId: "oi-" + r.id,
-      orderId: "ord-" + r.id,
-      customerId: "cust-" + r.id,
-      customerName: r.customer,
-      productId: productId ?? "prod-1",
-      rating: r.rating,
-      content: r.content,
-      status: r.status as "VISIBLE" | "HIDDEN",
-      createdAt: r.createdAt,
-    }))
-  );
-
-  const [questions, setQuestions] = useState<ProductQuestionItem[]>(() =>
-    mockQuestions.slice(0, 2).map((q) => ({
-      id: q.id,
-      productId: productId ?? "prod-1",
-      customerId: "cust-mock",
-      content: q.question,
-      status: q.answer ? ("ANSWERED" as const) : ("OPEN" as const),
-      answers: q.answer
-        ? [
-            {
-              id: "ans-" + q.id,
-              questionId: q.id,
-              adminId: "admin-1",
-              content: q.answer,
-              createdAt: new Date().toISOString(),
-            },
-          ]
-        : [],
-      createdAt: new Date().toISOString(),
-    }))
-  );
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [questions, setQuestions] = useState<ProductQuestionItem[]>([]);
+  const [loadError, setLoadError] = useState("");
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
@@ -65,23 +31,14 @@ export function ProductEngagementPanel({
   // Lấy review thật và hỏi đáp thật theo productId nếu có
   useEffect(() => {
     if (!productId) return;
-    engagementApi.reviews
-      .getByProduct(productId, 0, 10)
-      .then((res) => {
-        if (res?.content && res.content.length > 0) {
-          setReviews(res.content);
-        }
-      })
-      .catch(() => {});
-
-    engagementApi.questions
-      .getByProduct(productId, 0, 10)
-      .then((res) => {
-        if (res?.content && res.content.length > 0) {
-          setQuestions(res.content);
-        }
-      })
-      .catch(() => {});
+    setLoadError("");
+    Promise.all([
+      engagementApi.reviews.getByProduct(productId, 0, 10),
+      engagementApi.questions.getByProduct(productId, 0, 10),
+    ]).then(([reviewResult, questionResult]) => {
+      setReviews(reviewResult.content ?? []);
+      setQuestions(questionResult.content ?? []);
+    }).catch(() => setLoadError("Không thể tải đánh giá và hỏi đáp. Vui lòng thử lại sau."));
   }, [productId]);
 
   const handleReviewSuccess = (newReview: ReviewItem) => {
@@ -111,23 +68,7 @@ export function ProductEngagementPanel({
         setQuestionContent("");
       }, 1200);
     } catch {
-      // Optimistic fallback nếu chưa đăng nhập hoặc API mock
-      const optimisticQuestion: ProductQuestionItem = {
-        id: "q-" + Date.now(),
-        productId,
-        customerId: "current-customer",
-        content: questionContent.trim(),
-        status: "OPEN",
-        answers: [],
-        createdAt: new Date().toISOString(),
-      };
-      setQuestions((prev) => [optimisticQuestion, ...prev]);
-      setQuestionSuccess(true);
-      setTimeout(() => {
-        setQuestionSuccess(false);
-        setIsQuestionModalOpen(false);
-        setQuestionContent("");
-      }, 1200);
+      setQuestionError("Không thể gửi câu hỏi. Vui lòng đăng nhập và thử lại.");
     } finally {
       setSubmittingQuestion(false);
     }
@@ -137,7 +78,7 @@ export function ProductEngagementPanel({
   const avgRating =
     reviews.length > 0
       ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-      : "5.0";
+      : "0.0";
 
   return (
     <SurfacePanel className="h-fit">
@@ -158,6 +99,7 @@ export function ProductEngagementPanel({
       </div>
 
       <div className="mt-5 space-y-4">
+        {loadError ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{loadError}</p> : null}
         {/* Nút hành động */}
         <div className="flex gap-2">
           <Button

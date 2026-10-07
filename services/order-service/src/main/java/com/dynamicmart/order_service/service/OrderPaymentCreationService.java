@@ -29,7 +29,9 @@ public class OrderPaymentCreationService {
             if (command.existingPaymentId() == null) {
                 throw conflict("PAYMENT_CHECKPOINT_INCOMPLETE", "Saga PAYMENT_REQUESTED thiếu paymentId.");
             }
-            return new PaymentCheckpoint(command.existingPaymentId(), command.existingPaymentDueAt(), false);
+            PaymentResponse response = payments.getPayment(command.existingPaymentId());
+            validateResponse(command, response);
+            return new PaymentCheckpoint(response.id(), response.expiresAt(), response.redirectUrl(), false);
         }
         if (command.sagaStatus() == SagaStatus.COMPLETED
                 || command.sagaStatus() == SagaStatus.FINALIZING_RESERVATIONS
@@ -37,18 +39,23 @@ public class OrderPaymentCreationService {
             if (command.finalTotalVnd() > 0 && command.existingPaymentId() == null) {
                 throw conflict("PAYMENT_CHECKPOINT_INCOMPLETE", "Saga đang hoàn tất reservation nhưng thiếu paymentId.");
             }
+            if (command.existingPaymentId() != null) {
+                PaymentResponse response = payments.getPayment(command.existingPaymentId());
+                validateResponse(command, response);
+                return new PaymentCheckpoint(response.id(), response.expiresAt(), response.redirectUrl(), false);
+            }
             return new PaymentCheckpoint(
-                    command.existingPaymentId(), command.existingPaymentDueAt(), command.finalTotalVnd() == 0);
+                    command.existingPaymentId(), command.existingPaymentDueAt(), null, command.finalTotalVnd() == 0);
         }
         if (command.sagaStatus() != SagaStatus.ORDER_CREATED) {
             throw conflict("PAYMENT_CHECKPOINT_NOT_READY", "Order Saga chưa sẵn sàng tạo Payment.");
         }
         if (command.finalTotalVnd() == 0) {
             if ("PAYMENT_NOT_REQUIRED".equals(command.sagaStep())) {
-                return new PaymentCheckpoint(null, null, true);
+                return new PaymentCheckpoint(null, null, null, true);
             }
             checkpoints.markPaymentNotRequired(command.sagaId(), command.orderId());
-            return new PaymentCheckpoint(null, null, true);
+            return new PaymentCheckpoint(null, null, null, true);
         }
 
         PaymentResponse response = payments.createPayment(new OrderPaymentContextRequest(
@@ -57,7 +64,7 @@ public class OrderPaymentCreationService {
         validateResponse(command, response);
         checkpoints.markPaymentRequested(
                 command.sagaId(), command.orderId(), response.id(), response.expiresAt());
-        return new PaymentCheckpoint(response.id(), response.expiresAt(), false);
+        return new PaymentCheckpoint(response.id(), response.expiresAt(), response.redirectUrl(), false);
     }
 
     private void validateResponse(PaymentCommand command, PaymentResponse response) {
@@ -92,6 +99,6 @@ public class OrderPaymentCreationService {
             UUID correlationId) {
     }
 
-    public record PaymentCheckpoint(UUID paymentId, Instant paymentDueAt, boolean paymentNotRequired) {
+    public record PaymentCheckpoint(UUID paymentId, Instant paymentDueAt, String redirectUrl, boolean paymentNotRequired) {
     }
 }

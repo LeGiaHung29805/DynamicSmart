@@ -34,13 +34,14 @@ class OrderPaymentCreationServiceTests {
         Fixture fixture = fixture();
         when(fixture.payments.createPayment(any())).thenReturn(response(125_000));
 
-        fixture.service.ensurePayment(command(125_000, SagaStatus.ORDER_CREATED, null, "ORDER_SNAPSHOTS_PERSISTED"));
+        var result = fixture.service.ensurePayment(command(125_000, SagaStatus.ORDER_CREATED, null, "ORDER_SNAPSHOTS_PERSISTED"));
 
         ArgumentCaptor<OrderPaymentContextRequest> request = ArgumentCaptor.forClass(OrderPaymentContextRequest.class);
         verify(fixture.payments).createPayment(request.capture());
         assertEquals(ORDER_ID, request.getValue().orderId());
         assertEquals(CUSTOMER_ID, request.getValue().customerId());
         assertEquals(125_000, request.getValue().amountVnd());
+        assertEquals("https://pay.example/checkout", result.redirectUrl());
         verify(fixture.checkpoints).markPaymentRequested(SAGA_ID, ORDER_ID, PAYMENT_ID, DUE_AT);
     }
 
@@ -59,11 +60,13 @@ class OrderPaymentCreationServiceTests {
     @Test
     void paymentRequestedCheckpointMakesRetryRemoteCallFree() {
         Fixture fixture = fixture();
+        when(fixture.payments.getPayment(PAYMENT_ID)).thenReturn(response(125_000));
 
-        fixture.service.ensurePayment(command(125_000, SagaStatus.PAYMENT_REQUESTED, PAYMENT_ID,
+        var result = fixture.service.ensurePayment(command(125_000, SagaStatus.PAYMENT_REQUESTED, PAYMENT_ID,
                 "PAYMENT_CONTEXT_CREATED"));
 
         verify(fixture.payments, never()).createPayment(any());
+        assertEquals("https://pay.example/checkout", result.redirectUrl());
         verify(fixture.checkpoints, never()).markPaymentRequested(any(), any(), any(), any());
     }
 
@@ -92,6 +95,7 @@ class OrderPaymentCreationServiceTests {
     @Test
     void reservationFinalizationCheckpointMakesPaymentRetryRemoteCallFree() {
         Fixture fixture = fixture();
+        when(fixture.payments.getPayment(PAYMENT_ID)).thenReturn(response(125_000));
 
         var result = fixture.service.ensurePayment(command(
                 125_000, SagaStatus.FINALIZING_RESERVATIONS, PAYMENT_ID,
@@ -117,7 +121,7 @@ class OrderPaymentCreationServiceTests {
     private PaymentResponse response(long amount) {
         return new PaymentResponse(
                 PAYMENT_ID, ORDER_ID, amount, "PREPAID", "VNPAY", "PENDING",
-                null, DUE_AT, null);
+                "https://pay.example/checkout", DUE_AT, null);
     }
 
     private record Fixture(

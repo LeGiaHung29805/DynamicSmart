@@ -93,7 +93,7 @@ class CreateOrderFacadeTests {
     private CreationResult result(boolean replay) {
         return new CreationResult(
                 ORDER_ID, "ORD-1", OrderStatus.PENDING_PAYMENT, SAGA_ID,
-                UUID.randomUUID(), Instant.now().plusSeconds(900), replay);
+                UUID.randomUUID(), Instant.now().plusSeconds(900), "https://pay.example/checkout", replay);
     }
 
     private record Fixture(

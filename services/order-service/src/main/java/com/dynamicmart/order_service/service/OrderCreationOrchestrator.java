@@ -60,7 +60,7 @@ public class OrderCreationOrchestrator {
             reservationFinalization.finalizeIfConfirmed(committed.saga().getId(), committed.order().getId());
             return new CreationResult(
                     committed.order().getId(), committed.order().getOrderNumber(), committed.order().getStatus(),
-                    committed.saga().getId(), payment.paymentId(), payment.paymentDueAt(), true);
+                    committed.saga().getId(), payment.paymentId(), payment.paymentDueAt(), payment.redirectUrl(), true);
         }
 
         ValidatedOrderInput input = revalidation.revalidate(customerId, admission.sagaId());
@@ -81,7 +81,7 @@ public class OrderCreationOrchestrator {
         reservationFinalization.finalizeIfConfirmed(admission.sagaId(), persisted.orderId());
         return new CreationResult(
                 persisted.orderId(), persisted.orderNumber(), persisted.status(), admission.sagaId(),
-                payment.paymentId(), payment.paymentDueAt(), admission.replay() || persisted.replay());
+                payment.paymentId(), payment.paymentDueAt(), payment.redirectUrl(), admission.replay() || persisted.replay());
     }
 
     private CommittedOrder findCommittedOrder(UUID customerId, AdmissionResult admission) {
@@ -118,6 +118,7 @@ public class OrderCreationOrchestrator {
             UUID sagaId,
             UUID paymentId,
             Instant paymentDueAt,
+            String redirectUrl,
             boolean replay) {
     }
 

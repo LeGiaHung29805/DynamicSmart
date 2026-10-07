@@ -27,7 +27,6 @@ public class Payment {
     @Column(name = "failed_at") private Instant failedAt;
     @Column(name = "provider_transaction_ref", length = 100) private String providerTransactionRef;
     @Column(name = "correlation_id", nullable = false) private UUID correlationId;
-    @Column(name = "cod_receipt_no", length = 100) private String codReceiptNo;
     @Column(name = "cod_confirmed_by") private UUID codConfirmedBy;
     @Column(name = "cod_confirmed_at") private Instant codConfirmedAt;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
