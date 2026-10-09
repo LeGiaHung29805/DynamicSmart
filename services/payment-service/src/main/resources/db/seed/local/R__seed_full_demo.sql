@@ -117,4 +117,3 @@ FROM (
     SELECT id, status, count(*) OVER (PARTITION BY status) AS status_count
     FROM payments WHERE id::text LIKE 'e1000000-%'
 ) summary;
-

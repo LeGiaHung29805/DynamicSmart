@@ -38,6 +38,11 @@ app:
   clients:
     cart-service-url: ${CART_SERVICE_BASE_URL:http://localhost:8083}
     engagement-service-url: ${ENGAGEMENT_SERVICE_BASE_URL:http://localhost:8086}
+    engagement-connect-timeout-ms: ${ENGAGEMENT_SERVICE_CONNECT_TIMEOUT_MS:1000}
+    engagement-read-timeout-ms: ${ENGAGEMENT_SERVICE_READ_TIMEOUT_MS:1500}
+    best-seller-fallback-product-ids: ${BEST_SELLER_FALLBACK_PRODUCT_IDS:}
+  cors:
+    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
   security:
     jwt:
       issuer: ${JWT_ISSUER:dynamicmart-identity-service}
@@ -47,4 +52,12 @@ app:
   inventory:
     expiration-scan-ms: ${INVENTORY_EXPIRATION_SCAN_MS:30000}
   outbox:
+    enabled: ${OUTBOX_ENABLED:true}
     publisher-delay-ms: ${OUTBOX_PUBLISHER_DELAY_MS:1000}
+  promotion:
+    mode: ${CATALOG_PROMOTION_MODE:HTTP}
+    cart-service-url: ${CART_SERVICE_BASE_URL:http://localhost:8083}
+    connect-timeout-ms: ${CART_SERVICE_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${CART_SERVICE_READ_TIMEOUT_MS:1500}
+    demo-discount-percent: ${CATALOG_DEMO_DISCOUNT_PERCENT:15}
+    demo-duration-minutes: ${CATALOG_DEMO_DISCOUNT_DURATION_MINUTES:120}

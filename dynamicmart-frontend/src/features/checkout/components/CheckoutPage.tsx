@@ -48,7 +48,7 @@ function errorMessage(cause: unknown, fallback: string) {
   return isApiError(cause) ? cause.message : fallback;
 }
 
-export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?: string }>) {
+export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ initialSessionId?: string; initialVoucherId?: string }>) {
   const router = useRouter();
   const auth = useAuthSession();
   const [step, setStep] = useState<Step>("address");
@@ -111,6 +111,10 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
         setSession(nextSession);
         setAddresses(nextAddresses);
         setVouchers(nextVouchers);
+        if (initialVoucherId) {
+          const initialVoucher = nextVouchers.find((item) => item.id === initialVoucherId && item.scope !== "SHIPPING_DISCOUNT");
+          if (initialVoucher) setMerchandiseVoucherId(initialVoucher.id);
+        }
         setAddressId(nextSession.addressId ?? nextAddresses.find((item) => item.defaultAddress)?.id ?? nextAddresses[0]?.id ?? "");
         setPaymentMethod(nextSession.paymentMethod ?? "COD");
         setPaymentTiming(nextSession.paymentTiming ?? "POSTPAID");
@@ -123,7 +127,7 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
     }
     void load();
     return () => { ignored = true; };
-  }, [auth.status, initialSessionId, router]);
+  }, [auth.status, initialSessionId, initialVoucherId, router]);
 
   function invalidateDraft() {
     setPreview(null);
@@ -243,7 +247,7 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
 }
 
 function AddressStep({ addresses, addressId, disabled, select, showForm, toggleForm, saved, next }: Readonly<{ addresses: Address[]; addressId: string; disabled: boolean; select: (id: string) => void; showForm: boolean; toggleForm: () => void; saved: (address: Address) => Promise<void>; next: () => void }>) {
-  return <div className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black text-stone-950">1. Chọn địa chỉ giao hàng</h2><p className="mt-1 text-sm text-stone-500">Máy chủ kiểm tra địa chỉ thuộc tài khoản trước khi báo giá.</p></div><Button variant="outline" disabled={disabled} onClick={toggleForm}><Plus />{showForm ? "Đóng biểu mẫu" : "Thêm địa chỉ"}</Button></div>{showForm ? <InlineAddressForm saved={saved} /> : null}{addresses.length === 0 ? <div className="rounded-2xl border border-dashed border-stone-300 p-7 text-center"><MapPin className="mx-auto size-9 text-stone-300" /><p className="mt-3 font-bold text-stone-800">Bạn chưa có địa chỉ nhận hàng</p></div> : <div className="grid gap-3 sm:grid-cols-2">{addresses.map((address) => <label className={`relative block cursor-pointer rounded-2xl border p-4 transition ${addressId === address.id ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-stone-200 hover:border-rose-200"}`} key={address.id}><div className="flex items-start gap-3"><input className="mt-1 size-4 accent-rose-600" type="radio" checked={addressId === address.id} disabled={disabled} onChange={() => select(address.id)} /><div><div className="flex flex-wrap items-center gap-2"><strong>{address.recipientName}</strong>{address.defaultAddress ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700">Mặc định</span> : null}</div><p className="mt-1 text-sm font-semibold text-stone-600">{address.phone}</p><p className="mt-2 text-sm leading-6 text-stone-600">{address.addressLine}, {address.wardName}, {address.provinceName}</p></div></div></label>)}</div>}<div className="flex justify-end border-t border-stone-200 pt-5"><Button size="lg" disabled={!addressId || disabled} onClick={next}>Lấy báo giá GHN<ChevronRight /></Button></div></div>;
+  return <div className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black text-stone-950">1. Chọn địa chỉ giao hàng</h2><p className="mt-1 text-sm text-stone-500">Máy chủ kiểm tra địa chỉ thuộc tài khoản trước khi báo giá.</p></div><Button variant="outline" disabled={disabled} onClick={toggleForm}><Plus />{showForm ? "Đóng biểu mẫu" : "Thêm địa chỉ"}</Button></div>{showForm ? <InlineAddressForm saved={saved} /> : null}{addresses.length === 0 ? <div className="rounded-2xl border border-dashed border-stone-300 p-7 text-center"><MapPin className="mx-auto size-9 text-stone-300" /><p className="mt-3 font-bold text-stone-800">Bạn chưa có địa chỉ nhận hàng</p></div> : <div className="grid gap-3 sm:grid-cols-2">{addresses.map((address) => <label className={`relative block cursor-pointer rounded-2xl border p-4 transition ${addressId === address.id ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-stone-200 hover:border-rose-200"}`} key={address.id}><div className="flex items-start gap-3"><input className="mt-1 size-4 accent-rose-600" type="radio" checked={addressId === address.id} disabled={disabled} onChange={() => select(address.id)} /><div><div className="flex flex-wrap items-center gap-2"><strong>{address.recipientName}</strong>{address.defaultAddress ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Mặc định</span> : null}</div><p className="mt-1 text-sm font-semibold text-stone-600">{address.phone}</p><p className="mt-2 text-sm leading-6 text-stone-600">{address.addressLine}, {address.wardName}, {address.provinceName}</p></div></div></label>)}</div>}<div className="flex justify-end border-t border-stone-200 pt-5"><Button size="lg" disabled={!addressId || disabled} onClick={next}>Lấy báo giá GHN<ChevronRight /></Button></div></div>;
 }
 
 function InlineAddressForm({ saved }: Readonly<{ saved: (address: Address) => Promise<void> }>) {

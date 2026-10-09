@@ -163,6 +163,10 @@ export function listAdminProducts(query: {
   return apiClient.get<PageResponse<AdminProduct>>(`/api/v1/catalog/admin/products?${params.toString()}`);
 }
 
+export function getAdminProduct(productId: string) {
+  return apiClient.get<AdminProduct>(`/api/v1/catalog/admin/products/${productId}`);
+}
+
 export function createProduct(input: ProductInput) {
   return apiClient.post<AdminProduct>("/api/v1/catalog/admin/products", input);
 }

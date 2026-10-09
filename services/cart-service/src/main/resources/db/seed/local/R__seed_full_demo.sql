@@ -72,4 +72,3 @@ SELECT 'cart' AS domain,
        (SELECT count(*) FROM cart_items WHERE id::text LIKE 'c2000000-%') AS cart_items,
        (SELECT count(*) FROM vouchers WHERE id::text LIKE 'c4000000-%') AS vouchers
 FROM carts;
-

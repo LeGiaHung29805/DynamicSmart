@@ -31,14 +31,19 @@ export function ProductEngagementPanel({
   // Lấy review thật và hỏi đáp thật theo productId nếu có
   useEffect(() => {
     if (!productId) return;
+    let cancelled = false;
     Promise.all([
       engagementApi.reviews.getByProduct(productId, 0, 10),
       engagementApi.questions.getByProduct(productId, 0, 10),
     ]).then(([reviewResult, questionResult]) => {
+      if (cancelled) return;
       setLoadError("");
       setReviews(reviewResult.content ?? []);
       setQuestions(questionResult.content ?? []);
-    }).catch(() => setLoadError("Không thể tải đánh giá và hỏi đáp. Vui lòng thử lại sau."));
+    }).catch(() => {
+      if (!cancelled) setLoadError("Không thể tải đánh giá và hỏi đáp. Vui lòng thử lại sau.");
+    });
+    return () => { cancelled = true; };
   }, [productId]);
 
   const handleReviewSuccess = (newReview: ReviewItem) => {
@@ -177,11 +182,11 @@ export function ProductEngagementPanel({
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-bold text-slate-950">{question.content}</p>
                   {question.answers && question.answers.length > 0 ? (
-                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">
                       Đã trả lời
                     </span>
                   ) : (
-                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">
                       Chờ trả lời
                     </span>
                   )}
@@ -262,7 +267,7 @@ export function ProductEngagementPanel({
                     value={questionContent}
                     onChange={(e) => setQuestionContent(e.target.value)}
                   />
-                  <div className="mt-1 text-right text-[11px] text-slate-400">
+                  <div className="mt-1 text-right text-xs text-slate-500">
                     {questionContent.length}/1000 ký tự
                   </div>
                 </div>

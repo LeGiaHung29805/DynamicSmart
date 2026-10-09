@@ -162,7 +162,7 @@ export function CustomerSupportPage() {
                       #{conversation.id.slice(0, 10)}
                     </span>
                     <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                      className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
                         conversation.status === "OPEN"
                           ? "bg-emerald-100 text-emerald-800"
                           : "bg-slate-100 text-slate-600"
@@ -226,7 +226,7 @@ export function CustomerSupportPage() {
                       >
                         <p className="leading-relaxed">{message.content}</p>
                       </div>
-                      <span className="mt-1 text-[11px] text-slate-400 flex items-center gap-1">
+                      <span className="mt-1 text-xs text-slate-500 flex items-center gap-1">
                         {isCust ? (
                           <User className="size-3" />
                         ) : (

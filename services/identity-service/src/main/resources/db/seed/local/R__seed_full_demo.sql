@@ -47,4 +47,3 @@ SELECT 'identity' AS domain,
        count(*) FILTER (WHERE id::text LIKE 'a1000000-%') AS customers,
        (SELECT count(*) FROM addresses WHERE id::text LIKE 'a2000000-%') AS addresses
 FROM users;
-

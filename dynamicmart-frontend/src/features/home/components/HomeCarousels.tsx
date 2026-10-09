@@ -258,7 +258,7 @@ export function BrandCarousel() {
           >
             <span className="absolute -right-3 -bottom-9 -z-10 text-[8rem] leading-none font-black opacity-[0.08] transition duration-500 group-hover:-translate-y-2 group-hover:scale-105">{brand.mark}</span>
             <span className="text-xl font-black tracking-[-0.04em] sm:text-2xl">{brand.name}</span>
-            <span className="flex items-end justify-between gap-2 text-[11px] font-semibold opacity-75 sm:text-xs">{brand.subtitle}<ArrowUpRight className="size-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
+            <span className="flex items-end justify-between gap-2 text-xs font-semibold opacity-85">{brand.subtitle}<ArrowUpRight className="size-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
           </Link>
         ))}
       </div>

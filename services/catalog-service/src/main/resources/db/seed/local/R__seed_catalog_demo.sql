@@ -102,3 +102,11 @@ VALUES
     ('50000000-0000-0000-0000-000000000002', 8, 0),
     ('50000000-0000-0000-0000-000000000003', 5, 0)
 ON CONFLICT DO NOTHING;
+
+-- Giữ số liệu tổng hợp Catalog nhất quán với review mẫu trong engagement_db.
+-- Chi tiết review vẫn thuộc Engagement Service; Catalog chỉ lưu aggregate để đọc nhanh.
+UPDATE products
+SET average_rating = 5.00,
+    review_count = 1,
+    updated_at = NOW()
+WHERE id = '40000000-0000-0000-0000-000000000001';

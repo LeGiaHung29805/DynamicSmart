@@ -97,7 +97,7 @@ Bảng dưới là mục lục schema đích để cả nhóm thấy nhanh owner
 
 Mỗi database bổ sung `outbox_events`, `processed_events` và `idempotency_records` khi service tương ứng phát event, nhận event hoặc có command cần chống lặp. Không tạo một database kỹ thuật dùng chung và không tạo khóa ngoại giữa các database.
 
-Riêng `catalog_db` đã có schema P0 trong `services/catalog-service/src/main/resources/db/migration/V1__initial_schema.sql`; `V2__catalog_publication_and_indexes.sql` bổ sung thời điểm công khai, cờ nổi bật và index phục vụ search/filter. Mọi thay đổi tiếp theo phải tạo migration mới, không sửa file đã áp dụng ở môi trường dùng chung.
+Riêng `catalog_db` đã có schema P0 trong `services/catalog-service/src/main/resources/db/migration/V1__initial_schema.sql`; `V2__catalog_publication_and_indexes.sql` bổ sung thời điểm công khai, cờ nổi bật và index phục vụ search/filter; `V3__add_rating_columns.sql` bổ sung điểm và số lượt đánh giá tổng hợp. Mọi thay đổi tiếp theo phải tạo migration mới, không sửa file đã áp dụng ở môi trường dùng chung.
 
 ---
 

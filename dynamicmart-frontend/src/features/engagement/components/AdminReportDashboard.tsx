@@ -253,7 +253,7 @@ export function AdminReportDashboard() {
                   >
                     <div>
                       <span className="font-semibold text-xs sm:text-sm text-slate-900">{item.date}</span>
-                      <span className="block text-[11px] text-slate-400">{item.orders} đơn hoàn tất</span>
+                      <span className="block text-xs text-slate-500">{item.orders} đơn hoàn tất</span>
                     </div>
 
                     <div className="h-3 overflow-hidden rounded-full bg-slate-100">

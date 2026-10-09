@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.dynamicmart.catalog_service.client.PromotionPriceClient;
+import com.dynamicmart.catalog_service.config.CatalogPromotionProperties;
 import com.dynamicmart.catalog_service.entity.ProductVariant;
 import java.time.Instant;
 import java.util.List;
@@ -13,7 +14,8 @@ import org.junit.jupiter.api.Test;
 
 class PromotionPriceServiceTest {
     private final PromotionPriceClient client = mock(PromotionPriceClient.class);
-    private final PromotionPriceService service = new PromotionPriceService(client);
+    private final CatalogPromotionProperties httpProperties = properties(CatalogPromotionProperties.Mode.HTTP);
+    private final PromotionPriceService service = new PromotionPriceService(client, httpProperties);
 
     @Test
     void overlaysValidDirectSalePriceAndKeepsListPriceForOtherVariants() {
@@ -41,8 +43,35 @@ class PromotionPriceServiceTest {
         assertThat(service.resolve(List.of(variant)).get(variant.getId()).salePriceVnd()).isNull();
     }
 
+    @Test
+    void calculatesDeterministicStandaloneDemoDiscountWithoutCallingCart() {
+        PromotionPriceService demoService = new PromotionPriceService(client,
+                properties(CatalogPromotionProperties.Mode.DEMO));
+        ProductVariant variant = variant(1_000_000);
+
+        var price = demoService.resolve(List.of(variant)).get(variant.getId());
+
+        assertThat(price.listPriceVnd()).isEqualTo(1_000_000);
+        assertThat(price.salePriceVnd()).isEqualTo(850_000);
+        assertThat(price.directSaleDiscountVnd()).isEqualTo(150_000);
+        assertThat(price.directSalePercent()).isEqualTo(15);
+    }
+
+    @Test
+    void disabledPromotionKeepsListPrice() {
+        PromotionPriceService disabledService = new PromotionPriceService(client,
+                properties(CatalogPromotionProperties.Mode.DISABLED));
+        ProductVariant variant = variant(500_000);
+
+        assertThat(disabledService.resolve(List.of(variant)).get(variant.getId()).salePriceVnd()).isNull();
+    }
+
     private ProductVariant variant(long price) {
         return new ProductVariant(UUID.randomUUID(), UUID.randomUUID(), "SKU-" + UUID.randomUUID(), null,
                 price, 500, null, null, null, 0);
+    }
+
+    private CatalogPromotionProperties properties(CatalogPromotionProperties.Mode mode) {
+        return new CatalogPromotionProperties(mode, null, 1000, 1500, 15, 120);
     }
 }

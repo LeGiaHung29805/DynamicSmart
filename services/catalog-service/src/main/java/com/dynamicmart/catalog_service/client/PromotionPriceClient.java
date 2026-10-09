@@ -1,10 +1,12 @@
 package com.dynamicmart.catalog_service.client;
 
+import com.dynamicmart.catalog_service.config.CatalogPromotionProperties;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -13,10 +15,13 @@ import org.springframework.web.client.RestClientException;
 public class PromotionPriceClient {
     private final RestClient restClient;
 
-    public PromotionPriceClient(
-            @Value("${app.clients.cart-service-url:http://localhost:8083}") String cartServiceUrl,
-            RestClient.Builder builder) {
-        this.restClient = builder.baseUrl(cartServiceUrl).build();
+    public PromotionPriceClient(CatalogPromotionProperties properties, RestClient.Builder builder) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofMillis(properties.connectTimeoutMs()));
+        requestFactory.setReadTimeout(Duration.ofMillis(properties.readTimeoutMs()));
+        this.restClient = builder.baseUrl(properties.cartServiceUrl())
+                .requestFactory(requestFactory)
+                .build();
     }
 
     public List<PriceResponse> resolve(List<PriceRequest> variants) {
