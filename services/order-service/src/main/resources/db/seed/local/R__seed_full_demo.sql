@@ -61,13 +61,20 @@ SELECT
     ('b2000000-0000-4000-8000-' || lpad(product_no::text, 12, '0'))::uuid,
     ('b3000000-0000-4000-8000-' || lpad((((product_no - 1) * 3) + 1)::text, 12, '0'))::uuid,
     'DM-' || lpad(product_no::text, 3, '0') || '-1', 'Sản phẩm DynamicMart ' || lpad(product_no::text, 3, '0'), 'Tiêu chuẩn',
-    format('https://placehold.co/800x800/png?text=DynamicMart+%s+V1', lpad(product_no::text, 3, '0')),
+    CASE ((product_no - 1) % 6) + 1
+        WHEN 1 THEN 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=80'
+        WHEN 2 THEN 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1000&q=80'
+        WHEN 3 THEN 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80'
+        WHEN 4 THEN 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1000&q=80'
+        WHEN 5 THEN 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=80'
+        ELSE 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=1000&q=80'
+    END,
     79000 + product_no * 7000, 0, 79000 + product_no * 7000,
     quantity, 250 + (product_no % 8) * 100,
     20 + (product_no % 5), 15 + (product_no % 4), 5 + (product_no % 3),
     NOW() - make_interval(days => 49 - i)
 FROM data
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET image_url = EXCLUDED.image_url;
 
 WITH data AS (
     SELECT i,
@@ -155,12 +162,19 @@ SELECT
     ('b2000000-0000-4000-8000-' || lpad(product_no::text, 12, '0'))::uuid,
     ('b3000000-0000-4000-8000-' || lpad((((product_no - 1) * 3) + 1)::text, 12, '0'))::uuid,
     'DM-' || lpad(product_no::text, 3, '0') || '-1', 'Sản phẩm DynamicMart ' || lpad(product_no::text, 3, '0'), 'Tiêu chuẩn',
-    format('https://placehold.co/800x800/png?text=DynamicMart+%s+V1', lpad(product_no::text, 3, '0')),
+    CASE ((product_no - 1) % 6) + 1
+        WHEN 1 THEN 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=80'
+        WHEN 2 THEN 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1000&q=80'
+        WHEN 3 THEN 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80'
+        WHEN 4 THEN 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1000&q=80'
+        WHEN 5 THEN 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=80'
+        ELSE 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=1000&q=80'
+    END,
     79000 + product_no * 7000, 0, 79000 + product_no * 7000,
     quantity, 0, 0, (79000 + product_no * 7000) * quantity,
     250 + (product_no % 8) * 100, NOW() - make_interval(days => 49 - i)
 FROM data
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET image_url = EXCLUDED.image_url;
 
 INSERT INTO order_shipping_snapshots (
     id, order_id, quote_id, input_fingerprint, service_id, service_name,

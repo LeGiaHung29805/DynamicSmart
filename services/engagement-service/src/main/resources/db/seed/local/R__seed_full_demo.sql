@@ -59,10 +59,14 @@ INSERT INTO review_images (id, review_id, image_url, sort_order, created_at)
 SELECT
     ('fa000000-0000-4000-8000-' || lpad(review_no::text, 12, '0'))::uuid,
     ('f3000000-0000-4000-8000-' || lpad(review_no::text, 12, '0'))::uuid,
-    format(
-        'https://placehold.co/1200x900/png?text=Review+DynamicMart+%s',
-        lpad(product_no::text, 3, '0')
-    ),
+    CASE ((product_no - 1) % 6) + 1
+        WHEN 1 THEN 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80'
+        WHEN 2 THEN 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80'
+        WHEN 3 THEN 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80'
+        WHEN 4 THEN 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1200&q=80'
+        WHEN 5 THEN 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80'
+        ELSE 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=1200&q=80'
+    END,
     0,
     NOW() - make_interval(days => 48 - i)
 FROM completed
