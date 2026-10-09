@@ -1,0 +1,182 @@
+{
+  "info": {
+    "_postman_id": "65d04f14-4bf9-46d3-9bda-orderstandalone",
+    "name": "DynamicMart - Order Standalone",
+    "description": "Chạy trọn luồng Order Service với profile local,standalone. Identity, Cart, Catalog và Payment đều có adapter mock trong tiến trình Order; PostgreSQL, RabbitMQ và toàn bộ nghiệp vụ Order vẫn chạy thật.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "customerToken", "value": "" },
+    { "key": "otherCustomerToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "customerId", "value": "" },
+    { "key": "addressId", "value": "" },
+    { "key": "cartId", "value": "" },
+    { "key": "phoneVariantId", "value": "" },
+    { "key": "merchandiseVoucherId", "value": "" },
+    { "key": "shippingVoucherId", "value": "" },
+    { "key": "checkoutSessionId", "value": "" },
+    { "key": "quoteId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "createOrderKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Bootstrap",
+      "item": [
+        {
+          "name": "Health",
+          "request": { "method": "GET", "url": "{{orderBaseUrl}}/actuator/health" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Order is UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"] } }]
+        },
+        {
+          "name": "Load standalone fixtures",
+          "request": { "method": "GET", "url": "{{orderBaseUrl}}/api/v1/standalone/data" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Fixture API is available', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "['customerId','addressId','cartId','phoneVariantId','merchandiseVoucherId','shippingVoucherId'].forEach(key => pm.collectionVariables.set(key, data[key]));"
+          ] } }]
+        },
+        {
+          "name": "Issue customer token",
+          "request": { "method": "POST", "url": "{{orderBaseUrl}}/api/v1/standalone/tokens/customer" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Customer token issued', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('customerToken', pm.response.json().accessToken);"] } }]
+        },
+        {
+          "name": "Issue other-customer token",
+          "request": { "method": "POST", "url": "{{orderBaseUrl}}/api/v1/standalone/tokens/other-customer" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Other customer token issued', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('otherCustomerToken', pm.response.json().accessToken);"] } }]
+        },
+        {
+          "name": "Issue admin token",
+          "request": { "method": "POST", "url": "{{orderBaseUrl}}/api/v1/standalone/tokens/admin" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Admin token issued', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('adminToken', pm.response.json().accessToken);"] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Checkout and create COD order",
+      "item": [
+        {
+          "name": "Create checkout from mock cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"source\": \"CART\",\n  \"cartId\": \"{{cartId}}\"\n}" },
+            "url": "{{orderBaseUrl}}/api/v1/checkout/sessions"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Checkout created with two server-owned items', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().items).to.have.length(2); });",
+            "pm.collectionVariables.set('checkoutSessionId', pm.response.json().id);",
+            "pm.collectionVariables.set('createOrderKey', pm.variables.replaceIn('{{$guid}}'));"
+          ] } }]
+        },
+        {
+          "name": "Select address and COD",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"paymentTiming\": \"POSTPAID\",\n  \"paymentMethod\": \"COD\"\n}" },
+            "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Address and COD saved', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.paymentTiming).to.eql('POSTPAID'); pm.expect(body.paymentMethod).to.eql('COD'); });"] } }]
+        },
+        {
+          "name": "Preview GHN mock and both vouchers",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"merchandiseVoucherId\": \"{{merchandiseVoucherId}}\",\n  \"shippingVoucherId\": \"{{shippingVoucherId}}\",\n  \"serviceCode\": \"GHN_STANDARD\"\n}" },
+            "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/preview"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Quote and discounts are valid', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.shipping.serviceName).to.include('GHN Mock'); pm.expect(body.vouchers).to.have.length(2); pm.expect(body.money.finalTotalVnd).to.be.above(0); });",
+            "pm.collectionVariables.set('quoteId', pm.response.json().shipping.quoteId);"
+          ] } }]
+        },
+        {
+          "name": "Create order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Idempotency-Key", "value": "{{createOrderKey}}" }],
+            "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/orders"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('COD order created and confirmed', () => { pm.response.to.have.status(201); const body = pm.response.json(); pm.expect(body.status).to.eql('CONFIRMED'); pm.expect(body.replay).to.eql(false); });",
+            "pm.collectionVariables.set('orderId', pm.response.json().orderId);"
+          ] } }]
+        },
+        {
+          "name": "Replay create with same idempotency key",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Idempotency-Key", "value": "{{createOrderKey}}" }],
+            "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/orders"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Request is replayed without duplicate order', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.replay).to.eql(true); pm.expect(body.orderId).to.eql(pm.collectionVariables.get('orderId')); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Authorization and lifecycle",
+      "item": [
+        {
+          "name": "Owner reads order",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Owner can read order', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().orderId).to.eql(pm.collectionVariables.get('orderId')); });"] } }]
+        },
+        {
+          "name": "Other customer cannot read order",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{otherCustomerToken}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('IDOR is blocked with not found', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Admin packs order",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Idempotency-Key", "value": "{{$guid}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/pack" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Order is PACKING', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('PACKING'); });"] } }]
+        },
+        {
+          "name": "Admin ships order",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Idempotency-Key", "value": "{{$guid}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/ship" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Order is SHIPPING', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('SHIPPING'); });"] } }]
+        },
+        {
+          "name": "Admin hands over COD order",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Idempotency-Key", "value": "{{$guid}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/handover" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Order waits for COD handover', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('HANDOVER_PENDING'); });"] } }]
+        },
+        {
+          "name": "Customer confirms received",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Idempotency-Key", "value": "{{$guid}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}/received" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('COD collected and order completed', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('COMPLETED'); });"] } }]
+        },
+        {
+          "name": "Read final timeline",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}/timeline" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Timeline contains lifecycle history', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().timeline.length).to.be.above(3); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 - Negative contract cases",
+      "item": [
+        {
+          "name": "Reject unknown variant",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"source\": \"BUY_NOW\",\n  \"variantId\": \"99999999-9999-4999-8999-999999999999\",\n  \"quantity\": 1\n}" },
+            "url": "{{orderBaseUrl}}/api/v1/checkout/sessions"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Unknown mock variant is rejected', () => pm.response.to.have.status(422));"] } }]
+        },
+        {
+          "name": "Reject customer on admin API",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Customer has no admin permission', () => pm.response.to.have.status(403));"] } }]
+        }
+      ]
+    }
+  ]
+}

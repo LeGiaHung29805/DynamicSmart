@@ -1,0 +1,214 @@
+{
+  "info": {
+    "_postman_id": "eae4e608-7d79-4b09-a0bb-a0f8a8d744a2",
+    "name": "DynamicMart - Order & Checkout acceptance flow",
+    "description": "Chạy folder theo thứ tự 00 -> 07. Collection gọi trực tiếp Identity (8081) và Order (8084), tự lưu token, addressId, checkoutSessionId, quoteId, orderId và idempotency keys. Luồng 03-07 tạo đơn COD thật trên database local.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Prerequisites",
+      "item": [
+        {
+          "name": "Order health is UP",
+          "request": { "method": "GET", "url": "{{orderBaseUrl}}/actuator/health" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Order Service healthy', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+          ] } }]
+        },
+        {
+          "name": "Unauthenticated checkout is rejected",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"source\": \"BUY_NOW\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": 1\n}" }, "url": "{{orderBaseUrl}}/api/v1/checkout/sessions" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('401 without bearer token', () => pm.response.to.have.status(401));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "01 - Authenticate and prepare address",
+      "item": [
+        {
+          "name": "Login customer",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}" }, "url": "{{identityBaseUrl}}/api/v1/auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Customer login succeeds', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json(); pm.environment.set('customerToken', body.accessToken);",
+            "pm.test('Customer role is CUSTOMER', () => pm.expect(body.user.role).to.eql('CUSTOMER'));"
+          ] } }]
+        },
+        {
+          "name": "Login admin",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" }, "url": "{{identityBaseUrl}}/api/v1/auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Admin login succeeds', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json(); pm.environment.set('adminToken', body.accessToken);",
+            "pm.test('Admin role is ADMIN', () => pm.expect(body.user.role).to.eql('ADMIN'));"
+          ] } }]
+        },
+        {
+          "name": "Get customer addresses and select one",
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "url": "{{identityBaseUrl}}/api/v1/addresses" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Address list succeeds', () => pm.response.to.have.status(200));",
+            "const addresses = pm.response.json();",
+            "pm.test('Customer has an active address', () => pm.expect(addresses.length).to.be.above(0));",
+            "const address = addresses.find(value => value.defaultAddress) || addresses[0]; pm.environment.set('addressId', address.id);"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Create and configure checkout session",
+      "item": [
+        {
+          "name": "Create BUY_NOW checkout session",
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"source\": \"BUY_NOW\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": 1\n}" }, "url": "{{orderBaseUrl}}/api/v1/checkout/sessions" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Session is created', () => pm.response.to.have.status(201));",
+            "const body = pm.response.json(); pm.environment.set('checkoutSessionId', body.id);",
+            "pm.test('Trusted item snapshot exists', () => { pm.expect(body.source).to.eql('BUY_NOW'); pm.expect(body.items).to.have.lengthOf(1); });"
+          ] } }]
+        },
+        {
+          "name": "Reject invalid PREPAID plus COD pair",
+          "request": { "method": "PATCH", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"paymentTiming\": \"PREPAID\",\n  \"paymentMethod\": \"COD\"\n}" }, "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Invalid payment pair is rejected', () => { pm.response.to.have.status(422); pm.expect(pm.response.json().code).to.eql('INVALID_PAYMENT_SELECTION'); });"
+          ] } }]
+        },
+        {
+          "name": "Set address and COD payment",
+          "request": { "method": "PATCH", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"paymentTiming\": \"POSTPAID\",\n  \"paymentMethod\": \"COD\"\n}" }, "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Checkout configuration is saved', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json(); pm.test('Selected address and COD are persisted', () => { pm.expect(body.addressId).to.eql(pm.environment.get('addressId')); pm.expect(body.paymentTiming).to.eql('POSTPAID'); pm.expect(body.paymentMethod).to.eql('COD'); });"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Price preview (requires valid GHN)",
+      "item": [
+        {
+          "name": "Preview price and shipping quote",
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"merchandiseVoucherId\": null,\n  \"shippingVoucherId\": null,\n  \"serviceCode\": null\n}" }, "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/preview" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Preview is successful', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json(); pm.environment.set('shippingQuoteId', body.shipping.quoteId);",
+            "pm.test('Server calculated money and quote', () => { pm.expect(body.money.finalTotalVnd).to.be.at.least(0); pm.expect(body.shipping.expiresAt).to.not.be.empty; });"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 - Create order and idempotency",
+      "item": [
+        {
+          "name": "Create COD order from session",
+          "event": [{ "listen": "prerequest", "script": { "exec": [
+            "pm.environment.set('createOrderKey', pm.variables.replaceIn('{{$guid}}'));"
+          ] } }, { "listen": "test", "script": { "exec": [
+            "pm.test('Order is created', () => pm.response.to.have.status(201));",
+            "const body = pm.response.json(); pm.environment.set('orderId', body.orderId);",
+            "pm.test('New COD order is confirmed', () => { pm.expect(body.status).to.eql('CONFIRMED'); pm.expect(body.replay).to.eql(false); pm.expect(body.paymentId).to.not.be.empty; });"
+          ] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{createOrderKey}}" }], "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/orders" }
+        },
+        {
+          "name": "Replay create with same idempotency key",
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{createOrderKey}}" }], "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/orders" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Replay returns 200, not a duplicated order', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json(); pm.test('Replay flag is true and same order is returned', () => { pm.expect(body.replay).to.eql(true); pm.expect(body.orderId).to.eql(pm.environment.get('orderId')); });"
+          ] } }]
+        },
+        {
+          "name": "Missing Idempotency-Key is rejected",
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "url": "{{orderBaseUrl}}/api/v1/checkout/sessions/{{checkoutSessionId}}/orders" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Header is mandatory', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().code).to.eql('MISSING_IDEMPOTENCY_KEY'); });"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "05 - Customer query and authorization",
+      "item": [
+        {
+          "name": "Customer gets own order",
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Customer can read owned order', () => pm.response.to.have.status(200));",
+            "pm.test('Returned ID matches', () => pm.expect(pm.response.json().id).to.eql(pm.environment.get('orderId')));"
+          ] } }]
+        },
+        {
+          "name": "Customer reads order timeline",
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}/timeline" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Timeline is available', () => pm.response.to.have.status(200));"
+          ] } }]
+        },
+        {
+          "name": "Customer cannot use admin list",
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "url": "{{orderBaseUrl}}/api/v1/orders/admin?page=0&size=20" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Role boundary is enforced', () => pm.response.to.have.status(403));"
+          ] } }]
+        },
+        {
+          "name": "Admin lists orders",
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "url": "{{orderBaseUrl}}/api/v1/orders/admin?page=0&size=20&sort=createdAt,desc" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Admin can list orders', () => pm.response.to.have.status(200));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "06 - COD lifecycle",
+      "item": [
+        {
+          "name": "Admin packs order",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["pm.environment.set('packKey', pm.variables.replaceIn('{{$guid}}')); "] } }, { "listen": "test", "script": { "exec": ["pm.test('Order moves to PACKING', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('PACKING'); });"] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{packKey}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/pack" },
+        },
+        {
+          "name": "Admin ships order",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["pm.environment.set('shipKey', pm.variables.replaceIn('{{$guid}}')); "] } }, { "listen": "test", "script": { "exec": ["pm.test('Order moves to SHIPPING', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('SHIPPING'); });"] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{shipKey}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/ship" },
+        },
+        {
+          "name": "Admin marks COD handover pending",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["pm.environment.set('handoverKey', pm.variables.replaceIn('{{$guid}}')); "] } }, { "listen": "test", "script": { "exec": ["pm.test('COD order waits for handover', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('HANDOVER_PENDING'); });"] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{handoverKey}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/handover" },
+        },
+        {
+          "name": "Customer confirms received and COD collection",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["pm.environment.set('receivedKey', pm.variables.replaceIn('{{$guid}}')); "] } }, { "listen": "test", "script": { "exec": ["pm.test('COD is delivered and completed', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('COMPLETED'); });"] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{receivedKey}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/{{orderId}}/received" },
+        }
+      ]
+    },
+    {
+      "name": "07 - Regression and ownership cases",
+      "item": [
+        {
+          "name": "Reuse lifecycle key for a different action is rejected",
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "header": [{ "key": "Idempotency-Key", "value": "{{packKey}}" }], "url": "{{orderBaseUrl}}/api/v1/orders/admin/{{orderId}}/ship" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Idempotency key cannot be reused across operations', () => { pm.response.to.have.status(409); pm.expect(pm.response.json().code).to.eql('IDEMPOTENCY_KEY_REUSED'); });"
+          ] } }]
+        },
+        {
+          "name": "Invalid order ID format is rejected",
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{customerToken}}", "type": "string" }] }, "url": "{{orderBaseUrl}}/api/v1/orders/not-a-uuid" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Path validation returns 400', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST_PARAMETER'); });"
+          ] } }]
+        }
+      ]
+    }
+  ]
+}
