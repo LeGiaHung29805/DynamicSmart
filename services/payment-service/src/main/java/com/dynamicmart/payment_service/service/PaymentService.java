@@ -78,6 +78,19 @@ public class PaymentService {
     }
 
     @Transactional
+    public PaymentResponse createCustomerOnlineAttempt(UUID orderId, UUID customerId) {
+        Payment payment = requireOwnedPaymentByOrder(orderId, customerId);
+        if ("COD".equals(payment.getMethod())) {
+            throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_METHOD_NOT_ONLINE", "Thanh toán khi nhận hàng không tạo đường dẫn thanh toán trực tuyến.");
+        }
+        if ("POSTPAID".equals(payment.getTiming())
+                && attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).isEmpty()) {
+            throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_NOT_DUE", "Đơn hàng chưa đến bước thanh toán trả sau.");
+        }
+        return createVnPayAttempt(payment.getId());
+    }
+
+    @Transactional
     public PaymentResponse collectCodForReceivedOrder(UUID orderId) {
         Payment payment = payments.findByOrderIdForUpdate(orderId)
                 .orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_FOR_ORDER_NOT_FOUND", "Không tìm thấy Payment của đơn hàng."));
@@ -105,8 +118,13 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public PaymentResponse getByOrderId(UUID orderId) {
         Payment payment = payments.findByOrderId(orderId).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_FOR_ORDER_NOT_FOUND", "Không tìm thấy Payment của đơn hàng."));
-        String redirect = attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).stream().findFirst().map(PaymentAttempt::getRedirectUrl).orElse(null);
-        return response(payment, redirect);
+        return response(payment, activeRedirect(payment));
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentResponse getCustomerPaymentByOrder(UUID orderId, UUID customerId) {
+        Payment payment = requireOwnedPaymentByOrder(orderId, customerId);
+        return response(payment, activeRedirect(payment));
     }
 
     @Transactional(readOnly = true)
@@ -227,6 +245,25 @@ public class PaymentService {
     private String payload(Payment payment) { try { return objectMapper.writeValueAsString(java.util.Map.of("paymentId", payment.getId(), "orderId", payment.getOrderId(), "customerId", payment.getCustomerId(), "amountVnd", payment.getAmountVnd(), "timing", payment.getTiming(), "method", payment.getMethod(), "paymentMethod", payment.getMethod(), "status", payment.getStatus())); } catch (JacksonException exception) { throw new IllegalStateException(exception); } }
     private Payment requirePayment(UUID id) { return payments.findById(id).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Không tìm thấy khoản thanh toán.")); }
     private Payment requirePaymentForUpdate(UUID id) { return payments.findByIdForUpdate(id).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Không tìm thấy khoản thanh toán.")); }
+    private Payment requireOwnedPaymentByOrder(UUID orderId, UUID customerId) {
+        Payment payment = payments.findByOrderId(orderId)
+                .orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_FOR_ORDER_NOT_FOUND", "Không tìm thấy khoản thanh toán của đơn hàng."));
+        if (customerId == null || !payment.getCustomerId().equals(customerId)) {
+            throw new PaymentException(HttpStatus.FORBIDDEN, "PAYMENT_OWNERSHIP_DENIED", "Bạn không có quyền xem khoản thanh toán này.");
+        }
+        return payment;
+    }
+    private String activeRedirect(Payment payment) {
+        if (!"PENDING".equals(payment.getStatus())) return null;
+        Instant now = Instant.now();
+        return attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).stream()
+                .filter(attempt -> ("CREATED".equals(attempt.getStatus()) || "REDIRECTED".equals(attempt.getStatus()))
+                        && attempt.getExpiresAt() != null && attempt.getExpiresAt().isAfter(now))
+                .map(PaymentAttempt::getRedirectUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
     private PaymentAttempt requireAttemptForUpdate(String reference) { return attempts.findByProviderReferenceForUpdate(reference).orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "PAYMENT_REFERENCE_NOT_FOUND", "Không tìm thấy mã thanh toán VNPay.")); }
     private PaymentResponse response(Payment payment, String redirectUrl) {
         return PaymentMapper.toResponse(payment, redirectUrl);

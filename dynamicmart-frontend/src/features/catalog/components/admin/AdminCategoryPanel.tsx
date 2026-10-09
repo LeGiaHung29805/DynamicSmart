@@ -13,6 +13,7 @@ import {
   type CategoryInput,
 } from "../../api/admin-catalog.api";
 import type { CategoryAdmin } from "../../types";
+import { catalogStatusLabel } from "../../utils/catalog-format";
 import { errorMessage, fieldClass, Label, textAreaClass } from "./form-utils";
 
 const emptyDraft: CategoryInput = { parentId: null, code: "", name: "", slug: "", description: "", sortOrder: 0 };
@@ -89,7 +90,7 @@ export function AdminCategoryPanel() {
         {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p> : null}
         <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
           <table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Danh mục</th><th className="px-4 py-3">Mã / slug</th><th className="px-4 py-3">Trạng thái</th><th className="px-4 py-3 text-right">Thao tác</th></tr></thead>
-          <tbody className="divide-y divide-slate-100">{categories.map((category) => <tr key={category.id}><td className="px-4 py-3"><p className="font-bold text-slate-900">{category.name}</p><p className="text-xs text-slate-500">Thứ tự {category.sortOrder}{category.parentId ? " · Danh mục con" : " · Danh mục gốc"}</p></td><td className="px-4 py-3"><p className="font-mono text-xs">{category.code}</p><p className="text-xs text-slate-500">/{category.slug}</p></td><td className="px-4 py-3"><StatusBadge label={category.status} tone={category.status === "ACTIVE" ? "success" : "neutral"} /></td><td className="px-4 py-3"><div className="flex justify-end gap-2"><button className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50" onClick={() => edit(category)} type="button"><Pencil className="size-4" /></button><button className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold" disabled={busy} onClick={() => void toggle(category)} type="button">{category.status === "ACTIVE" ? "Ẩn" : "Kích hoạt"}</button></div></td></tr>)}</tbody></table>
+          <tbody className="divide-y divide-slate-100">{categories.map((category) => <tr key={category.id}><td className="px-4 py-3"><p className="font-bold text-slate-900">{category.name}</p><p className="text-xs text-slate-500">Thứ tự {category.sortOrder}{category.parentId ? " · Danh mục con" : " · Danh mục gốc"}</p></td><td className="px-4 py-3"><p className="font-mono text-xs">{category.code}</p><p className="text-xs text-slate-500">/{category.slug}</p></td><td className="px-4 py-3"><StatusBadge label={catalogStatusLabel(category.status)} tone={category.status === "ACTIVE" ? "success" : "neutral"} /></td><td className="px-4 py-3"><div className="flex justify-end gap-2"><button className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50" onClick={() => edit(category)} type="button"><Pencil className="size-4" /></button><button className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold" disabled={busy} onClick={() => void toggle(category)} type="button">{category.status === "ACTIVE" ? "Ẩn" : "Kích hoạt"}</button></div></td></tr>)}</tbody></table>
           {!loading && !categories.length ? <p className="p-8 text-center text-sm text-slate-500">Chưa có danh mục.</p> : null}
         </div>
       </SurfacePanel>

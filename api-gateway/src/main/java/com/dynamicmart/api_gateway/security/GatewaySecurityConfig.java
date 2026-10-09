@@ -38,6 +38,7 @@ public class GatewaySecurityConfig {
                                 "/api/v1/payments/payos/webhook",
                                 "/api/v1/payments/sepay/webhook",
                                 "/api/v1/assistant/chat",
+                                "/api/v1/assistant/chat/stream",
                                 "/api/v1/cart/promotions/prices/**").permitAll()
                         // Dịch vụ đích xác thực lại các route nội bộ bằng X-Internal-Api-Key.
                         .requestMatchers(HttpMethod.POST,

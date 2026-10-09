@@ -1,31 +1,8 @@
 import { apiClient } from "@/lib/api/client";
-import type { OrderPage, OrderQuery } from "../types/order.types";
+import type { OrderDetail, OrderItem, OrderPage, OrderQuery } from "../types/order.types";
 
-export type CustomerOrderItem = {
-  itemId: string;
-  productId: string;
-  variantId: string;
-  productName: string;
-  variantName?: string;
-  imageUrl?: string;
-  quantity: number;
-  unitPriceVnd: number;
-  lineTotalVnd: number;
-};
-
-export type CustomerOrder = {
-  orderId: string;
-  orderNumber: string;
-  status: "PENDING_PAYMENT" | "CONFIRMED" | "PACKING" | "SHIPPING" | "HANDOVER_PENDING" | "DELIVERED" | "COMPLETED" | "CANCELLED";
-  paymentTiming: "PREPAID" | "POSTPAID" | "NOT_REQUIRED";
-  paymentMethod: string;
-  money: { finalTotalVnd: number; currency: string };
-  availableActions: string[];
-  shipmentDeliveredAt?: string;
-  completedAt?: string;
-  createdAt: string;
-  items?: CustomerOrderItem[];
-};
+export type CustomerOrder = OrderDetail;
+export type CustomerOrderItem = OrderItem;
 
 function queryString(query: OrderQuery = {}) {
   const params = new URLSearchParams();

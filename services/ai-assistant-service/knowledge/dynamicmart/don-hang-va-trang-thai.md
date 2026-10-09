@@ -8,4 +8,8 @@ Các trạng thái đơn hàng của DynamicMart gồm: chờ thanh toán, đã 
 
 Thông tin sản phẩm, giá, voucher và vận chuyển của đơn được lưu dưới dạng bản chụp để lịch sử không thay đổi theo catalog hiện tại. Khách phải đăng nhập và sử dụng màn hình đơn hàng để xem dữ liệu của một đơn cụ thể.
 
+Trang đơn hàng của khách hiển thị danh sách, chi tiết và dòng thời gian trạng thái của đúng tài khoản đang đăng nhập. Khi đơn đủ điều kiện, khách có thể dùng thao tác Đã nhận hàng; máy chủ kiểm tra ownership và state machine trước khi ghi nhận. Với COD, thao tác hợp lệ này cũng kích hoạt quy trình ghi nhận thu tiền phía Payment Service, khách không tự nhập số tiền đã thu.
+
+Nếu không thấy đơn vừa tạo, khách nên tải lại trang đơn hàng, kiểm tra đúng tài khoản và trạng thái thanh toán. Không gửi lại yêu cầu đặt hàng liên tục nếu chưa biết kết quả, vì hệ thống dùng idempotency để ngăn một phiên checkout tạo nhiều đơn.
+
 Chatbot chỉ giải thích ý nghĩa trạng thái. Chatbot công khai không được xác nhận một mã đơn thuộc về ai, không tự hủy đơn, không đánh dấu đã nhận hàng và không đọc lịch sử trạng thái cá nhân.

@@ -38,7 +38,7 @@ export function AdminCatalogWorkspace({ children }: Readonly<{ children: React.R
       <PageHeader
         description="Mỗi nghiệp vụ có một không gian riêng để thao tác nhanh, rõ trạng thái và dễ quay lại công việc đang làm."
         eyebrow="Catalog & inventory"
-        title="Quản trị kho sản phẩm"
+        title="Quản lý sản phẩm"
       />
       <nav aria-label="Khu vực quản trị catalog" className="sticky top-0 z-20 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
         {tabs.map(({ href, label, icon: Icon }) => {

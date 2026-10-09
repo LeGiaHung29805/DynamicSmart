@@ -1,4 +1,4 @@
-import type { PaymentMethod, PaymentTiming } from "@/features/order/types/order.types";
+import type { OrderStatus, PaymentMethod, PaymentTiming } from "@/features/order/types/order.types";
 
 export type CheckoutSource = "CART" | "BUY_NOW";
 export type CheckoutStatus = "ACTIVE" | "COMPLETED" | "CANCELLED" | "EXPIRED";
@@ -87,7 +87,7 @@ export type CheckoutPreview = {
 export type CreateOrderResult = {
   orderId: string;
   orderNumber: string;
-  status: string;
+  status: OrderStatus;
   sagaId: string;
   paymentId?: string;
   paymentDueAt?: string;

@@ -11,6 +11,7 @@ class DirectoryDocumentLoader:
     """Equivalent to the DirectoryLoader stage used in the reference video."""
 
     SUPPORTED_SUFFIXES = {".md", ".txt", ".pdf"}
+    IGNORED_FILENAMES = {"danh-muc-va-san-pham-chi-tiet.md"}
 
     def __init__(self, root: Path):
         self.root = root
@@ -22,7 +23,11 @@ class DirectoryDocumentLoader:
         documents: list[Document] = []
         for tenant_dir in sorted(path for path in self.root.iterdir() if path.is_dir()):
             for path in sorted(tenant_dir.rglob("*")):
-                if not path.is_file() or path.suffix.lower() not in self.SUPPORTED_SUFFIXES:
+                if (
+                    not path.is_file()
+                    or path.suffix.lower() not in self.SUPPORTED_SUFFIXES
+                    or path.name.casefold() in self.IGNORED_FILENAMES
+                ):
                     continue
                 content = self._read(path).strip()
                 if not content:

@@ -1,5 +1,6 @@
 export type Profile = { id: string; email: string; fullName: string; phone: string; role: "CUSTOMER" | "ADMIN"; status: string; lastLoginAt?: string; createdAt?: string; updatedAt?: string };
 export type Address = { id: string; recipientName: string; phone: string; addressLine: string; provinceId: number; provinceName: string; wardId: number; wardName: string; defaultAddress: boolean; status: string };
+export type AddressInput = Pick<Address, "recipientName" | "phone" | "addressLine" | "provinceId" | "wardId" | "defaultAddress">;
 export type VoucherWalletItem = { id: string; code: string; name: string; description: string; distributionMode: "DEFAULT_FOR_ELIGIBLE" | "ASSIGNED_ONLY" | "CODE_ONLY"; eligible: boolean; ineligibleReason?: string; endsAt: string; scope: string; discountMethod?: string; fixedDiscountVnd?: number; discountRateBps?: number; maxDiscountVnd?: number; discountAmountVnd?: number; productIds?: string[]; categoryIds?: string[] };
 export type VoucherUsageHistory = { id: string; voucherId: string; voucherCode: string; voucherName: string; status: "RESERVED" | "CONSUMED" | "RELEASED" | "EXPIRED"; discountAmountVnd: number; shippingDiscountVnd: number; orderId?: string; createdAt: string; consumedAt?: string; releasedAt?: string; releaseReason?: string };
 export type LocationOption = { id: number; name: string };

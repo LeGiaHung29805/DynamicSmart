@@ -14,29 +14,41 @@ class EmbeddingProvider(Protocol):
 
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
 
+    async def embed_query(self, text: str) -> list[float]: ...
+
 
 class OllamaEmbeddingProvider:
     name = "ollama"
 
-    def __init__(self, base_url: str, model: str, timeout_seconds: float):
+    def __init__(self, base_url: str, model: str, timeout_seconds: float, keep_alive: str):
         self.base_url = base_url
         self.model = model
-        self.timeout_seconds = timeout_seconds
+        self.keep_alive = keep_alive
+        timeout = httpx.Timeout(timeout_seconds, connect=min(3.0, timeout_seconds))
+        self.client = httpx.AsyncClient(timeout=timeout)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        timeout = httpx.Timeout(self.timeout_seconds, connect=min(3.0, self.timeout_seconds))
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                f"{self.base_url}/api/embed",
-                json={"model": self.model, "input": texts},
-            )
-            response.raise_for_status()
-            embeddings = response.json().get("embeddings")
+        response = await self.client.post(
+            f"{self.base_url}/api/embed",
+            json={"model": self.model, "input": texts, "keep_alive": self.keep_alive},
+        )
+        response.raise_for_status()
+        embeddings = response.json().get("embeddings")
         if not isinstance(embeddings, list) or len(embeddings) != len(texts):
             raise RuntimeError("Ollama trả về embedding không hợp lệ.")
         return [[float(value) for value in vector] for vector in embeddings]
+
+    async def embed_query(self, text: str) -> list[float]:
+        instruction = (
+            "Instruct: Retrieve Vietnamese ecommerce knowledge that directly answers the query.\n"
+            f"Query: {text}"
+        )
+        return (await self.embed([instruction]))[0]
+
+    async def close(self) -> None:
+        await self.client.aclose()
 
 
 class HashEmbeddingProvider:
@@ -49,6 +61,9 @@ class HashEmbeddingProvider:
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         return [self._embed_one(text) for text in texts]
+
+    async def embed_query(self, text: str) -> list[float]:
+        return self._embed_one(text)
 
     def _embed_one(self, text: str) -> list[float]:
         vector = [0.0] * self.dimensions

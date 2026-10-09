@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
+import { locationApi } from "@/features/shipping";
 import { isApiError } from "@/lib/api/error";
 import { useAuthSession } from "@/lib/auth/session";
-import { customerApi } from "../api/customer.api";
+import { addressApi } from "../api/address.api";
 import type { Address, LocationOption } from "../types/customer.types";
 
 export function AddressBookPage() {
@@ -32,7 +33,7 @@ export function AddressBookPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    const [addressesResult, provincesResult] = await Promise.allSettled([customerApi.addresses(), customerApi.provinces()]);
+    const [addressesResult, provincesResult] = await Promise.allSettled([addressApi.list(), locationApi.provinces()]);
     if (addressesResult.status === "fulfilled") setRows(addressesResult.value);
     else setError(isApiError(addressesResult.reason) ? addressesResult.reason.message : "Không thể tải sổ địa chỉ.");
     if (provincesResult.status === "fulfilled") setProvinces(provincesResult.value);
@@ -51,7 +52,7 @@ export function AddressBookPage() {
     setWardId(selectedWard);
     setWards([]);
     if (!value) return;
-    try { setWards(await customerApi.wards(value)); }
+    try { setWards(await locationApi.wards(value)); }
     catch (cause) { setError(isApiError(cause) ? cause.message : "Không thể tải danh mục Phường/Xã."); }
   }
 
@@ -88,13 +89,11 @@ export function AddressBookPage() {
         phone: String(data.get("phone") ?? "").trim(),
         addressLine: String(data.get("addressLine") ?? "").trim(),
         provinceId,
-        provinceName: province.name,
         wardId,
-        wardName: ward.name,
         defaultAddress: editing?.defaultAddress || data.get("defaultAddress") === "on",
       };
-      if (editing) await customerApi.updateAddress(editing.id, input);
-      else await customerApi.createAddress(input);
+      if (editing) await addressApi.update(editing.id, input);
+      else await addressApi.create(input);
       showToast(editing ? "Đã cập nhật địa chỉ." : "Đã thêm địa chỉ mới.", "success");
       resetForm();
       form.reset();
@@ -104,13 +103,13 @@ export function AddressBookPage() {
   }
 
   async function makeDefault(id: string) {
-    try { await customerApi.makeDefault(id); showToast("Đã đặt làm địa chỉ mặc định.", "success"); await load(); }
+    try { await addressApi.makeDefault(id); showToast("Đã đặt làm địa chỉ mặc định.", "success"); await load(); }
     catch (cause) { setError(isApiError(cause) ? cause.message : "Không thể đặt địa chỉ mặc định."); }
   }
 
   async function deactivate(id: string) {
     if (!window.confirm("Ngừng sử dụng địa chỉ này? Địa chỉ sẽ không bị xóa khỏi lịch sử.")) return;
-    try { await customerApi.deactivateAddress(id); showToast("Địa chỉ đã được ngừng sử dụng.", "success"); await load(); }
+    try { await addressApi.deactivate(id); showToast("Địa chỉ đã được ngừng sử dụng.", "success"); await load(); }
     catch (cause) { setError(isApiError(cause) ? cause.message : "Không thể ngừng sử dụng địa chỉ."); }
   }
 

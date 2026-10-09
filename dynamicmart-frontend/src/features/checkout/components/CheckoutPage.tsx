@@ -1,7 +1,9 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Catalog image URLs may come from arbitrary configured hosts. */
+
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, CreditCard, MapPin, Plus, Truck } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CreditCard, MapPin, Plus, ShieldCheck, TimerReset, Truck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ErrorState, LoadingState } from "@/components/common/PageState";
@@ -9,16 +11,19 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { cartApi } from "@/features/cart";
+import { addressApi } from "@/features/customer/api/address.api";
 import { customerApi } from "@/features/customer/api/customer.api";
 import type { Address, LocationOption, VoucherWalletItem } from "@/features/customer/types/customer.types";
+import { locationApi } from "@/features/shipping";
 import type { PaymentMethod, PaymentTiming } from "@/features/order/types/order.types";
+import { orderStatusLabel } from "@/features/order/utils/order-format";
 import { isApiError } from "@/lib/api/error";
 import { useAuthSession } from "@/lib/auth/session";
 import { checkoutApi } from "../api/checkout.api";
 import type { CheckoutPreview, CheckoutSession, CreateOrderResult } from "../types/checkout.types";
 
 type Step = "address" | "shipping" | "payment" | "confirm";
-type PaymentChoice = { label: string; method: PaymentMethod; timing: PaymentTiming };
+type PaymentChoice = { label: string; description: string; method: PaymentMethod; timing: PaymentTiming };
 
 const steps = [
   { id: "address", label: "Địa chỉ", icon: MapPin },
@@ -28,15 +33,15 @@ const steps = [
 ] as const;
 
 const paymentChoices: PaymentChoice[] = [
-  { method: "COD", timing: "POSTPAID", label: "COD khi nhận hàng" },
-  { method: "VNPAY", timing: "PREPAID", label: "VNPay trả trước" },
-  { method: "VNPAY", timing: "POSTPAID", label: "VNPay trả sau" },
-  { method: "ZALOPAY", timing: "PREPAID", label: "ZaloPay trả trước" },
-  { method: "ZALOPAY", timing: "POSTPAID", label: "ZaloPay trả sau" },
-  { method: "PAYOS", timing: "PREPAID", label: "PayOS trả trước" },
-  { method: "PAYOS", timing: "POSTPAID", label: "PayOS trả sau" },
-  { method: "BANK_QR", timing: "PREPAID", label: "Chuyển khoản QR trả trước" },
-  { method: "BANK_QR", timing: "POSTPAID", label: "Chuyển khoản QR trả sau" },
+  { method: "COD", timing: "POSTPAID", label: "Thanh toán khi nhận hàng (COD)", description: "Khách xác nhận đã nhận hàng để hoàn tất thanh toán." },
+  { method: "VNPAY", timing: "PREPAID", label: "VNPay · thanh toán trước", description: "Thanh toán ngay sau khi đơn được tạo." },
+  { method: "VNPAY", timing: "POSTPAID", label: "VNPay · thanh toán khi bàn giao", description: "Đường dẫn được mở khi đơn sẵn sàng bàn giao." },
+  { method: "ZALOPAY", timing: "PREPAID", label: "ZaloPay · thanh toán trước", description: "Thanh toán ngay sau khi đơn được tạo." },
+  { method: "ZALOPAY", timing: "POSTPAID", label: "ZaloPay · thanh toán khi bàn giao", description: "Đường dẫn được mở khi đơn sẵn sàng bàn giao." },
+  { method: "PAYOS", timing: "PREPAID", label: "PayOS · thanh toán trước", description: "Thanh toán ngay sau khi đơn được tạo." },
+  { method: "PAYOS", timing: "POSTPAID", label: "PayOS · thanh toán khi bàn giao", description: "Đường dẫn được mở khi đơn sẵn sàng bàn giao." },
+  { method: "BANK_QR", timing: "PREPAID", label: "Chuyển khoản QR · thanh toán trước", description: "Quét mã và thanh toán ngay sau khi tạo đơn." },
+  { method: "BANK_QR", timing: "POSTPAID", label: "Chuyển khoản QR · thanh toán khi bàn giao", description: "Mã thanh toán được mở khi đơn sẵn sàng bàn giao." },
 ];
 
 function errorMessage(cause: unknown, fallback: string) {
@@ -99,7 +104,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
         }
         const [nextSession, nextAddresses, nextVouchers] = await Promise.all([
           sessionPromise,
-          customerApi.addresses(),
+          addressApi.list(),
           customerApi.vouchers(),
         ]);
         if (ignored) return;
@@ -115,7 +120,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
         setPaymentTiming(nextSession.paymentTiming ?? "POSTPAID");
         if (!initialSessionId) router.replace(`/checkout?sessionId=${encodeURIComponent(nextSession.id)}`);
       } catch (cause) {
-        if (!ignored) setMessage(errorMessage(cause, "Không thể khởi tạo phiên Checkout."));
+        if (!ignored) setMessage(errorMessage(cause, "Không thể khởi tạo phiên thanh toán."));
       } finally {
         if (!ignored) setLoading(false);
       }
@@ -131,7 +136,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
   }
 
   async function reloadAccountData() {
-    const [nextAddresses, nextVouchers] = await Promise.all([customerApi.addresses(), customerApi.vouchers()]);
+    const [nextAddresses, nextVouchers] = await Promise.all([addressApi.list(), customerApi.vouchers()]);
     setAddresses(nextAddresses);
     setVouchers(nextVouchers);
     return nextAddresses;
@@ -140,7 +145,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
   async function saveAndPreview(nextStep?: Step) {
     if (!session || !addressId || working) return false;
     setWorking(true);
-    setMessage("Đang kiểm tra giá, tồn kho, voucher và phí giao hàng…");
+    setMessage("Đang kiểm tra lại giá, tồn kho, mã giảm giá và phí giao hàng…");
     try {
       const updated = await checkoutApi.updateSession(session.id, { addressId, paymentMethod, paymentTiming });
       const nextPreview = await checkoutApi.preview(session.id, {
@@ -160,7 +165,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
       return true;
     } catch (cause) {
       setPreview(null);
-      setMessage(errorMessage(cause, "Không thể tạo bản xem trước Checkout."));
+      setMessage(errorMessage(cause, "Không thể tính lại đơn hàng. Vui lòng kiểm tra thông tin và thử lại."));
       return false;
     } finally {
       setWorking(false);
@@ -179,28 +184,44 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
       setMessage("");
       if (result.redirectUrl) window.location.assign(result.redirectUrl);
     } catch (cause) {
-      setMessage(errorMessage(cause, "Không thể tạo đơn. Hãy kiểm tra lại Checkout và thử lại."));
+      setMessage(errorMessage(cause, "Không thể tạo đơn. Hãy kiểm tra lại thông tin đặt hàng và thử lại."));
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function cancelSession() {
+    if (!session || working || !window.confirm("Hủy phiên đặt hàng hiện tại?")) return;
+    setWorking(true);
+    setMessage("Đang hủy phiên đặt hàng…");
+    try {
+      await checkoutApi.cancel(session.id);
+      router.replace("/cart");
+    } catch (cause) {
+      setMessage(errorMessage(cause, "Không thể hủy phiên đặt hàng."));
     } finally {
       setWorking(false);
     }
   }
 
   if (auth.status === "loading" || loading) {
-    return <main className="mx-auto min-h-[60vh] max-w-5xl px-4 py-12"><LoadingState title="Đang chuẩn bị Checkout" /></main>;
+    return <main className="mx-auto min-h-[60vh] max-w-5xl px-4 py-12"><LoadingState title="Đang chuẩn bị đặt hàng" /></main>;
   }
   if (auth.status === "anonymous") return null;
   if (!session) {
-    return <main className="mx-auto min-h-[60vh] max-w-3xl px-4 py-12"><ErrorState description={message || "Không tìm thấy phiên Checkout."} onAction={() => router.refresh()} /></main>;
+    return <main className="mx-auto min-h-[60vh] max-w-3xl px-4 py-12"><ErrorState description={message || "Không tìm thấy phiên đặt hàng."} onAction={() => router.refresh()} /></main>;
   }
   if (session.status !== "ACTIVE" && !order) {
-    return <main className="mx-auto min-h-[60vh] max-w-3xl px-4 py-12"><ErrorState actionLabel="Quay lại giỏ hàng" description={`Phiên Checkout đang ở trạng thái ${session.status} và không thể tiếp tục.`} onAction={() => router.push("/cart")} title="Phiên Checkout không còn hiệu lực" /></main>;
+    const sessionLabels = { ACTIVE: "đang hoạt động", COMPLETED: "đã tạo đơn", CANCELLED: "đã hủy", EXPIRED: "đã hết hạn" } as const;
+    return <main className="mx-auto min-h-[60vh] max-w-3xl px-4 py-12"><ErrorState actionLabel="Quay lại giỏ hàng" description={`Phiên đặt hàng ${sessionLabels[session.status]} và không thể tiếp tục.`} onAction={() => router.push("/cart")} title="Phiên đặt hàng không còn hiệu lực" /></main>;
   }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-      <p className="text-sm font-semibold text-brand">Thanh toán an toàn</p>
-      <h1 className="mt-1 text-3xl font-bold">Hoàn tất đơn hàng</h1>
-      <p className="mt-2 text-xs text-slate-500">Phiên {session.id} · hết hạn {new Date(session.expiresAt).toLocaleString("vi-VN")}</p>
+      <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+        <div className="absolute -right-16 -top-20 size-56 rounded-full bg-rose-500/25 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-5"><div className="max-w-2xl"><p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-rose-100"><ShieldCheck className="size-4" />Thanh toán an toàn</p><h1 className="mt-4 text-3xl font-black sm:text-4xl">Hoàn tất đơn hàng của bạn</h1><p className="mt-3 text-sm leading-6 text-slate-300">Giá, tồn kho, mã giảm giá và phí giao hàng được máy chủ kiểm tra lại trước khi tạo đơn.</p><p className="mt-4 flex items-center gap-2 text-xs text-slate-400"><TimerReset className="size-4" />Phiên hết hạn {new Date(session.expiresAt).toLocaleString("vi-VN")}</p></div><Button className="border-white/20 bg-transparent text-white hover:bg-white/10" variant="outline" disabled={working} onClick={() => void cancelSession()}><X />Hủy phiên</Button></div>
+      </section>
 
       <ol className="my-8 grid grid-cols-4 gap-2">
         {steps.map((item, index) => {
@@ -235,9 +256,9 @@ function InlineAddressForm({ saved }: Readonly<{ saved: (address: Address) => Pr
   const [provinceId, setProvinceId] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => { customerApi.provinces().then(setProvinces).catch(() => setProvinces([])); }, []);
-  useEffect(() => { if (provinceId) customerApi.wards(provinceId).then(setWards).catch(() => setWards([])); }, [provinceId]);
-  return <form className="grid gap-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } const data = new FormData(form); const wardId = Number(data.get("wardId")); const province = provinces.find((item) => item.id === provinceId); const ward = wards.find((item) => item.id === wardId); if (!province || !ward) { setError("Vui lòng chọn Tỉnh/Thành phố và Phường/Xã do GHN hỗ trợ."); return; } setSubmitting(true); setError(""); void customerApi.createAddress({ recipientName: String(data.get("recipientName")).trim(), phone: String(data.get("phone")).trim(), addressLine: String(data.get("addressLine")).trim(), provinceId, provinceName: province.name, wardId, wardName: ward.name, defaultAddress: data.get("defaultAddress") === "on" }).then(saved).catch((cause) => setError(errorMessage(cause, "Không thể lưu địa chỉ."))).finally(() => setSubmitting(false)); }}><div className="sm:col-span-2"><h3 className="font-black">Địa chỉ mới</h3><p className="mt-1 text-xs text-stone-500">Tỉnh/Thành phố và Phường/Xã được máy chủ đối chiếu với danh mục GHN trước khi lưu.</p></div><Input autoComplete="name" name="recipientName" label="Người nhận" required minLength={2} maxLength={150} /><Input autoComplete="tel" inputMode="tel" name="phone" label="Số điện thoại" required pattern="^(?:0|\+84)(?:3|5|7|8|9)\d{8}$" title="Nhập số điện thoại Việt Nam hợp lệ, ví dụ 0374505367 hoặc +84374505367." /><Select label="Tỉnh/Thành phố" value={provinceId || ""} onChange={(event) => { setProvinceId(Number(event.target.value)); setWards([]); }} required><option value="">Chọn tỉnh/thành</option>{provinces.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Select name="wardId" label="Phường/Xã" required disabled={!provinceId}><option value="">Chọn phường/xã</option>{wards.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><div className="sm:col-span-2"><Input autoComplete="street-address" name="addressLine" label="Số nhà, tên đường" required minLength={3} maxLength={500} /></div><label className="flex items-center gap-2 text-sm font-bold"><input name="defaultAddress" type="checkbox" />Đặt làm mặc định</label>{error ? <p className="text-sm text-danger sm:col-span-2">{error}</p> : null}<div className="flex justify-end sm:col-span-2"><Button type="submit" disabled={submitting}>{submitting ? "Đang lưu…" : "Lưu địa chỉ"}</Button></div></form>;
+  useEffect(() => { locationApi.provinces().then(setProvinces).catch(() => setProvinces([])); }, []);
+  useEffect(() => { if (provinceId) locationApi.wards(provinceId).then(setWards).catch(() => setWards([])); }, [provinceId]);
+  return <form className="grid gap-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } const data = new FormData(form); const wardId = Number(data.get("wardId")); const province = provinces.find((item) => item.id === provinceId); const ward = wards.find((item) => item.id === wardId); if (!province || !ward) { setError("Vui lòng chọn Tỉnh/Thành phố và Phường/Xã do GHN hỗ trợ."); return; } setSubmitting(true); setError(""); void addressApi.create({ recipientName: String(data.get("recipientName")).trim(), phone: String(data.get("phone")).trim(), addressLine: String(data.get("addressLine")).trim(), provinceId, wardId, defaultAddress: data.get("defaultAddress") === "on" }).then(saved).catch((cause) => setError(errorMessage(cause, "Không thể lưu địa chỉ."))).finally(() => setSubmitting(false)); }}><div className="sm:col-span-2"><h3 className="font-black">Địa chỉ mới</h3><p className="mt-1 text-xs text-stone-500">Tỉnh/Thành phố và Phường/Xã được máy chủ đối chiếu với danh mục GHN trước khi lưu.</p></div><Input autoComplete="name" name="recipientName" label="Người nhận" required minLength={2} maxLength={150} /><Input autoComplete="tel" inputMode="tel" name="phone" label="Số điện thoại" required pattern="^(?:0|\+84)(?:3|5|7|8|9)\d{8}$" title="Nhập số điện thoại Việt Nam hợp lệ, ví dụ 0374505367 hoặc +84374505367." /><Select label="Tỉnh/Thành phố" value={provinceId || ""} onChange={(event) => { setProvinceId(Number(event.target.value)); setWards([]); }} required><option value="">Chọn tỉnh/thành</option>{provinces.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Select name="wardId" label="Phường/Xã" required disabled={!provinceId}><option value="">Chọn phường/xã</option>{wards.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><div className="sm:col-span-2"><Input autoComplete="street-address" name="addressLine" label="Số nhà, tên đường" required minLength={3} maxLength={500} /></div><label className="flex items-center gap-2 text-sm font-bold"><input name="defaultAddress" type="checkbox" />Đặt làm mặc định</label>{error ? <p className="text-sm text-danger sm:col-span-2">{error}</p> : null}<div className="flex justify-end sm:col-span-2"><Button type="submit" disabled={submitting}>{submitting ? "Đang lưu…" : "Lưu địa chỉ"}</Button></div></form>;
 }
 
 function ShippingStep({ disabled, merchandise, merchandiseVoucherId, shipping, shippingVoucherId, preview, back, changeMerchandise, changeShipping, next }: Readonly<{ disabled: boolean; merchandise: VoucherWalletItem[]; merchandiseVoucherId: string; shipping: VoucherWalletItem[]; shippingVoucherId: string; preview: CheckoutPreview | null; back: () => void; changeMerchandise: (value: string) => void; changeShipping: (value: string) => void; next: () => void }>) {
@@ -245,12 +266,12 @@ function ShippingStep({ disabled, merchandise, merchandiseVoucherId, shipping, s
 }
 
 function PaymentStep({ disabled, method, timing, back, select, next }: Readonly<{ disabled: boolean; method: PaymentMethod; timing: PaymentTiming; back: () => void; select: (choice: PaymentChoice) => void; next: () => void }>) {
-  return <div className="space-y-5"><h2 className="text-xl font-semibold">3. Phương thức thanh toán</h2>{paymentChoices.map((choice) => <label className="flex items-center gap-3 rounded-xl border p-4" key={`${choice.method}-${choice.timing}`}><input type="radio" checked={method === choice.method && timing === choice.timing} disabled={disabled} onChange={() => select(choice)} />{choice.label}</label>)}<div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={next}>Xác nhận lựa chọn<ChevronRight /></Button></div></div>;
+  return <div className="space-y-5"><div><h2 className="text-xl font-black">3. Phương thức thanh toán</h2><p className="mt-1 text-sm text-slate-500">Kết quả chỉ được ghi nhận sau khi máy chủ xác minh thông báo từ cổng thanh toán.</p></div><div className="grid gap-3 sm:grid-cols-2">{paymentChoices.map((choice) => { const selected = method === choice.method && timing === choice.timing; return <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${selected ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-slate-200 hover:border-rose-200"}`} key={`${choice.method}-${choice.timing}`}><input className="mt-1 accent-rose-600" type="radio" checked={selected} disabled={disabled} onChange={() => select(choice)} /><span><strong className="block text-sm">{choice.label}</strong><span className="mt-1 block text-xs leading-5 text-slate-500">{choice.description}</span></span></label>; })}</div><div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={next}>Xác nhận lựa chọn<ChevronRight /></Button></div></div>;
 }
 
 function ConfirmStep({ disabled, order, paymentTiming, back, create }: Readonly<{ disabled: boolean; order: CreateOrderResult | null; paymentTiming: PaymentTiming; back: () => void; create: () => void }>) {
-  if (order) return <div className="py-8 text-center"><Check className="mx-auto size-12 text-emerald-600" /><h2 className="mt-4 text-xl font-bold">Đã tạo đơn {order.orderNumber}</h2><p className="mt-2 text-slate-500">Trạng thái: {order.status}</p>{order.paymentId ? <p className="mt-1 text-xs text-slate-400">Payment: {order.paymentId}</p> : null}<Link className="mt-6 inline-flex rounded-xl bg-emerald-950 px-5 py-3 text-sm font-black text-white" href={`/customer/account/orders/${order.orderId}`}>Xem chi tiết đơn hàng</Link></div>;
-  return <div className="space-y-5"><h2 className="text-xl font-semibold">4. Xác nhận đơn hàng</h2><p className="text-sm text-slate-600">Máy chủ sẽ kiểm tra lại snapshot Checkout và chống tạo trùng bằng Idempotency-Key.</p><div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={create}>{disabled ? "Đang tạo đơn…" : paymentTiming === "PREPAID" ? "Tạo đơn và thanh toán" : "Xác nhận tạo đơn"}</Button></div></div>;
+  if (order) return <div className="py-8 text-center"><Check className="mx-auto size-12 text-emerald-600" /><h2 className="mt-4 text-xl font-bold">Đã tạo đơn {order.orderNumber}</h2><p className="mt-2 text-slate-500">Trạng thái: {orderStatusLabel(order.status)}</p>{order.paymentId ? <p className="mt-1 text-xs text-slate-400">Mã thanh toán: {order.paymentId}</p> : null}<Link className="mt-6 inline-flex rounded-xl bg-emerald-950 px-5 py-3 text-sm font-black text-white" href={`/customer/account/orders/${order.orderId}`}>Xem chi tiết đơn hàng</Link></div>;
+  return <div className="space-y-5"><h2 className="text-xl font-semibold">4. Xác nhận đơn hàng</h2><p className="text-sm text-slate-600">Máy chủ sẽ kiểm tra lại toàn bộ thông tin và bảo đảm mỗi lần xác nhận chỉ tạo một đơn.</p><div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={create}>{disabled ? "Đang tạo đơn…" : paymentTiming === "PREPAID" ? "Tạo đơn và thanh toán" : "Xác nhận tạo đơn"}</Button></div></div>;
 }
 
 function VoucherSelect({ label, values, value, change }: Readonly<{ label: string; values: VoucherWalletItem[]; value: string; change: (value: string) => void }>) {
@@ -258,7 +279,7 @@ function VoucherSelect({ label, values, value, change }: Readonly<{ label: strin
 }
 
 function CheckoutSummary({ preview, session }: Readonly<{ preview: CheckoutPreview | null; session: CheckoutSession }>) {
-  return <aside className="h-fit rounded-xl border bg-white p-5"><h2 className="font-semibold">Tóm tắt đơn hàng</h2><div className="mt-4 space-y-3 text-sm">{session.items.map((item) => <div className="flex justify-between gap-3" key={item.id}><span>{item.productName}{item.variantName ? ` · ${item.variantName}` : ""} × {item.quantity}</span><strong>{money(item.unitPriceVnd * item.quantity)}</strong></div>)}{preview ? <><Row label="Giá niêm yết" value={money(preview.money.itemsListSubtotalVnd)} /><Row label="Direct sale" value={`−${money(preview.money.directSaleDiscountVnd)}`} /><Row label="Voucher sản phẩm/đơn" value={`−${money(preview.money.productDiscountVnd + preview.money.orderDiscountVnd)}`} /><Row label={`GHN · ${preview.shipping.serviceName}`} value={money(preview.money.shippingFeeVnd)} /><Row label="Voucher vận chuyển" value={`−${money(preview.money.shippingDiscountVnd)}`} /><div className="flex justify-between border-t pt-3 text-base font-bold"><span>Tổng cộng</span><span className="text-brand">{money(preview.money.finalTotalVnd)}</span></div><p className="text-xs text-slate-500">Báo giá hết hạn {new Date(preview.shipping.expiresAt).toLocaleString("vi-VN")}</p></> : <p className="border-t pt-3 text-xs text-slate-500">Tiền và phí giao hàng sẽ được máy chủ tính sau khi chọn địa chỉ.</p>}</div></aside>;
+  return <aside className="h-fit rounded-3xl border bg-white p-5 shadow-sm"><h2 className="font-black">Tóm tắt đơn hàng</h2><div className="mt-4 space-y-3 text-sm">{session.items.map((item) => <div className="flex items-center justify-between gap-3" key={item.id}><div className="flex min-w-0 items-center gap-3">{item.imageUrl ? <img alt={item.productName} className="size-11 shrink-0 rounded-lg object-cover" src={item.imageUrl} /> : <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400">Ảnh</div>}<span className="min-w-0"><strong className="block truncate">{item.productName}</strong><span className="text-xs text-slate-500">{item.variantName || item.sku} × {item.quantity}</span></span></div><strong className="shrink-0">{money(item.unitPriceVnd * item.quantity)}</strong></div>)}{preview ? <><div className="border-t pt-3" /><Row label="Giá niêm yết" value={money(preview.money.itemsListSubtotalVnd)} /><Row label="Giảm giá trực tiếp" value={`−${money(preview.money.directSaleDiscountVnd)}`} /><Row label="Mã giảm sản phẩm/đơn" value={`−${money(preview.money.productDiscountVnd + preview.money.orderDiscountVnd)}`} /><Row label={`GHN · ${preview.shipping.serviceName}`} value={money(preview.money.shippingFeeVnd)} /><Row label="Mã giảm phí giao hàng" value={`−${money(preview.money.shippingDiscountVnd)}`} /><div className="flex justify-between border-t pt-3 text-base font-bold"><span>Tổng cộng</span><span className="text-brand">{money(preview.money.finalTotalVnd)}</span></div><p className="text-xs text-slate-500">Báo giá hết hạn {new Date(preview.shipping.expiresAt).toLocaleString("vi-VN")}</p></> : <p className="border-t pt-3 text-xs text-slate-500">Tiền và phí giao hàng sẽ được máy chủ tính sau khi chọn địa chỉ.</p>}</div></aside>;
 }
 
 function Row({ label, value }: Readonly<{ label: string; value: string }>) {

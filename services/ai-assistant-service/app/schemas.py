@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -35,12 +35,27 @@ class ProductInput(BaseModel):
         return value
 
 
+class ChatTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=800)
+
+    @field_validator("content")
+    @classmethod
+    def normalize_content(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Nội dung lịch sử không được để trống.")
+        return normalized
+
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(min_length=2, max_length=500)
     tenant: str = Field(default="fashion-ecommerce", pattern=r"^[a-z0-9][a-z0-9-]{1,63}$")
     products: list[ProductInput] = Field(default_factory=list, max_length=6)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=10)
 
     @field_validator("message")
     @classmethod

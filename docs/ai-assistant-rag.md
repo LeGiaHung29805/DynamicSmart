@@ -19,7 +19,30 @@ Document loader (.md, .txt, .pdf)
 → câu trả lời + citations
 ```
 
-Mô hình mặc định là `qwen2.5:0.5b`; embedding mặc định là `nomic-embed-text`. Khi Ollama không sẵn sàng trong môi trường phát triển, embedding băm chỉ được dùng để kiểm thử luồng và phần trả lời chuyển sang trích đoạn nguồn, không được xem là cấu hình production.
+Luồng runtime được tối ưu theo loại câu hỏi:
+
+```text
+Tìm sản phẩm -> Catalog Service -> response trực tiếp
+FAQ/chính sách đơn giản -> embedding + Qdrant -> trích xuất có citation
+Câu hỏi so sánh/tổng hợp/tư vấn -> embedding + Qdrant -> Ollama streaming (khi bật synthesis)
+```
+
+FastAPI tái sử dụng kết nối HTTP, cache tối đa 128 embedding câu hỏi lặp lại và giữ model
+Ollama nóng trong 30 phút. Chat model mặc định dùng context 2048 token, sinh tối đa 160 token.
+Do `qwen2.5:0.5b` có thể diễn giải sai chính sách, môi trường mặc định đặt
+`RAG_ENABLE_LLM_SYNTHESIS=false`: câu trả lời chính sách được trích xuất có nguồn. Chỉ bật
+LLM synthesis khi đã chuyển sang model mạnh hơn và kiểm thử bộ câu hỏi nghiệp vụ.
+
+Retriever dùng kết hợp semantic score và từ khóa tiếng Việt đã chuẩn hóa từ đồng nghĩa. Kết
+quả được giới hạn tối đa hai chunk mỗi file để context không bị một tài liệu chiếm hết. Splitter
+ưu tiên biên đoạn và câu, overlap theo đơn vị hoàn chỉnh; câu trả lời extractive chọn tối đa ba
+ý có liên quan và loại tiêu đề/câu giới hạn trợ lý không trả lời trực tiếp câu hỏi.
+
+Mô hình chat mặc định là `qwen2.5:0.5b`; embedding mặc định là
+`qwen3-embedding:0.6b`. Collection mặc định `ecommerce_knowledge_qwen3_06b` được tách khỏi
+collection của model embedding cũ để không trộn các vector khác kích thước. Khi Ollama không
+sẵn sàng trong môi trường phát triển, embedding băm chỉ được dùng để kiểm thử luồng và phần
+trả lời chuyển sang trích đoạn nguồn, không được xem là cấu hình production.
 
 ## Contract
 
@@ -29,17 +52,56 @@ Frontend gọi Gateway:
 POST /api/v1/assistant/chat
 ```
 
+Giao diện DynamicMart dùng `POST /api/v1/assistant/chat/stream` (NDJSON) để hiển thị token
+ngay khi Ollama sinh nội dung. Endpoint JSON cũ tiếp tục được giữ cho client hiện tại và
+Fashion Ecommerce.
+
+Frontend chỉ trình bày nội dung trả lời và thẻ sản phẩm, giữ xuống dòng giữa các ý và không
+hiển thị citation. Trường `citations` vẫn được giữ trong contract làm metadata kỹ thuật để
+không phá vỡ client cũ.
+
 Body:
 
 ```json
-{"tenant":"dynamicmart","message":"Phí vận chuyển tính thế nào?","products":[]}
+{
+  "tenant":"dynamicmart",
+  "message":"Nếu đổi địa chỉ thì sao?",
+  "products":[],
+  "history":[
+    {"role":"user","content":"Phí vận chuyển tính thế nào?"},
+    {"role":"assistant","content":"Phí được hiển thị trước khi xác nhận."}
+  ]
+}
 ```
 
-Response gồm `reply`, `intent`, `query`, `products` và `citations`. MVP DynamicMart chỉ dùng knowledge RAG; chưa truyền dữ liệu Catalog thời gian thực vào `products`. Khi bổ sung tìm sản phẩm, Adapter phía máy chủ phải lấy dữ liệu từ Catalog Service và không tin giá/tồn kho do trình duyệt gửi.
+`history` là trường tùy chọn, tối đa 10 lượt (`user`/`assistant`), mỗi nội dung tối đa 800 ký
+tự. Nó chỉ được frontend giữ trong phiên trang hiện tại và gửi kèm request để giải nghĩa câu hỏi
+nối tiếp. FastAPI không lưu lịch sử vào database hoặc Qdrant; nội dung nhạy cảm phổ biến bị
+lược bỏ trước khi dùng cho retrieval/prompt.
+
+Response gồm `reply`, `intent`, `query`, `products` và `citations`. Với câu hỏi tìm sản phẩm,
+AI Assistant tự lấy dữ liệu Catalog thời gian thực ở phía máy chủ; trường `products` do trình
+duyệt gửi không được dùng làm nguồn giá hoặc tồn kho của DynamicMart.
+
+DynamicMart hiện đã dùng hai luồng dữ liệu:
+
+- Chính sách, FAQ và hướng dẫn ổn định: đọc từ `.md`, `.txt`, `.pdf` rồi lập chỉ mục vào Qdrant.
+- Sản phẩm, giá khuyến mãi và trạng thái còn hàng: AI Assistant gọi public contract của Catalog
+  Service ở thời điểm khách hỏi. AI Assistant không kết nối `catalog_db` và không lưu bản sao
+  giá/tồn kho trong Qdrant.
+
+```text
+Frontend -> API Gateway -> AI Assistant -> Catalog Service -> catalog_db
+                                      <- ProductSummary <-
+```
+
+Khi Admin tạo, sửa, công khai sản phẩm hoặc điều chỉnh giá/tồn kho, chatbot dùng dữ liệu mới ở
+câu hỏi kế tiếp; không phải tạo file tài liệu hoặc re-index Qdrant. Snapshot sản phẩm Markdown
+cũ `danh-muc-va-san-pham-chi-tiet.md` không được loader lập chỉ mục.
 
 ## Chạy local
 
-1. Cài và chạy Ollama, tải `qwen2.5:0.5b` và `nomic-embed-text`.
+1. Cài và chạy Ollama, tải `qwen2.5:0.5b` và `qwen3-embedding:0.6b`.
 2. Cài dependency và chạy FastAPI theo `services/ai-assistant-service/README.md`.
 3. Gateway dùng `AI_ASSISTANT_SERVICE_URL=http://127.0.0.1:8001` theo mặc định.
 4. Chạy Gateway và frontend như quy trình hiện có.
