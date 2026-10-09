@@ -4,11 +4,13 @@ import com.dynamicmart.order_service.client.CartOrderConfirmationGateway.OrderCo
 import com.dynamicmart.order_service.exception.OrderException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
+@Profile("!standalone")
 public class HttpCartOrderConfirmationGateway implements CartOrderConfirmationGateway {
     private final RestClient client;
 

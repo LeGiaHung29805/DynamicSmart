@@ -44,9 +44,11 @@ function Wait-OrderHealth {
 function Invoke-LocalSmoke {
     Wait-OrderHealth
     Assert-DockerReady
+    # installed_rank also counts repeatable migrations; validate the latest
+    # versioned schema migration instead.
     $flywayVersion = (& docker --config $dockerConfig compose -f $composeFile exec --no-TTY postgres `
-            psql -U order_user -d order_db -Atc 'select max(installed_rank) from flyway_schema_history where success;').Trim()
-    if ($LASTEXITCODE -ne 0 -or $flywayVersion -ne '8') {
+            psql -U order_user -d order_db -Atc 'select max(version::integer) from flyway_schema_history where success and version is not null;').Trim()
+    if ($LASTEXITCODE -ne 0 -or $flywayVersion -ne '10') {
         throw "Flyway smoke thất bại; version nhận được: $flywayVersion"
     }
     & docker --config $dockerConfig compose -f $composeFile exec --no-TTY rabbitmq rabbitmq-diagnostics -q ping
@@ -54,8 +56,15 @@ function Invoke-LocalSmoke {
         throw 'RabbitMQ ping thất bại.'
     }
 
+    $activeProfiles = @($env:ORDER_SPRING_PROFILES_ACTIVE -split ',' | ForEach-Object { $_.Trim() })
+    $isStandalone = $activeProfiles -contains 'standalone'
     $authenticatedApi = 'SKIPPED - cần ORDER_LOCAL_ACCESS_TOKEN do Identity Service thật cấp'
-    if (-not [string]::IsNullOrWhiteSpace($env:ORDER_LOCAL_ACCESS_TOKEN)) {
+    if ($isStandalone) {
+        $token = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/standalone/tokens/customer"
+        $headers = @{ Authorization = "Bearer $($token.accessToken)" }
+        Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/orders?page=0&size=1" -Headers $headers | Out-Null
+        $authenticatedApi = 'OK - standalone token'
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:ORDER_LOCAL_ACCESS_TOKEN)) {
         $headers = @{ Authorization = "Bearer $($env:ORDER_LOCAL_ACCESS_TOKEN)" }
         Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/orders?page=0&size=1" -Headers $headers | Out-Null
         $authenticatedApi = 'OK'
@@ -66,7 +75,11 @@ function Invoke-LocalSmoke {
         FlywayVersion = $flywayVersion
         RabbitMq = 'Ping succeeded'
         AuthenticatedApi = $authenticatedApi
-        Note = 'Không tạo token hoặc dữ liệu giả; Checkout cần service thật ở cổng 8081/8082/8083/8085.'
+        Note = if ($isStandalone) {
+            'Standalone adapters đang hoạt động; không cần các service ngang hàng.'
+        } else {
+            'Không tạo token hoặc dữ liệu giả; Checkout cần service thật ở cổng 8081/8082/8083/8085.'
+        }
     } | Format-List
 }
 

@@ -5,11 +5,13 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
+@Profile("!standalone")
 public class HttpPaymentClient implements PaymentClient {
     public static final String INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key";
 

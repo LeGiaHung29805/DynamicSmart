@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
+@Profile("!standalone")
 public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReservationGateway {
     private final RestClient client;
     public HttpVoucherGateway(@Qualifier("cartRestClient") RestClient client) { this.client = client; }

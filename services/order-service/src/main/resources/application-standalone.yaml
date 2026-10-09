@@ -1,0 +1,3 @@
+app:
+  saga-recovery:
+    enabled: false

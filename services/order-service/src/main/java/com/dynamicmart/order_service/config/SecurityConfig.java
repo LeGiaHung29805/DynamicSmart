@@ -31,6 +31,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/v1/orders/internal/**").permitAll()
+                        // The matching controller only exists under the local-only standalone profile.
+                        .requestMatchers("/api/v1/standalone/**").permitAll()
                         .requestMatchers("/api/v1/orders/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/orders/**", "/api/v1/checkout/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated())

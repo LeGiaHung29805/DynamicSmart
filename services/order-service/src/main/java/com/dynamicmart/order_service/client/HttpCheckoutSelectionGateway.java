@@ -8,11 +8,13 @@ import java.util.Objects;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
+@Profile("!standalone")
 public class HttpCheckoutSelectionGateway implements CheckoutSelectionGateway {
     private final RestClient cart; private final RestClient catalog;
     public HttpCheckoutSelectionGateway(@Qualifier("cartRestClient") RestClient cart,
