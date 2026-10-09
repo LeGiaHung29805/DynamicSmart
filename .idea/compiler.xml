@@ -22,7 +22,7 @@
         </processorPath>
         <module name="order-service" />
       </profile>
-      <profile name="Annotation profile for engagement-service" enabled="true">
+      <profile name="Annotation profile for catalog-service" enabled="true">
         <sourceOutputDir name="../generated-sources/annotations" />
         <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
         <processorPath useClasspath="false">
@@ -38,8 +38,8 @@
         <module name="catalog-service.main" />
         <module name="cart-service.main" />
         <module name="cart-service.test" />
-        <module name="catalog-service.test" />
         <module name="identity-service.test" />
+        <module name="catalog-service.test" />
         <module name="engagement-service.main" />
       </profile>
     </annotationProcessing>
