@@ -1,14 +1,15 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
-import { Bot, ChevronDown, MessageCircle, Send, X } from "lucide-react";
-import { assistantApi, type AssistantCitation } from "../api/assistant.api";
+import { Bot, MessageCircle, PackageCheck, Send, X } from "lucide-react";
+import { formatVnd } from "@/components/common/Price";
+import { assistantApi, type AssistantHistoryTurn, type AssistantProduct } from "../api/assistant.api";
 
 type Message = {
   id: string;
   role: "assistant" | "customer";
   content: string;
-  citations?: AssistantCitation[];
+  products?: AssistantProduct[];
 };
 
 const suggestions = [
@@ -45,6 +46,20 @@ export function AssistantWidget() {
     const question = (suggestedMessage ?? message).trim();
     if (question.length < 2 || busy) return;
 
+    const history: AssistantHistoryTurn[] = messages
+      .filter((item) => item.id !== "welcome" && item.content.trim())
+      .slice(-10)
+      .map((item) => {
+        const productNames = item.products?.map((product) => product.name).filter(Boolean) ?? [];
+        const productContext = productNames.length > 0
+          ? ` Sản phẩm đã hiển thị: ${productNames.join(", ")}.`
+          : "";
+        return {
+          role: item.role === "customer" ? "user" : "assistant",
+          content: `${item.content}${productContext}`.slice(0, 800),
+        };
+      });
+
     setMessages((current) => [
       ...current,
       { id: crypto.randomUUID(), role: "customer", content: question },
@@ -52,25 +67,31 @@ export function AssistantWidget() {
     setMessage("");
     setError("");
     setBusy(true);
+    const answerId = crypto.randomUUID();
+    setMessages((current) => [
+      ...current,
+      { id: answerId, role: "assistant", content: "" },
+    ]);
 
     try {
-      const response = await assistantApi.ask(question);
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: response.reply,
-          citations: response.citations,
-        },
-      ]);
+      const response = await assistantApi.askStream(question, history, (content, replace) => {
+        setMessages((current) => current.map((item) => item.id === answerId
+          ? { ...item, content: replace ? content : item.content + content }
+          : item));
+      });
+      setMessages((current) => current.map((item) => item.id === answerId
+        ? {
+            ...item,
+            content: response.reply,
+            products: response.products,
+          }
+        : item));
     } catch {
       const text = "Trợ lý đang tạm thời không phản hồi. Vui lòng thử lại sau.";
       setError(text);
-      setMessages((current) => [
-        ...current,
-        { id: crypto.randomUUID(), role: "assistant", content: text },
-      ]);
+      setMessages((current) => current.map((item) => item.id === answerId
+        ? { ...item, content: text }
+        : item));
     } finally {
       setBusy(false);
     }
@@ -115,21 +136,34 @@ export function AssistantWidget() {
             {messages.map((item) => (
               <div key={item.id} className={`flex ${item.role === "customer" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${item.role === "customer" ? "rounded-br-md bg-slate-950 text-white" : "rounded-bl-md bg-white text-slate-700"}`}>
-                  <p>{item.content}</p>
-                  {item.citations && item.citations.length > 0 && (
-                    <details className="mt-3 border-t border-slate-200 pt-2 text-xs text-slate-500">
-                      <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-emerald-800">
-                        <ChevronDown className="size-3.5" /> Nguồn tham khảo
-                      </summary>
-                      <ul className="mt-2 space-y-2">
-                        {item.citations.slice(0, 4).map((citation) => (
-                          <li key={`${citation.source}-${citation.title}`}>
-                            <strong className="block text-slate-700">{citation.title}</strong>
-                            <span>{citation.excerpt}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
+                  <p className="whitespace-pre-line break-words">{item.content || "Đang chuẩn bị câu trả lời…"}</p>
+                  {item.products && item.products.length > 0 && (
+                    <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                      {item.products.slice(0, 6).map((product) => (
+                        <a
+                          key={product.id ?? product.url}
+                          className="flex gap-3 rounded-xl border border-slate-200 bg-white p-2.5 transition hover:border-emerald-300 hover:bg-emerald-50/50"
+                          href={product.url}
+                        >
+                          {product.image_url ? (
+                            // Ảnh do Catalog Service quản lý; dùng img để hỗ trợ object-storage host động.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img className="size-16 shrink-0 rounded-lg bg-slate-100 object-cover" src={product.image_url} alt="" />
+                          ) : (
+                            <span className="grid size-16 shrink-0 place-items-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-400">DynamicMart</span>
+                          )}
+                          <span className="min-w-0 flex-1">
+                            <strong className="line-clamp-2 block leading-5 text-slate-900">{product.name}</strong>
+                            {product.detail ? <span className="line-clamp-1 block text-xs text-slate-500">{product.detail}</span> : null}
+                            <span className="mt-1 flex flex-wrap items-center gap-2">
+                              {product.price !== null && product.price !== undefined ? <b className="text-emerald-800">{formatVnd(product.price)}</b> : null}
+                              {product.compare_at_price !== null && product.compare_at_price !== undefined ? <del className="text-xs text-slate-400">{formatVnd(product.compare_at_price)}</del> : null}
+                            </span>
+                            <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><PackageCheck className="size-3.5" /> Còn hàng</span>
+                          </span>
+                        </a>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -150,7 +184,7 @@ export function AssistantWidget() {
               </div>
             )}
 
-            {busy && <p className="text-xs font-medium text-slate-500">Đang truy xuất tài liệu…</p>}
+            {busy && <p className="text-xs font-medium text-slate-500">Đang tìm trong tài liệu và danh mục sản phẩm…</p>}
           </div>
 
           {error && <p role="alert" className="border-t border-red-100 bg-red-50 px-4 py-2 text-xs text-red-700">{error}</p>}

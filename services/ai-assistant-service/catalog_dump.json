@@ -1,0 +1,241 @@
+{
+  "categories": [
+    {
+      "id": "10000000-0000-0000-0000-000000000001",
+      "code": "ELECTRONICS",
+      "name": "Điện tử",
+      "slug": "dien-tu",
+      "description": "Thiết bị điện tử tiêu dùng",
+      "sortOrder": 10,
+      "children": [
+        {
+          "id": "10000000-0000-0000-0000-000000000002",
+          "code": "PHONE",
+          "name": "Điện thoại",
+          "slug": "dien-thoai",
+          "description": "Điện thoại thông minh",
+          "sortOrder": 10,
+          "children": []
+        },
+        {
+          "id": "10000000-0000-0000-0000-000000000003",
+          "code": "LAPTOP",
+          "name": "Laptop",
+          "slug": "laptop",
+          "description": "Máy tính xách tay",
+          "sortOrder": 20,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": "40000000-0000-0000-0000-000000000002",
+      "name": "Dynamic Laptop Air",
+      "slug": "dynamic-laptop-air",
+      "shortDescription": "Laptop mỏng nhẹ cho học tập và công việc.",
+      "description": "Sản phẩm minh họa cho catalog local.",
+      "category": {
+        "id": "10000000-0000-0000-0000-000000000003",
+        "code": "LAPTOP",
+        "name": "Laptop",
+        "slug": "laptop"
+      },
+      "featured": true,
+      "averageRating": 0.0,
+      "reviewCount": 0,
+      "publishedAt": "2026-09-28T01:52:16.057058Z",
+      "attributes": [
+        {
+          "id": "41000000-0000-0000-0000-000000000002",
+          "attributeId": "20000000-0000-0000-0000-000000000001",
+          "attributeCode": "BRAND",
+          "attributeName": "Thương hiệu",
+          "dataType": "SELECT",
+          "value": "ASUS"
+        }
+      ],
+      "images": [
+        {
+          "id": "60000000-0000-0000-0000-000000000002",
+          "productId": "40000000-0000-0000-0000-000000000002",
+          "variantId": null,
+          "imageUrl": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853",
+          "altText": "Dynamic Laptop Air",
+          "sortOrder": 10,
+          "primary": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-0000-0000-000000000003",
+          "productId": "40000000-0000-0000-0000-000000000002",
+          "sku": "DLA-BLK-512",
+          "name": "Đen / 512 GB",
+          "price": {
+            "listPriceVnd": 24990000,
+            "salePriceVnd": null,
+            "directSaleDiscountVnd": 0,
+            "directSalePercent": 0,
+            "directSaleEndsAt": null,
+            "directSalePromotionId": null
+          },
+          "weightGrams": 1800,
+          "lengthCm": 42,
+          "widthCm": 30,
+          "heightCm": 8,
+          "status": "ACTIVE",
+          "sortOrder": 10,
+          "inventory": {
+            "onHandQuantity": 4,
+            "reservedQuantity": 0,
+            "availableQuantity": 4
+          },
+          "purchasable": true,
+          "attributes": [
+            {
+              "id": "51000000-0000-0000-0000-000000000005",
+              "attributeId": "20000000-0000-0000-0000-000000000002",
+              "attributeCode": "COLOR",
+              "attributeName": "Màu sắc",
+              "dataType": "SELECT",
+              "value": "BLACK"
+            }
+          ],
+          "images": []
+        }
+      ]
+    },
+    {
+      "id": "40000000-0000-0000-0000-000000000001",
+      "name": "Dynamic Phone Pro",
+      "slug": "dynamic-phone-pro",
+      "shortDescription": "Điện thoại hiệu năng cao với nhiều phiên bản.",
+      "description": "Sản phẩm minh họa cho luồng chọn màu sắc và dung lượng.",
+      "category": {
+        "id": "10000000-0000-0000-0000-000000000002",
+        "code": "PHONE",
+        "name": "Điện thoại",
+        "slug": "dien-thoai"
+      },
+      "featured": true,
+      "averageRating": 0.0,
+      "reviewCount": 0,
+      "publishedAt": "2026-09-24T01:52:16.057058Z",
+      "attributes": [
+        {
+          "id": "41000000-0000-0000-0000-000000000001",
+          "attributeId": "20000000-0000-0000-0000-000000000001",
+          "attributeCode": "BRAND",
+          "attributeName": "Thương hiệu",
+          "dataType": "SELECT",
+          "value": "SAMSUNG"
+        }
+      ],
+      "images": [
+        {
+          "id": "60000000-0000-0000-0000-000000000001",
+          "productId": "40000000-0000-0000-0000-000000000001",
+          "variantId": null,
+          "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
+          "altText": "Dynamic Phone Pro",
+          "sortOrder": 10,
+          "primary": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-0000-0000-000000000001",
+          "productId": "40000000-0000-0000-0000-000000000001",
+          "sku": "DPP-BLK-128",
+          "name": "Đen / 128 GB",
+          "price": {
+            "listPriceVnd": 15990000,
+            "salePriceVnd": 15490000,
+            "directSaleDiscountVnd": 500000,
+            "directSalePercent": 3,
+            "directSaleEndsAt": "2027-10-01T02:09:55.019871Z",
+            "directSalePromotionId": "70200000-0000-4000-8000-000000000001"
+          },
+          "weightGrams": 420,
+          "lengthCm": 18,
+          "widthCm": 10,
+          "heightCm": 6,
+          "status": "ACTIVE",
+          "sortOrder": 10,
+          "inventory": {
+            "onHandQuantity": 12,
+            "reservedQuantity": 0,
+            "availableQuantity": 12
+          },
+          "purchasable": true,
+          "attributes": [
+            {
+              "id": "51000000-0000-0000-0000-000000000001",
+              "attributeId": "20000000-0000-0000-0000-000000000002",
+              "attributeCode": "COLOR",
+              "attributeName": "Màu sắc",
+              "dataType": "SELECT",
+              "value": "BLACK"
+            },
+            {
+              "id": "51000000-0000-0000-0000-000000000002",
+              "attributeId": "20000000-0000-0000-0000-000000000003",
+              "attributeCode": "STORAGE",
+              "attributeName": "Dung lượng",
+              "dataType": "SELECT",
+              "value": "128GB"
+            }
+          ],
+          "images": []
+        },
+        {
+          "id": "50000000-0000-0000-0000-000000000002",
+          "productId": "40000000-0000-0000-0000-000000000001",
+          "sku": "DPP-BLU-256",
+          "name": "Xanh / 256 GB",
+          "price": {
+            "listPriceVnd": 18990000,
+            "salePriceVnd": null,
+            "directSaleDiscountVnd": 0,
+            "directSalePercent": 0,
+            "directSaleEndsAt": null,
+            "directSalePromotionId": null
+          },
+          "weightGrams": 420,
+          "lengthCm": 18,
+          "widthCm": 10,
+          "heightCm": 6,
+          "status": "ACTIVE",
+          "sortOrder": 20,
+          "inventory": {
+            "onHandQuantity": 7,
+            "reservedQuantity": 0,
+            "availableQuantity": 7
+          },
+          "purchasable": true,
+          "attributes": [
+            {
+              "id": "51000000-0000-0000-0000-000000000003",
+              "attributeId": "20000000-0000-0000-0000-000000000002",
+              "attributeCode": "COLOR",
+              "attributeName": "Màu sắc",
+              "dataType": "SELECT",
+              "value": "BLUE"
+            },
+            {
+              "id": "51000000-0000-0000-0000-000000000004",
+              "attributeId": "20000000-0000-0000-0000-000000000003",
+              "attributeCode": "STORAGE",
+              "attributeName": "Dung lượng",
+              "dataType": "SELECT",
+              "value": "256GB"
+            }
+          ],
+          "images": []
+        }
+      ]
+    }
+  ]
+}

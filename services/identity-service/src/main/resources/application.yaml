@@ -11,7 +11,7 @@ spring:
     password: ${DB_PASSWORD}
   flyway:
     enabled: true
-    locations: classpath:db/migration,classpath:db/seed/local
+    locations: classpath:db/migration
 
 server:
   port: ${SERVER_PORT:8081}

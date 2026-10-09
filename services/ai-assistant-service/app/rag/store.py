@@ -108,8 +108,22 @@ class QdrantVectorStore:
             )
             lexical_score = score_lexical_match(query_text, f"{chunk.title} {chunk.content}")
             score = (float(point.score) * 0.7) + (lexical_score * 0.3)
+            normalized_query = " ".join(_tokens(query_text))
+            asks_about_assistant = any(term in normalized_query for term in ("tro ly", "chatbot", "gioi han"))
+            if "gioi-han-tro-ly" in chunk.source and not asks_about_assistant:
+                score -= 0.2
             results.append(SearchResult(chunk=chunk, score=score))
-        return sorted(results, key=lambda result: result.score, reverse=True)[:limit]
+        ranked = sorted(results, key=lambda result: result.score, reverse=True)
+        diversified: list[SearchResult] = []
+        source_counts: Counter[str] = Counter()
+        for result in ranked:
+            if source_counts[result.chunk.source] >= 2:
+                continue
+            diversified.append(result)
+            source_counts[result.chunk.source] += 1
+            if len(diversified) >= limit:
+                break
+        return diversified
 
     def counts_by_tenant(self) -> dict[str, int]:
         if not self.client.collection_exists(self.collection_name):
@@ -161,7 +175,8 @@ class QdrantVectorStore:
 
 _STOP_WORDS = {
     "bao", "bi", "cac", "cho", "co", "cua", "duoc", "la", "mot",
-    "nhung", "san", "pham", "the", "thi", "toi", "trong", "va",
+    "cach", "can", "gi", "lam", "muon", "nao", "nhu", "nhung", "sao",
+    "san", "pham", "the", "thi", "toi", "trong", "va",
 }
 
 
@@ -187,4 +202,15 @@ def score_lexical_match(query: str, document: str) -> float:
 def _tokens(value: str) -> list[str]:
     normalized = unicodedata.normalize("NFD", value.lower())
     normalized = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+    normalized = normalized.replace("phi van chuyen duoc tinh", "phi giao hang bao gia")
+    normalized = normalized.replace("phi giao hang duoc tinh", "phi giao hang bao gia")
+    normalized = normalized.replace("ma giam gia", "voucher")
+    normalized = normalized.replace("ma khuyen mai", "voucher")
+    normalized = normalized.replace("ship hang", "giao hang")
+    normalized = normalized.replace("shipping", "giao hang")
+    normalized = normalized.replace("van chuyen", "giao hang")
+    normalized = normalized.replace("doi tra", "hoan tra")
+    normalized = normalized.replace("thanh toan khi nhan hang", "cod")
+    normalized = normalized.replace("tra tien khi nhan hang", "cod")
+    normalized = normalized.replace("san pham yeu thich", "wishlist")
     return re.findall(r"[a-z0-9]{2,}", normalized)
