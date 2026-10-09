@@ -53,7 +53,7 @@ public class ShippingQuoteService {
     private ShippingQuoteResponse response(ShippingQuote quote) {
         return ShippingQuoteMapper.toResponse(quote);
     }
-    private String fingerprint(ShippingQuoteRequest request) { return sha256(Map.of("customerId", request.customerId(), "provinceId", request.provinceId(), "wardId", request.wardId(), "items", request.items(), "shippingDiscountVnd", request.shippingDiscountVnd(), "serviceCode", request.serviceCode() == null ? "" : request.serviceCode(), "warehouseDistrictId", properties.fromDistrictId() == null ? 0 : properties.fromDistrictId(), "warehouseWardCode", properties.fromWardCode() == null ? "" : properties.fromWardCode())); }
+    private String fingerprint(ShippingQuoteRequest request) { return sha256(Map.of("customerId", request.customerId(), "checkoutSessionId", request.checkoutSessionId(), "provinceId", request.provinceId(), "wardId", request.wardId(), "items", request.items(), "shippingDiscountVnd", request.shippingDiscountVnd(), "serviceCode", request.serviceCode() == null ? "" : request.serviceCode(), "warehouseDistrictId", properties.fromDistrictId() == null ? 0 : properties.fromDistrictId(), "warehouseWardCode", properties.fromWardCode() == null ? "" : properties.fromWardCode())); }
     private String itemsFingerprint(ShippingQuoteRequest request) { return sha256(request.items()); }
     private String sha256(Object value) { try { return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(objectMapper.writeValueAsBytes(value))); } catch (Exception exception) { throw new IllegalStateException("Cannot fingerprint shipping quote", exception); } }
 }

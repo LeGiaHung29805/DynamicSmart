@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useAuthSession } from "@/lib/auth/session";
-import { customerApi } from "../api/customer.api";
+import { locationApi } from "@/features/shipping";
+import { addressApi } from "../api/address.api";
 import type { Address, LocationOption } from "../types/customer.types";
 
 export function AddressBookPage() {
@@ -22,17 +23,17 @@ export function AddressBookPage() {
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("Đang tải…");
 
-  const reload = () => customerApi.addresses().then((value) => { setAddresses(value); setMessage(""); }).catch(() => setMessage("Không thể tải sổ địa chỉ."));
+  const reload = () => addressApi.list().then((value) => { setAddresses(value); setMessage(""); }).catch(() => setMessage("Không thể tải sổ địa chỉ."));
   useEffect(() => {
     if (session.status !== "authenticated") return;
-    customerApi.addresses().then((value) => { setAddresses(value); setMessage(""); })
+    addressApi.list().then((value) => { setAddresses(value); setMessage(""); })
       .catch(() => setMessage("Không thể tải sổ địa chỉ."));
-    customerApi.provinces().then(setProvinces)
+    locationApi.provinces().then(setProvinces)
       .catch(() => setMessage("Không thể tải danh mục tỉnh/thành."));
   }, [session.status]);
   useEffect(() => {
     if (session.status === "authenticated" && provinceId) {
-      customerApi.wards(provinceId).then(setWards)
+      locationApi.wards(provinceId).then(setWards)
         .catch(() => { setWards([]); setMessage("Không thể tải danh mục phường/xã."); });
     }
   }, [provinceId, session.status]);
@@ -49,12 +50,12 @@ export function AddressBookPage() {
     if (!recipientName || !phone || !addressLine || !province || !ward) {
       setMessage("Vui lòng nhập đầy đủ cả 5 trường bắt buộc."); return;
     }
-    const body = { recipientName, phone, addressLine, provinceId, provinceName: province.name, wardId, wardName: ward.name, defaultAddress: editing?.defaultAddress || data.get("defaultAddress") === "on" };
-    try { if (editing) await customerApi.updateAddress(editing.id, body); else await customerApi.createAddress(body); closeForm(); reload(); }
+    const body = { recipientName, phone, addressLine, provinceId, wardId, defaultAddress: editing?.defaultAddress || data.get("defaultAddress") === "on" };
+    try { if (editing) await addressApi.update(editing.id, body); else await addressApi.create(body); closeForm(); reload(); }
     catch { setMessage("Không thể lưu địa chỉ. Hãy kiểm tra lại địa giới."); }
   };
-  const makeDefault = async (id: string) => { try { await customerApi.makeDefault(id); reload(); } catch { setMessage("Không thể đặt địa chỉ mặc định."); } };
-  const deactivate = async (id: string) => { if (!window.confirm("Ngừng sử dụng địa chỉ này?")) return; try { await customerApi.deactivateAddress(id); reload(); } catch { setMessage("Không thể ngừng sử dụng địa chỉ."); } };
+  const makeDefault = async (id: string) => { try { await addressApi.makeDefault(id); reload(); } catch { setMessage("Không thể đặt địa chỉ mặc định."); } };
+  const deactivate = async (id: string) => { if (!window.confirm("Ngừng sử dụng địa chỉ này?")) return; try { await addressApi.deactivate(id); reload(); } catch { setMessage("Không thể ngừng sử dụng địa chỉ."); } };
 
   return <div className="space-y-7"><PageHeader eyebrow="Giao hàng" title="Sổ địa chỉ" description="Quản lý địa chỉ nhận hàng. Tỉnh/Thành phố và Phường/Xã được lấy từ danh mục địa giới và kiểm tra lại ở máy chủ." action={<Button size="lg" onClick={openCreate}><Plus />Thêm địa chỉ</Button>} />
     {message ? <SurfacePanel className={message.startsWith("Không") ? "text-red-600" : ""}>{message}</SurfacePanel> : null}

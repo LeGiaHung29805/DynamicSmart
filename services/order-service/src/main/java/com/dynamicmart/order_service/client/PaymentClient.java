@@ -30,6 +30,7 @@ public interface PaymentClient {
 
     record ShippingQuoteRequest(
             UUID customerId,
+            UUID checkoutSessionId,
             int provinceId,
             int wardId,
             List<ShippingItemRequest> items,

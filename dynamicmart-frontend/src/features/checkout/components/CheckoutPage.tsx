@@ -11,8 +11,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { cartApi } from "@/features/cart";
+import { addressApi } from "@/features/customer/api/address.api";
 import { customerApi } from "@/features/customer/api/customer.api";
 import type { Address, LocationOption, VoucherWalletItem } from "@/features/customer/types/customer.types";
+import { locationApi } from "@/features/shipping";
 import type { PaymentMethod, PaymentTiming } from "@/features/order/types/order.types";
 import { orderStatusLabel } from "@/features/order/utils/order-format";
 import { isApiError } from "@/lib/api/error";
@@ -102,7 +104,7 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
         }
         const [nextSession, nextAddresses, nextVouchers] = await Promise.all([
           sessionPromise,
-          customerApi.addresses(),
+          addressApi.list(),
           customerApi.vouchers(),
         ]);
         if (ignored) return;
@@ -130,7 +132,7 @@ export function CheckoutPage({ initialSessionId }: Readonly<{ initialSessionId?:
   }
 
   async function reloadAccountData() {
-    const [nextAddresses, nextVouchers] = await Promise.all([customerApi.addresses(), customerApi.vouchers()]);
+    const [nextAddresses, nextVouchers] = await Promise.all([addressApi.list(), customerApi.vouchers()]);
     setAddresses(nextAddresses);
     setVouchers(nextVouchers);
     return nextAddresses;
@@ -250,9 +252,9 @@ function InlineAddressForm({ saved }: Readonly<{ saved: (address: Address) => Pr
   const [provinceId, setProvinceId] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => { customerApi.provinces().then(setProvinces).catch(() => setProvinces([])); }, []);
-  useEffect(() => { if (provinceId) customerApi.wards(provinceId).then(setWards).catch(() => setWards([])); }, [provinceId]);
-  return <form className="grid gap-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } const data = new FormData(form); const wardId = Number(data.get("wardId")); const province = provinces.find((item) => item.id === provinceId); const ward = wards.find((item) => item.id === wardId); if (!province || !ward) { setError("Vui lòng chọn Tỉnh/Thành phố và Phường/Xã do GHN hỗ trợ."); return; } setSubmitting(true); setError(""); void customerApi.createAddress({ recipientName: String(data.get("recipientName")).trim(), phone: String(data.get("phone")).trim(), addressLine: String(data.get("addressLine")).trim(), provinceId, provinceName: province.name, wardId, wardName: ward.name, defaultAddress: data.get("defaultAddress") === "on" }).then(saved).catch((cause) => setError(errorMessage(cause, "Không thể lưu địa chỉ."))).finally(() => setSubmitting(false)); }}><div className="sm:col-span-2"><h3 className="font-black">Địa chỉ mới</h3><p className="mt-1 text-xs text-stone-500">Tỉnh/Thành phố và Phường/Xã được máy chủ đối chiếu với danh mục GHN trước khi lưu.</p></div><Input autoComplete="name" name="recipientName" label="Người nhận" required minLength={2} maxLength={150} /><Input autoComplete="tel" inputMode="tel" name="phone" label="Số điện thoại" required pattern="^(?:0|\+84)(?:3|5|7|8|9)\d{8}$" title="Nhập số điện thoại Việt Nam hợp lệ, ví dụ 0374505367 hoặc +84374505367." /><Select label="Tỉnh/Thành phố" value={provinceId || ""} onChange={(event) => { setProvinceId(Number(event.target.value)); setWards([]); }} required><option value="">Chọn tỉnh/thành</option>{provinces.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Select name="wardId" label="Phường/Xã" required disabled={!provinceId}><option value="">Chọn phường/xã</option>{wards.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><div className="sm:col-span-2"><Input autoComplete="street-address" name="addressLine" label="Số nhà, tên đường" required minLength={3} maxLength={500} /></div><label className="flex items-center gap-2 text-sm font-bold"><input name="defaultAddress" type="checkbox" />Đặt làm mặc định</label>{error ? <p className="text-sm text-danger sm:col-span-2">{error}</p> : null}<div className="flex justify-end sm:col-span-2"><Button type="submit" disabled={submitting}>{submitting ? "Đang lưu…" : "Lưu địa chỉ"}</Button></div></form>;
+  useEffect(() => { locationApi.provinces().then(setProvinces).catch(() => setProvinces([])); }, []);
+  useEffect(() => { if (provinceId) locationApi.wards(provinceId).then(setWards).catch(() => setWards([])); }, [provinceId]);
+  return <form className="grid gap-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } const data = new FormData(form); const wardId = Number(data.get("wardId")); const province = provinces.find((item) => item.id === provinceId); const ward = wards.find((item) => item.id === wardId); if (!province || !ward) { setError("Vui lòng chọn Tỉnh/Thành phố và Phường/Xã do GHN hỗ trợ."); return; } setSubmitting(true); setError(""); void addressApi.create({ recipientName: String(data.get("recipientName")).trim(), phone: String(data.get("phone")).trim(), addressLine: String(data.get("addressLine")).trim(), provinceId, wardId, defaultAddress: data.get("defaultAddress") === "on" }).then(saved).catch((cause) => setError(errorMessage(cause, "Không thể lưu địa chỉ."))).finally(() => setSubmitting(false)); }}><div className="sm:col-span-2"><h3 className="font-black">Địa chỉ mới</h3><p className="mt-1 text-xs text-stone-500">Tỉnh/Thành phố và Phường/Xã được máy chủ đối chiếu với danh mục GHN trước khi lưu.</p></div><Input autoComplete="name" name="recipientName" label="Người nhận" required minLength={2} maxLength={150} /><Input autoComplete="tel" inputMode="tel" name="phone" label="Số điện thoại" required pattern="^(?:0|\+84)(?:3|5|7|8|9)\d{8}$" title="Nhập số điện thoại Việt Nam hợp lệ, ví dụ 0374505367 hoặc +84374505367." /><Select label="Tỉnh/Thành phố" value={provinceId || ""} onChange={(event) => { setProvinceId(Number(event.target.value)); setWards([]); }} required><option value="">Chọn tỉnh/thành</option>{provinces.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Select name="wardId" label="Phường/Xã" required disabled={!provinceId}><option value="">Chọn phường/xã</option>{wards.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><div className="sm:col-span-2"><Input autoComplete="street-address" name="addressLine" label="Số nhà, tên đường" required minLength={3} maxLength={500} /></div><label className="flex items-center gap-2 text-sm font-bold"><input name="defaultAddress" type="checkbox" />Đặt làm mặc định</label>{error ? <p className="text-sm text-danger sm:col-span-2">{error}</p> : null}<div className="flex justify-end sm:col-span-2"><Button type="submit" disabled={submitting}>{submitting ? "Đang lưu…" : "Lưu địa chỉ"}</Button></div></form>;
 }
 
 function ShippingStep({ disabled, merchandise, merchandiseVoucherId, shipping, shippingVoucherId, preview, back, changeMerchandise, changeShipping, next }: Readonly<{ disabled: boolean; merchandise: VoucherWalletItem[]; merchandiseVoucherId: string; shipping: VoucherWalletItem[]; shippingVoucherId: string; preview: CheckoutPreview | null; back: () => void; changeMerchandise: (value: string) => void; changeShipping: (value: string) => void; next: () => void }>) {

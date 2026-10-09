@@ -87,6 +87,7 @@ public class CheckoutPreviewService {
         validateAddress(session, address);
         PaymentClient.ShippingQuoteResponse quote = payments.createShippingQuote(new ShippingQuoteRequest(
                 customerId,
+                checkoutSessionId,
                 address.provinceId(),
                 address.wardId(),
                 items.stream().map(this::toShippingItem).toList(),
@@ -99,7 +100,7 @@ public class CheckoutPreviewService {
         long shippingDiscount = voucherResult.vouchers().stream().mapToLong(AppliedVoucher::shippingDiscountVnd).sum();
         if (shippingDiscount > 0) {
             quote = payments.createShippingQuote(new ShippingQuoteRequest(
-                    customerId, address.provinceId(), address.wardId(),
+                    customerId, checkoutSessionId, address.provinceId(), address.wardId(),
                     items.stream().map(this::toShippingItem).toList(), shippingDiscount,
                     normalizeServiceCode(request.serviceCode())));
         }

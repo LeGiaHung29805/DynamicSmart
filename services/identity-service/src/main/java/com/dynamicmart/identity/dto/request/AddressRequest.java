@@ -10,6 +10,4 @@ public record AddressRequest(
         @NotBlank @Size(max = 500) String addressLine,
         @Positive int provinceId,
         @Positive int wardId,
-        @NotBlank @Size(max = 150) String provinceName,
-        @NotBlank @Size(max = 150) String wardName,
         boolean defaultAddress) { }

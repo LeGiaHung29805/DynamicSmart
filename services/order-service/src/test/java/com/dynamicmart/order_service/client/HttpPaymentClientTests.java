@@ -28,6 +28,7 @@ import org.springframework.web.client.RestClient;
 class HttpPaymentClientTests {
     private static final String INTERNAL_KEY = "test-internal-key";
     private static final UUID CUSTOMER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID CHECKOUT_SESSION_ID = UUID.fromString("00000000-0000-0000-0000-000000000006");
     private static final UUID QUOTE_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID ORDER_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
     private static final UUID PAYMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000004");
@@ -53,6 +54,7 @@ class HttpPaymentClientTests {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header(HttpPaymentClient.INTERNAL_API_KEY_HEADER, INTERNAL_KEY))
                 .andExpect(jsonPath("$.customerId").value(CUSTOMER_ID.toString()))
+                .andExpect(jsonPath("$.checkoutSessionId").value(CHECKOUT_SESSION_ID.toString()))
                 .andExpect(jsonPath("$.provinceId").value(202))
                 .andExpect(jsonPath("$.wardId").value(1450))
                 .andExpect(jsonPath("$.items[0].variantId").value(VARIANT_ID.toString()))
@@ -61,7 +63,7 @@ class HttpPaymentClientTests {
                 .andRespond(withSuccess(shippingQuote(), MediaType.APPLICATION_JSON));
 
         var response = client.createShippingQuote(new ShippingQuoteRequest(
-                CUSTOMER_ID, 202, 1450,
+                CUSTOMER_ID, CHECKOUT_SESSION_ID, 202, 1450,
                 List.of(new ShippingItemRequest(VARIANT_ID, 2, 500, 20, 10, 6)),
                 5_000, "GHN_STANDARD"));
 
