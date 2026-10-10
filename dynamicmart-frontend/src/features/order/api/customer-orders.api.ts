@@ -39,9 +39,27 @@ function queryString(query: OrderQuery = {}) {
   return params.toString();
 }
 
+export type PurchasedOrderItem = {
+  orderId: string;
+  orderNumber: string;
+  orderItemId: string;
+  productId: string;
+  variantId: string;
+  productName: string;
+  variantName?: string;
+  imageUrl?: string;
+  unitPriceVnd: number;
+  quantity: number;
+  completedAt?: string;
+};
+
 export const customerOrdersApi = {
   list: (query: OrderQuery = {}) => apiClient.get<OrderPage>(`api/v1/orders?${queryString(query)}`),
   get: (orderId: string) => apiClient.get<CustomerOrder>(`api/v1/orders/${orderId}`),
+  getPurchasedItems: (productId?: string) =>
+    apiClient.get<PurchasedOrderItem[]>(
+      `api/v1/orders/purchased-items${productId ? `?productId=${productId}` : ""}`
+    ),
   confirmReceived: async (orderId: string) => {
     await apiClient.post(`api/v1/orders/${orderId}/received`, undefined, {
       headers: { "Idempotency-Key": crypto.randomUUID() },

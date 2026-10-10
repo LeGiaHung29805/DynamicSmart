@@ -11,3 +11,7 @@
 /docs/report-revision/
 /docs/report-assets/
 /docs/report-edit/
+
+# Runtime logs and crash dumps
+.run/
+*.log

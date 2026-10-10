@@ -106,17 +106,106 @@ export function AdminOrderWorkspace() {
     setApplied({ orderNumber: orderNumber.trim(), customerId: customerId.trim() });
   }
 
-  if (session.status === "loading" || session.status === "anonymous") return <LoadingState title="Đang kiểm tra quyền quản trị" />;
+  if (session.status === "loading") return <LoadingState title="Đang kiểm tra quyền quản trị" />;
   if (!isAdmin) {
-    return <ErrorState actionLabel="Về trang chủ" description="Chỉ tài khoản ADMIN được mở khu vực quản lý Order." onAction={() => router.push("/")} title="Không có quyền truy cập" />;
+    return (
+      <div className="space-y-7">
+        <PageHeader eyebrow="Vận hành bán hàng" title="Quản lý đơn hàng" description="Theo dõi đơn hàng, thanh toán và trạng thái giao hàng từ Order Service." />
+        <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-8 text-center shadow-sm">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-100 text-amber-700">
+            <ShieldAlert className="size-7" />
+          </div>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">Yêu cầu quyền Quản trị viên (ADMIN)</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+            Khu vực Quản lý đơn hàng yêu cầu đăng nhập tài khoản Quản trị viên để theo dõi đơn và xử lý vận hành.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button onClick={() => router.push(`/login?returnTo=${encodeURIComponent("/admin/orders")}`)}>
+              Đăng nhập tài khoản Quản trị
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/")}>
+              Về trang chủ
+            </Button>
+          </div>
+          <p className="mt-4 text-xs text-slate-500">
+            Tài khoản demo: <code className="font-mono font-semibold text-slate-700">admin@dynamicmart.local</code> / Mật khẩu: <code className="font-mono font-semibold text-slate-700">Password@123</code>
+          </p>
+        </div>
+      </div>
+    );
   }
 
-  return <div className="space-y-7"><PageHeader eyebrow="Vận hành" title="Quản lý đơn hàng" description="Theo dõi snapshot, timeline và chuyển trạng thái bằng command idempotent của Order Service." />
-    <SurfacePanel><form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_220px_auto] lg:items-end" onSubmit={search}><Input label="Mã đơn" value={orderNumber} onChange={(event) => setOrderNumber(event.target.value)} /><Input label="Customer ID" value={customerId} onChange={(event) => setCustomerId(event.target.value)} /><Select label="Trạng thái" value={status} onChange={(event) => { setLoading(true); setError(""); setStatus(event.target.value as OrderStatus | ""); setPage(0); }}><option value="">Tất cả trạng thái</option>{statuses.map((value) => <option key={value} value={value}>{orderStatusLabel(value)}</option>)}</Select><Button type="submit"><Search />Lọc</Button></form></SurfacePanel>
-    {error ? <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><ShieldAlert className="mt-0.5 size-5 shrink-0" />{error}</div> : null}
-    {loading ? <LoadingState title="Đang tải Order" /> : <SurfacePanel className="overflow-hidden p-0"><div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-stone-50 text-xs font-bold uppercase text-stone-500"><tr><th className="px-5 py-4">Đơn hàng</th><th className="px-5 py-4">Customer</th><th className="px-5 py-4">Thanh toán</th><th className="px-5 py-4">Tổng tiền</th><th className="px-5 py-4">Trạng thái</th><th className="px-5 py-4" /></tr></thead><tbody>{data?.content.map((order) => <tr className="border-t border-stone-100" key={order.orderId}><td className="px-5 py-4"><strong>{order.orderNumber}</strong><p className="mt-1 text-xs text-stone-500">{formatDateTime(order.createdAt)}</p></td><td className="px-5 py-4 font-mono text-xs">{order.customerId}</td><td className="px-5 py-4">{order.paymentMethod} · {order.paymentTiming}</td><td className="px-5 py-4 font-black">{formatVnd(order.finalTotalVnd)}</td><td className="px-5 py-4"><StatusBadge label={orderStatusLabel(order.status)} tone={orderStatusTone(order.status)} /></td><td className="px-5 py-4"><Button variant="outline" onClick={() => void inspect(order.orderId)}>Chi tiết</Button></td></tr>)}</tbody></table></div><div className="flex items-center justify-end gap-3 border-t px-5 py-4"><Button variant="outline" disabled={!data || data.first} onClick={() => { setLoading(true); setPage((value) => Math.max(0, value - 1)); }}>Trang trước</Button><span className="text-sm text-stone-500">{(data?.page ?? 0) + 1}/{Math.max(data?.totalPages ?? 1, 1)}</span><Button variant="outline" disabled={!data || data.last} onClick={() => { setLoading(true); setPage((value) => value + 1); }}>Trang sau</Button></div></SurfacePanel>}
-    {detailLoading ? <LoadingState title="Đang tải chi tiết Order" /> : selected ? <AdminOrderDetail order={selected} working={working} close={() => setSelected(null)} execute={execute} /> : null}
-  </div>;
+  return (
+    <div className="space-y-7">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageHeader eyebrow="Vận hành bán hàng" title="Quản lý đơn hàng" description="Theo dõi đơn hàng, thanh toán và chuyển trạng thái đóng gói, giao nhận qua Order API." />
+        <div className="flex items-center gap-2">
+          <StatusBadge label="API Trực tiếp" tone="success" />
+          <Button size="sm" variant="outline" onClick={() => void loadList()}>
+            Làm mới
+          </Button>
+        </div>
+      </div>
+      <SurfacePanel>
+        <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_220px_auto] lg:items-end" onSubmit={search}>
+          <Input label="Mã đơn" value={orderNumber} onChange={(event) => setOrderNumber(event.target.value)} />
+          <Input label="Customer ID" value={customerId} onChange={(event) => setCustomerId(event.target.value)} />
+          <Select label="Trạng thái" value={status} onChange={(event) => { setLoading(true); setError(""); setStatus(event.target.value as OrderStatus | ""); setPage(0); }}>
+            <option value="">Tất cả trạng thái</option>
+            {statuses.map((value) => <option key={value} value={value}>{orderStatusLabel(value)}</option>)}
+          </Select>
+          <Button type="submit"><Search />Lọc</Button>
+        </form>
+      </SurfacePanel>
+      {error ? (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <ShieldAlert className="mt-0.5 size-5 shrink-0" />
+          {error}
+        </div>
+      ) : null}
+      {loading ? (
+        <LoadingState title="Đang tải Order" />
+      ) : (
+        <SurfacePanel className="overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-stone-50 text-xs font-bold uppercase text-stone-500">
+                <tr>
+                  <th className="px-5 py-4">Đơn hàng</th>
+                  <th className="px-5 py-4">Customer</th>
+                  <th className="px-5 py-4">Thanh toán</th>
+                  <th className="px-5 py-4">Tổng tiền</th>
+                  <th className="px-5 py-4">Trạng thái</th>
+                  <th className="px-5 py-4" />
+                </tr>
+              </thead>
+              <tbody>
+                {data?.content.map((order) => (
+                  <tr className="border-t border-stone-100" key={order.orderId}>
+                    <td className="px-5 py-4">
+                      <strong>{order.orderNumber}</strong>
+                      <p className="mt-1 text-xs text-stone-500">{formatDateTime(order.createdAt)}</p>
+                    </td>
+                    <td className="px-5 py-4 font-mono text-xs">{order.customerId}</td>
+                    <td className="px-5 py-4">{order.paymentMethod} · {order.paymentTiming}</td>
+                    <td className="px-5 py-4 font-black">{formatVnd(order.finalTotalVnd)}</td>
+                    <td className="px-5 py-4"><StatusBadge label={orderStatusLabel(order.status)} tone={orderStatusTone(order.status)} /></td>
+                    <td className="px-5 py-4"><Button variant="outline" onClick={() => void inspect(order.orderId)}>Chi tiết</Button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t px-5 py-4">
+            <Button variant="outline" disabled={!data || data.first} onClick={() => { setLoading(true); setPage((value) => Math.max(0, value - 1)); }}>Trang trước</Button>
+            <span className="text-sm text-stone-500">{(data?.page ?? 0) + 1}/{Math.max(data?.totalPages ?? 1, 1)}</span>
+            <Button variant="outline" disabled={!data || data.last} onClick={() => { setLoading(true); setPage((value) => value + 1); }}>Trang sau</Button>
+          </div>
+        </SurfacePanel>
+      )}
+      {detailLoading ? <LoadingState title="Đang tải chi tiết Order" /> : selected ? <AdminOrderDetail order={selected} working={working} close={() => setSelected(null)} execute={execute} /> : null}
+    </div>
+  );
 }
 
 function AdminOrderDetail({ order, working, close, execute }: Readonly<{ order: OrderDetail; working: boolean; close: () => void; execute: (action: Exclude<OrderAction, "CONFIRM_RECEIVED">) => Promise<void> }>) {

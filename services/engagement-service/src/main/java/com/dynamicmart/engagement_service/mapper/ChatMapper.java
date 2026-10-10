@@ -26,7 +26,7 @@ public class ChatMapper {
 
     private ChatMessageResponse toMessage(ChatMessage message) {
         return new ChatMessageResponse(message.getId(), message.getConversationId(), message.getSenderId(),
-                message.getSenderRole(), HtmlUtils.htmlEscape(message.getContent()),
+                message.getSenderRole(), message.getContent(),
                 message.getIdempotencyKey(), message.getReadAt(), message.getCreatedAt());
     }
 }

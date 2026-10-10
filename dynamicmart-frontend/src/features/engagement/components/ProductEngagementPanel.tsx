@@ -1,9 +1,12 @@
 "use client";
 
-import { CheckCircle2, MessageSquarePlus, MessageSquareText, PenLine, Send, Star, X } from "lucide-react";
+import { CheckCircle2, MessageSquarePlus, MessageSquareText, PenLine, Send, ShieldCheck, Star, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
+import { useAuthSession } from "@/lib/auth/session";
+import { customerOrdersApi, type PurchasedOrderItem } from "@/features/order/api/customer-orders.api";
 import { engagementApi } from "../api/engagement.api";
 import type { ProductQuestionItem, ReviewItem } from "../types/engagement.types";
 import { CreateReviewModal } from "./CreateReviewModal";
@@ -13,13 +16,56 @@ export interface ProductEngagementPanelProps {
   productName?: string;
 }
 
+function decodeEntities(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/&agrave;/gi, "à")
+    .replace(/&aacute;/gi, "á")
+    .replace(/&acirc;/gi, "â")
+    .replace(/&atilde;/gi, "ã")
+    .replace(/&egrave;/gi, "è")
+    .replace(/&eacute;/gi, "é")
+    .replace(/&ecirc;/gi, "ê")
+    .replace(/&igrave;/gi, "ì")
+    .replace(/&iacute;/gi, "í")
+    .replace(/&ograve;/gi, "ò")
+    .replace(/&oacute;/gi, "ó")
+    .replace(/&ocirc;/gi, "ô")
+    .replace(/&otilde;/gi, "õ")
+    .replace(/&ugrave;/gi, "ù")
+    .replace(/&uacute;/gi, "ú")
+    .replace(/&yacute;/gi, "ý")
+    .replace(/&Agrave;/gi, "À")
+    .replace(/&Aacute;/gi, "Á")
+    .replace(/&Egrave;/gi, "È")
+    .replace(/&Eacute;/gi, "É")
+    .replace(/&Igrave;/gi, "Ì")
+    .replace(/&Iacute;/gi, "Í")
+    .replace(/&Ograve;/gi, "Ò")
+    .replace(/&Oacute;/gi, "Ó")
+    .replace(/&Ugrave;/gi, "Ù")
+    .replace(/&Uacute;/gi, "Ú")
+    .replace(/&Yacute;/gi, "Ý")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
 export function ProductEngagementPanel({
   productId,
   productName,
 }: Readonly<ProductEngagementPanelProps>) {
+  const session = useAuthSession();
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [questions, setQuestions] = useState<ProductQuestionItem[]>([]);
   const [loadError, setLoadError] = useState("");
+
+  const [purchasedItems, setPurchasedItems] = useState<PurchasedOrderItem[]>([]);
+  const [myProductReviews, setMyProductReviews] = useState<ReviewItem[]>([]);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [selectedEligibleItem, setSelectedEligibleItem] = useState<PurchasedOrderItem | null>(null);
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
@@ -46,8 +92,44 @@ export function ProductEngagementPanel({
     return () => { cancelled = true; };
   }, [productId]);
 
+  // Kiểm tra điều kiện đã mua hàng thành công và đã đánh giá chưa
+  useEffect(() => {
+    if (!productId || session.status !== "authenticated") {
+      setPurchasedItems([]);
+      setMyProductReviews([]);
+      return;
+    }
+    let cancelled = false;
+    setCheckingEligibility(true);
+    Promise.all([
+      customerOrdersApi.getPurchasedItems(productId).catch(() => []),
+      engagementApi.reviews.getMyProductReviews(productId).catch(() => []),
+    ]).then(([orders, myRevs]) => {
+      if (cancelled) return;
+      setPurchasedItems(orders);
+      setMyProductReviews(myRevs);
+    }).finally(() => {
+      if (!cancelled) setCheckingEligibility(false);
+    });
+    return () => { cancelled = true; };
+  }, [productId, session.status]);
+
+  const eligibleUnreviewedItem = purchasedItems.find(
+    (item) => !myProductReviews.some((r) => r.orderItemId === item.orderItemId)
+  );
+  const hasReviewedThisProduct = myProductReviews.length > 0;
+
+  const getReviewerName = (rev: ReviewItem) => {
+    if (rev.customerName) return rev.customerName;
+    if (session.status === "authenticated" && session.user.id === rev.customerId) {
+      return session.user.fullName ? `${session.user.fullName} (Bạn)` : "Bạn (Đã mua hàng)";
+    }
+    return "Khách hàng DynamicMart";
+  };
+
   const handleReviewSuccess = (newReview: ReviewItem) => {
     setReviews((prev) => [newReview, ...prev]);
+    setMyProductReviews((prev) => [newReview, ...prev]);
   };
 
   const handleSubmitQuestion = async (e: React.FormEvent) => {
@@ -105,25 +187,111 @@ export function ProductEngagementPanel({
 
       <div className="mt-5 space-y-4">
         {loadError ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{loadError}</p> : null}
-        {/* Nút hành động */}
-        <div className="flex gap-2">
-          <Button
-            className="flex-1"
-            size="sm"
-            onClick={() => setIsReviewModalOpen(true)}
-          >
-            <PenLine className="size-4" />
-            Viết đánh giá
-          </Button>
-          <Button
-            className="flex-1"
-            size="sm"
-            variant="outline"
-            onClick={() => setIsQuestionModalOpen(true)}
-          >
-            <MessageSquarePlus className="size-4" />
-            Gửi câu hỏi
-          </Button>
+        {/* Khối điều kiện đánh giá & hành động */}
+        <div className="space-y-2.5">
+          {session.status === "authenticated" ? (
+            checkingEligibility ? (
+              <p className="rounded-xl bg-slate-50 p-2.5 text-xs text-slate-500 animate-pulse">
+                Đang kiểm tra điều kiện đánh giá của bạn...
+              </p>
+            ) : eligibleUnreviewedItem ? (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedEligibleItem(eligibleUnreviewedItem);
+                    setIsReviewModalOpen(true);
+                  }}
+                >
+                  <PenLine className="size-4" />
+                  Đánh giá sản phẩm đã mua
+                </Button>
+                <Button
+                  className="sm:w-auto"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsQuestionModalOpen(true)}
+                >
+                  <MessageSquarePlus className="size-4" />
+                  Gửi câu hỏi
+                </Button>
+              </div>
+            ) : hasReviewedThisProduct ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                    Bạn đã đánh giá sản phẩm này
+                  </p>
+                  <Link
+                    href="/customer/account/reviews"
+                    className="text-xs font-bold text-emerald-900 underline hover:text-emerald-700"
+                  >
+                    Xem đánh giá của tôi →
+                  </Link>
+                </div>
+                <div className="mt-2.5">
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsQuestionModalOpen(true)}
+                  >
+                    <MessageSquarePlus className="size-4" />
+                    Gửi câu hỏi cho shop
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-slate-500 shrink-0" />
+                  Chỉ khách hàng đã mua sản phẩm này và hoàn tất đơn hàng mới có thể đánh giá.
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Nếu bạn vừa mua hàng, vui lòng vào{" "}
+                  <Link href="/customer/account/reviews" className="font-bold text-brand hover:underline">
+                    Hồ sơ &gt; Đánh giá của tôi
+                  </Link>{" "}
+                  sau khi đơn hoàn tất.
+                </p>
+                <div className="mt-2.5">
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsQuestionModalOpen(true)}
+                  >
+                    <MessageSquarePlus className="size-4" />
+                    Gửi câu hỏi thắc mắc
+                  </Button>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <p className="text-xs font-semibold text-slate-700">
+                Đánh giá chỉ dành cho khách hàng đã mua sản phẩm qua DynamicMart.
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <Link
+                  href="/login"
+                  className="inline-flex text-xs font-bold text-brand hover:underline"
+                >
+                  Đăng nhập tài khoản →
+                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsQuestionModalOpen(true)}
+                >
+                  <MessageSquarePlus className="size-4" />
+                  Hỏi đáp
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Danh sách review */}
@@ -139,17 +307,36 @@ export function ProductEngagementPanel({
                 className="rounded-xl border border-slate-200 bg-white p-3.5"
                 key={review.id}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-bold text-slate-950">
-                    {review.customerName || `Khách #${review.customerId.slice(0, 6)}`}
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600">
-                    <Star className="size-4 fill-current" />
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-slate-950 text-sm">
+                        {getReviewerName(review)}
+                      </p>
+                      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/60">
+                        <CheckCircle2 className="size-3 text-emerald-600" />
+                        Đã mua hàng
+                      </span>
+                    </div>
+                    {review.createdAt ? (
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {new Date(review.createdAt).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600 shrink-0">
+                    <Star className="size-4 fill-amber-400 text-amber-500" />
                     {review.rating}/5
                   </span>
                 </div>
                 {review.content ? (
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{review.content}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">
+                    {decodeEntities(review.content)}
+                  </p>
                 ) : null}
                 {review.imageUrls && review.imageUrls.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -211,9 +398,15 @@ export function ProductEngagementPanel({
       {/* Modal viết review */}
       <CreateReviewModal
         isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          setSelectedEligibleItem(null);
+        }}
         onSuccess={handleReviewSuccess}
-        productName={productName}
+        orderItemId={selectedEligibleItem?.orderItemId}
+        productName={productName || selectedEligibleItem?.productName}
+        productImage={selectedEligibleItem?.imageUrl}
+        orderNumber={selectedEligibleItem?.orderNumber}
       />
 
       {/* Modal gửi câu hỏi */}

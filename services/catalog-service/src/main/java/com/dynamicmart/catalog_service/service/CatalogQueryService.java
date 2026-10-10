@@ -112,7 +112,15 @@ public class CatalogQueryService {
 
     @Transactional(readOnly = true)
     public ProductDetailResponse getBySlug(String slug) {
-        Product product = productRepository.findBySlugIgnoreCase(slug.trim().toLowerCase(Locale.ROOT))
+        String cleanSlug = slug.trim().toLowerCase(Locale.ROOT);
+        java.util.Optional<Product> productOpt = productRepository.findBySlugIgnoreCase(cleanSlug);
+        if (productOpt.isEmpty()) {
+            try {
+                UUID id = UUID.fromString(slug.trim());
+                productOpt = productRepository.findById(id);
+            } catch (IllegalArgumentException ignored) { }
+        }
+        Product product = productOpt
                 .filter(value -> value.isPublicAt(Instant.now()))
                 .orElseThrow(this::productNotFound);
         boolean categoryActive = categoryRepository.findById(product.getCategoryId())

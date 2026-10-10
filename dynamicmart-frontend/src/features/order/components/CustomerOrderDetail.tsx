@@ -7,7 +7,7 @@ import { ErrorState, LoadingState } from "@/components/common/PageState";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
-import { CreateReviewModal } from "@/features/engagement";
+import { CreateReviewModal, engagementApi, type ReviewItem } from "@/features/engagement";
 import { customerOrdersApi, type CustomerOrder, type CustomerOrderItem } from "../api/customer-orders.api";
 
 const money = (value: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
@@ -18,6 +18,7 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reviewItem, setReviewItem] = useState<CustomerOrderItem | null>(null);
+  const [reviewedItemIds, setReviewedItemIds] = useState<Set<string>>(new Set());
 
   async function load() {
     setLoading(true); setError(null);
@@ -27,8 +28,17 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
   }
   useEffect(() => {
     let ignored = false;
-    customerOrdersApi.get(orderId)
-      .then((nextOrder) => { if (!ignored) setOrder(nextOrder); })
+    Promise.all([
+      customerOrdersApi.get(orderId),
+      engagementApi.reviews.getMyReviews(0, 100).catch(() => ({ content: [] })),
+    ])
+      .then(([nextOrder, revRes]) => {
+        if (!ignored) {
+          setOrder(nextOrder);
+          const ids = new Set((revRes.content ?? []).map((r) => r.orderItemId));
+          setReviewedItemIds(ids);
+        }
+      })
       .catch((cause) => { if (!ignored) setError(cause instanceof Error ? cause.message : "Không thể tải đơn hàng."); })
       .finally(() => { if (!ignored) setLoading(false); });
     return () => { ignored = true; };
@@ -102,15 +112,22 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
                   </div>
 
                   {order.status === "COMPLETED" ? (
-                    <Button
-                      className="gap-1.5"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setReviewItem(item)}
-                    >
-                      <Star className="size-3.5 fill-amber-400 text-amber-500" />
-                      Đánh giá sản phẩm
-                    </Button>
+                    reviewedItemIds.has(item.itemId) ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                        <CheckCircle2 className="size-3.5 text-emerald-600" />
+                        Đã đánh giá
+                      </span>
+                    ) : (
+                      <Button
+                        className="gap-1.5"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setReviewItem(item)}
+                      >
+                        <Star className="size-3.5 fill-amber-400 text-amber-500" />
+                        Đánh giá sản phẩm
+                      </Button>
+                    )
                   ) : null}
                 </div>
               ))}
@@ -152,7 +169,12 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
         isOpen={!!reviewItem}
         orderItemId={reviewItem?.itemId}
         productName={reviewItem?.productName}
+        productImage={reviewItem?.imageUrl}
+        orderNumber={order.orderNumber}
         onClose={() => setReviewItem(null)}
+        onSuccess={(created) => {
+          setReviewedItemIds((prev) => new Set([...prev, created.orderItemId]));
+        }}
       />
     </main>
   );

@@ -45,19 +45,15 @@ public class GatewayRoutes {
         }).build();
     }
     @Bean RouterFunction<ServerResponse> engagementRoute(@Value("${app.routes.engagement-service-url}") String target) {
-        return route("engagement-service").route(path("/api/v1/reviews/**")
-                .or(path("/api/v1/admin/reviews/**"))
-                .or(path("/api/v1/reports/**"))
-                .or(path("/api/v1/wishlists/**"))
-                .or(path("/api/v1/notifications/**"))
-                .or(path("/api/v1/product-questions/**"))
-                .or(path("/api/v1/admin/product-questions/**"))
-                .or(path("/api/v1/support/conversations/**"))
-                .or(path("/api/v1/admin/support/conversations/**"))
-                .or(path("/api/v1/engagement/internal/events/**")), http()).before(uri(target)).build();
-    }
-
-    @Bean RouterFunction<ServerResponse> aiAssistantRoute(@Value("${app.routes.ai-assistant-service-url}") String target) {
-        return route("ai-assistant-service").route(path("/api/v1/assistant/**"), http()).before(uri(target)).build();
+        return route("engagement-service").route(path("/api/v1/reviews").or(path("/api/v1/reviews/**"))
+                .or(path("/api/v1/admin/reviews")).or(path("/api/v1/admin/reviews/**"))
+                .or(path("/api/v1/reports")).or(path("/api/v1/reports/**"))
+                .or(path("/api/v1/wishlists")).or(path("/api/v1/wishlists/**"))
+                .or(path("/api/v1/notifications")).or(path("/api/v1/notifications/**"))
+                .or(path("/api/v1/product-questions")).or(path("/api/v1/product-questions/**"))
+                .or(path("/api/v1/admin/product-questions")).or(path("/api/v1/admin/product-questions/**"))
+                .or(path("/api/v1/support/conversations")).or(path("/api/v1/support/conversations/**"))
+                .or(path("/api/v1/admin/support/conversations")).or(path("/api/v1/admin/support/conversations/**"))
+                .or(path("/api/v1/engagement/**")), http()).before(uri(target)).build();
     }
 }

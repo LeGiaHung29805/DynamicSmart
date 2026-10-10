@@ -15,7 +15,7 @@ import org.springframework.web.util.HtmlUtils;
 public class ProductQuestionMapper {
     public ProductQuestionResponse toResponse(ProductQuestion question, List<ProductAnswer> answers) {
         return new ProductQuestionResponse(question.getId(), question.getProductId(), question.getCustomerId(),
-                HtmlUtils.htmlEscape(question.getContent()), question.getStatus(), question.getHiddenReason(),
+                question.getContent(), question.getStatus(), question.getHiddenReason(),
                 answers.stream().map(this::toAnswer).toList(), question.getCreatedAt(), question.getUpdatedAt());
     }
 
@@ -25,6 +25,6 @@ public class ProductQuestionMapper {
 
     private ProductAnswerResponse toAnswer(ProductAnswer answer) {
         return new ProductAnswerResponse(answer.getId(), answer.getQuestionId(), answer.getAdminId(),
-                HtmlUtils.htmlEscape(answer.getContent()), answer.getCreatedAt());
+                answer.getContent(), answer.getCreatedAt());
     }
 }

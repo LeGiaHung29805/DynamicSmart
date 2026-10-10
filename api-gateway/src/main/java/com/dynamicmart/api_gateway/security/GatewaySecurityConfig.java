@@ -62,9 +62,7 @@ public class GatewaySecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/engagement/internal/events/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments", "/api/v1/payments/*/callback-audits", "/api/v1/payments/*/attempts").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/admin/users/**", "/api/v1/cart/admin/**",
-                                "/api/v1/admin/reviews/**", "/api/v1/admin/product-questions/**",
-                                "/api/v1/admin/support/conversations/**", "/api/v1/reports/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**", "/api/v1/cart/admin/**", "/api/v1/reports/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .addFilterAfter(sessionValidationFilter, BearerTokenAuthenticationFilter.class)

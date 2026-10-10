@@ -46,6 +46,21 @@ public class ReviewController {
         return ApiResponse.of(reviews.getSummaryByProduct(productId));
     }
 
+    @GetMapping("/me")
+    public ApiResponse<PageResponse<ReviewResponse>> myReviews(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ApiResponse.of(reviews.customerReviews(CurrentUser.id(jwt), page, size));
+    }
+
+    @GetMapping("/me/product/{productId}")
+    public ApiResponse<java.util.List<ReviewResponse>> myProductReviews(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID productId) {
+        return ApiResponse.of(reviews.customerProductReviews(CurrentUser.id(jwt), productId));
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ReviewResponse> create(@AuthenticationPrincipal Jwt jwt,

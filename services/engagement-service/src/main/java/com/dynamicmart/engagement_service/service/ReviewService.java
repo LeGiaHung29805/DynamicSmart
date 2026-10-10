@@ -79,6 +79,25 @@ public class ReviewService {
         return withImages(source.getContent(), source.getPageable(), source.getTotalElements());
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<ReviewResponse> customerReviews(UUID customerId, int page, int size) {
+        var source = reviews.findAllByCustomerIdOrderByCreatedAtDesc(customerId, PageRequest.of(page, size));
+        return withImages(source.getContent(), source.getPageable(), source.getTotalElements());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> customerProductReviews(UUID customerId, UUID productId) {
+        List<Review> list = reviews.findAllByCustomerIdAndProductIdOrderByCreatedAtDesc(customerId, productId);
+        if (list.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> reviewIds = list.stream().map(Review::getId).toList();
+        Map<UUID, List<ReviewImage>> grouped = mapper.groupImages(images.findAllByReviewIdInOrderBySortOrderAsc(reviewIds));
+        return list.stream()
+                .map(review -> mapper.toResponse(review, grouped.getOrDefault(review.getId(), List.of())))
+                .toList();
+    }
+
     @Transactional
     public ReviewResponse create(UUID customerId, CreateReviewRequest request) {
         if (reviews.existsByOrderItemId(request.orderItemId())) {

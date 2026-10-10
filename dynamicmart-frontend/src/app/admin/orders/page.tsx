@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { AdminSectionPage } from "@/features/admin";
+import { AdminOrderWorkspace } from "@/features/order";
 
-export const metadata: Metadata = { title: "Quản lý đơn hàng" };
+export const metadata: Metadata = { title: "Quản lý đơn hàng | DynamicMart Admin" };
 
 export default function AdminOrdersPage() {
-  return <AdminSectionPage section="orders" />;
+  return <AdminOrderWorkspace />;
 }
+

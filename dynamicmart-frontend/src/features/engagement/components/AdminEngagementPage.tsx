@@ -3,27 +3,38 @@
 import {
   AlertCircle,
   EyeOff,
+  Headphones,
   MessageSquareText,
   RefreshCw,
+  Send,
   ShieldAlert,
   Star,
+  User,
   UserCheck,
+  X,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
+import { useAuthSession } from "@/lib/auth/session";
 import { engagementApi } from "../api/engagement.api";
+import { apiClient } from "@/lib/api/client";
+import type { ProductDetail } from "@/features/catalog/types";
 import type {
   ChatConversationItem,
   ProductQuestionItem,
   ReviewItem,
 } from "../types/engagement.types";
 import { AdminHideReviewModal } from "./AdminHideReviewModal";
-import { Status } from "./EngagementShared";
+import { Status, decodeHtml } from "./EngagementShared";
 
 export function AdminEngagementPage() {
+  const session = useAuthSession();
+  const isAdmin = session.status === "authenticated" && session.user.role === "ADMIN";
+
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -45,8 +56,18 @@ export function AdminEngagementPage() {
   const [conversations, setConversations] = useState<
     { id: string; customer: string; status: string; assignedAdmin?: string; messagesCount?: number }[]
   >([]);
+  const [activeChatDetail, setActiveChatDetail] = useState<ChatConversationItem | null>(null);
+  const [chatReplyInput, setChatReplyInput] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const [loadingChatDetail, setLoadingChatDetail] = useState(false);
 
   useEffect(() => {
+    if (!isAdmin) {
+      if (session.status !== "loading") {
+        setLoading(false);
+      }
+      return;
+    }
     let ignore = false;
     async function load() {
       let anyLive = false;
@@ -68,16 +89,27 @@ export function AdminEngagementPage() {
       try {
         const questionRes = await engagementApi.questions.getAdminQuestions(0, 20);
         if (!ignore) {
-          setQuestions(
-            (questionRes.content ?? []).map((q: ProductQuestionItem) => ({
-              id: q.id,
-              product: `Sản phẩm #${q.productId.slice(0, 8)}`,
-              question: q.content,
-              answer: q.answers?.[0]?.content,
-              status: q.status,
-            }))
+          const rawQ = questionRes.content ?? [];
+          const enrichedQ = await Promise.all(
+            rawQ.map(async (q: ProductQuestionItem) => {
+              let prodName = `Sản phẩm #${q.productId.slice(0, 8)}`;
+              try {
+                const prod = await apiClient.get<ProductDetail>(`/api/v1/catalog/products/id/${q.productId}`);
+                if (prod?.name) prodName = prod.name;
+              } catch {}
+              return {
+                id: q.id,
+                product: prodName,
+                question: q.content,
+                answer: q.answers?.[0]?.content,
+                status: q.status,
+              };
+            })
           );
-          anyLive = true;
+          if (!ignore) {
+            setQuestions(enrichedQ);
+            anyLive = true;
+          }
         }
       } catch {
         hasError = true;
@@ -90,7 +122,7 @@ export function AdminEngagementPage() {
           setConversations(
             (chatRes.content ?? []).map((c: ChatConversationItem) => ({
               id: c.id,
-              customer: `Khách #${c.customerId.slice(0, 8)}`,
+              customer: "Khách hàng DynamicMart",
               status: c.status,
               assignedAdmin: c.assignedAdminId ? `Admin #${c.assignedAdminId.slice(0, 6)}` : "Chưa nhận",
               messagesCount: c.messages?.length || 0,
@@ -113,7 +145,7 @@ export function AdminEngagementPage() {
     return () => {
       ignore = true;
     };
-  }, [refreshTrigger]);
+  }, [isAdmin, session.status, refreshTrigger]);
 
   // Hành động ẩn review
   const handleOpenHideModal = (review: ReviewItem) => {
@@ -177,6 +209,78 @@ export function AdminEngagementPage() {
       setErrorMsg("Không thể đóng hội thoại.");
     }
   };
+
+  const handleOpenChatDetail = async (conversationId: string) => {
+    setLoadingChatDetail(true);
+    try {
+      const detail = await engagementApi.support.adminConversation(conversationId);
+      setActiveChatDetail(detail);
+    } catch {
+      setErrorMsg("Không thể tải chi tiết hội thoại.");
+    } finally {
+      setLoadingChatDetail(false);
+    }
+  };
+
+  const handleAdminSendReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeChatDetail || !chatReplyInput.trim()) return;
+
+    setSendingReply(true);
+    try {
+      const updated = await engagementApi.support.adminSend(
+        activeChatDetail.id,
+        chatReplyInput.trim()
+      );
+      setActiveChatDetail(updated);
+      setChatReplyInput("");
+      setRefreshTrigger((prev) => prev + 1);
+    } catch {
+      setErrorMsg("Không thể gửi phản hồi từ admin.");
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  if (session.status === "loading") {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <RefreshCw className="size-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="space-y-7">
+        <PageHeader
+          description="Duyệt đánh giá, ẩn vi phạm có lưu lý do audit, trả lời hỏi đáp và xử lý hội thoại hỗ trợ khách hàng."
+          eyebrow="Quản trị tương tác"
+          title="Tương tác khách hàng"
+        />
+        <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-8 text-center shadow-sm">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-100 text-amber-700">
+            <ShieldAlert className="size-7" />
+          </div>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">Yêu cầu quyền Quản trị viên (ADMIN)</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+            Trang này dành riêng cho tài khoản Quản trị viên để kiểm duyệt đánh giá, giải đáp thắc mắc và hỗ trợ khách hàng.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/login?returnTo=/admin/engagement"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-600"
+            >
+              Đăng nhập tài khoản Quản trị
+            </Link>
+          </div>
+          <p className="mt-4 text-xs text-slate-500">
+            Tài khoản demo: <code className="font-mono font-semibold text-slate-700">admin@dynamicmart.local</code> / Mật khẩu: <code className="font-mono font-semibold text-slate-700">Password@123</code>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-7">
@@ -244,13 +348,13 @@ export function AdminEngagementPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-bold text-sm text-slate-950">
-                      {review.customerName || `Khách #${review.customerId.slice(0, 8)}`}
+                      {review.customerName || "Khách hàng DynamicMart"}
                     </p>
                     <Status value={review.status} />
                   </div>
 
                   <p className="mt-2 text-sm text-slate-600">
-                    {review.content || "(Không có nhận xét chữ)"}
+                    {decodeHtml(review.content) || "(Không có nhận xét chữ)"}
                   </p>
 
                   {review.hiddenReason ? (
@@ -305,11 +409,11 @@ export function AdminEngagementPage() {
                     <p className="font-bold text-sm text-slate-950 truncate">{question.product}</p>
                     <Status value={question.status} />
                   </div>
-                  <p className="mt-2 text-sm text-slate-600">{question.question}</p>
+                  <p className="mt-2 text-sm text-slate-600">{decodeHtml(question.question)}</p>
 
                   {question.answer ? (
                     <div className="mt-2.5 rounded-lg bg-emerald-50/70 p-2.5 text-xs text-emerald-900 border border-emerald-100">
-                      <strong className="text-emerald-950">Phản hồi:</strong> {question.answer}
+                      <strong className="text-emerald-950">Phản hồi:</strong> {decodeHtml(question.answer)}
                     </div>
                   ) : (
                     <div className="mt-3">
@@ -376,7 +480,17 @@ export function AdminEngagementPage() {
                     Phụ trách: <span className="font-semibold text-slate-700">{conversation.assignedAdmin || "Chưa có"}</span>
                   </p>
 
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={loadingChatDetail}
+                      onClick={() => handleOpenChatDetail(conversation.id)}
+                    >
+                      <MessageSquareText className="size-3.5" />
+                      Xem & Trả lời
+                    </Button>
+
                     {!isClosed && conversation.assignedAdmin !== "Bạn (Tôi)" ? (
                       <Button
                         size="sm"
@@ -398,7 +512,7 @@ export function AdminEngagementPage() {
                         Đóng
                       </Button>
                     ) : (
-                      <span className="text-xs text-slate-400 italic">Đã đóng trao đổi</span>
+                      <span className="text-xs text-slate-400 italic self-center">Đã đóng trao đổi</span>
                     )}
                   </div>
                 </div>
@@ -407,6 +521,103 @@ export function AdminEngagementPage() {
           </div>
         </SurfacePanel>
       </div>
+
+      {/* Modal Admin Chat Trực tiếp */}
+      {activeChatDetail ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          role="dialog"
+        >
+          <div className="relative flex flex-col w-full max-w-2xl h-[600px] rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-full bg-emerald-700 text-white font-bold">
+                  <Headphones className="size-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-slate-950">
+                    Hội thoại hỗ trợ khách hàng
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Mã hội thoại: #{activeChatDetail.id.slice(0, 12)} · Trạng thái: {activeChatDetail.status}
+                  </p>
+                </div>
+              </div>
+              <button
+                aria-label="Đóng"
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition"
+                onClick={() => setActiveChatDetail(null)}
+                type="button"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Danh sách tin nhắn */}
+            <div className="flex-1 p-4 sm:p-6 space-y-3 overflow-y-auto bg-slate-50/30">
+              {!activeChatDetail.messages || activeChatDetail.messages.length === 0 ? (
+                <div className="text-center py-16 text-slate-400 text-sm">
+                  Chưa có tin nhắn trong cuộc trò chuyện này.
+                </div>
+              ) : (
+                activeChatDetail.messages.map((message, index) => {
+                  const isCust = message.senderRole === "CUSTOMER";
+                  return (
+                    <div
+                      className={`flex flex-col max-w-[80%] ${
+                        isCust ? "mr-auto items-start" : "ml-auto items-end"
+                      }`}
+                      key={`${message.id || index}`}
+                    >
+                      <span className="text-[11px] text-slate-400 mb-1 flex items-center gap-1">
+                        {isCust ? <User className="size-3" /> : <Headphones className="size-3 text-emerald-600" />}
+                        {isCust ? "Khách hàng" : "Admin (Bạn)"} · {new Date(message.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <div
+                        className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                          isCust
+                            ? "bg-white text-slate-900 border border-slate-200 rounded-tl-xs"
+                            : "bg-emerald-950 text-white rounded-tr-xs"
+                        }`}
+                      >
+                        {decodeHtml(message.content)}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Form gửi phản hồi admin */}
+            <form
+              className="p-3 sm:p-4 border-t border-slate-100 bg-white flex gap-2"
+              onSubmit={handleAdminSendReply}
+            >
+              <input
+                aria-label="Nội dung phản hồi"
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:border-brand"
+                disabled={activeChatDetail.status === "CLOSED" || sendingReply}
+                placeholder={
+                  activeChatDetail.status === "CLOSED"
+                    ? "Cuộc hội thoại này đã đóng..."
+                    : "Nhập nội dung phản hồi cho khách hàng..."
+                }
+                value={chatReplyInput}
+                onChange={(e) => setChatReplyInput(e.target.value)}
+              />
+              <Button
+                className="bg-emerald-950 hover:bg-emerald-900 text-white font-bold px-4"
+                disabled={!chatReplyInput.trim() || activeChatDetail.status === "CLOSED" || sendingReply}
+                type="submit"
+              >
+                <Send className="size-4" />
+                <span>Gửi</span>
+              </Button>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {/* Popup ẩn review có lưu audit */}
       <AdminHideReviewModal
