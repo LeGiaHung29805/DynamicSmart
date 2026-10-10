@@ -14,4 +14,12 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     java.util.List<Review> findAllByProductIdAndStatus(UUID productId, String status);
 
     Page<Review> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    Page<Review> findAllByCustomerIdOrderByCreatedAtDesc(UUID customerId, Pageable pageable);
+
+    java.util.List<Review> findAllByCustomerIdAndProductIdOrderByCreatedAtDesc(UUID customerId, UUID productId);
+
+    java.util.List<Review> findAllByCustomerId(UUID customerId);
+
+    boolean existsByCustomerIdAndProductId(UUID customerId, UUID productId);
 }

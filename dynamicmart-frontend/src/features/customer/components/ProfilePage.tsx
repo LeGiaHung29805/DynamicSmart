@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, CheckCircle2, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarDays, CheckCircle2, Mail, Phone, ShieldCheck, Star, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ErrorState, LoadingState } from "@/components/common/PageState";
@@ -76,6 +76,29 @@ export function ProfilePage() {
               {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2">{error}</p> : null}
               <div className="flex justify-end sm:col-span-2"><Button className="h-11 min-w-36 rounded-xl bg-emerald-800 px-5 text-white hover:bg-emerald-700" disabled={saving} type="submit">{saving ? "Đang lưu..." : "Lưu thay đổi"}</Button></div>
             </form>
+
+            <div className="mt-8 border-t border-slate-100 pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl bg-amber-50/60 border border-amber-200/60 p-4 sm:p-5">
+                <div className="flex items-center gap-3.5">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700">
+                    <Star className="size-6 fill-amber-400" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-black text-slate-950">Đánh giá cá nhân của tôi</h3>
+                    <p className="text-xs text-slate-600">
+                      Đánh giá các sản phẩm đã mua hoặc xem lại các phản hồi bạn đã đóng góp.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold shrink-0 shadow-xs"
+                  size="sm"
+                  onClick={() => router.push("/customer/account/reviews")}
+                >
+                  Vào mục Đánh giá →
+                </Button>
+              </div>
+            </div>
           </SurfacePanel>
         </div>
       ) : null}

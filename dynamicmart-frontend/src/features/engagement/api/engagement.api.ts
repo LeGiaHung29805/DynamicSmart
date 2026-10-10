@@ -27,6 +27,12 @@ export const engagementApi = {
       ),
     getSummary: (productId: string) =>
       apiClient.get<ReviewSummary>(`/api/v1/reviews/products/${productId}/summary`),
+    getMyReviews: (page = 0, size = 20) =>
+      apiClient.get<PageResponse<ReviewItem>>(
+        `/api/v1/reviews/me?page=${page}&size=${size}`
+      ),
+    getMyProductReviews: (productId: string) =>
+      apiClient.get<ReviewItem[]>(`/api/v1/reviews/me/product/${productId}`),
     create: (payload: CreateReviewPayload) =>
       apiClient.post<ReviewItem>("/api/v1/reviews", payload),
     getAdminReviews: (page = 0, size = 20) =>

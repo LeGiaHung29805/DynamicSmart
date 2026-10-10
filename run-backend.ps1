@@ -72,6 +72,8 @@ function Start-BackendProcess($Service, $SharedSecurity, [switch]$OrderFallback)
     Set-ProcessEnvironment (Read-EnvFile (Join-Path $workingDirectory ".env"))
     Set-ProcessEnvironment $SharedSecurity
     $env:SPRING_FLYWAY_VALIDATE_ON_MIGRATE = "false"
+    $env:MAVEN_OPTS = "-Xms64m -Xmx256m"
+    $jvmArgs = "-Xms128m -Xmx320m -XX:MaxMetaspaceSize=192m -XX:TieredStopAtLevel=1"
 
     if ($OrderFallback) {
         $env:SPRING_FLYWAY_ENABLED = "false"
@@ -88,7 +90,7 @@ function Start-BackendProcess($Service, $SharedSecurity, [switch]$OrderFallback)
     Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
 
     $process = Start-Process -FilePath "cmd.exe" `
-        -ArgumentList "/d", "/c", "mvnw.cmd spring-boot:run" `
+        -ArgumentList "/d", "/c", "mvnw.cmd spring-boot:run -Dspring-boot.run.jvmArguments=""$jvmArgs""" `
         -WorkingDirectory $workingDirectory `
         -WindowStyle Hidden `
         -RedirectStandardOutput $stdout `
@@ -169,27 +171,23 @@ New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 try {
     $records = @()
     foreach ($service in $services) {
-        $records += Start-BackendProcess $service $sharedSecurity
-    }
-
-    foreach ($record in $records) {
-        if ($null -eq $record) {
-            continue
-        }
-
-        if (-not (Wait-BackendPort $record $StartupTimeoutSeconds)) {
-            if ($record.Service.Name -eq "order" -and -not $record.IsOrderFallback) {
-                $log = Get-StartupError $record
-                if ($log -match 'payment_id.*already exists|V9__add_order_saga_payment_checkpoint') {
-                    Write-Warning "Order DB has legacy Flyway history. Restarting Order in local compatibility mode."
-                    $fallback = Start-BackendProcess $record.Service $sharedSecurity -OrderFallback
-                    if (-not (Wait-BackendPort $fallback $StartupTimeoutSeconds)) {
-                        throw "Order Service failed to start.`n$(Get-StartupError $fallback)"
+        $record = Start-BackendProcess $service $sharedSecurity
+        if ($null -ne $record) {
+            $records += $record
+            if (-not (Wait-BackendPort $record $StartupTimeoutSeconds)) {
+                if ($record.Service.Name -eq "order" -and -not $record.IsOrderFallback) {
+                    $log = Get-StartupError $record
+                    if ($log -match 'payment_id.*already exists|V9__add_order_saga_payment_checkpoint') {
+                        Write-Warning "Order DB has legacy Flyway history. Restarting Order in local compatibility mode."
+                        $fallback = Start-BackendProcess $record.Service $sharedSecurity -OrderFallback
+                        if (-not (Wait-BackendPort $fallback $StartupTimeoutSeconds)) {
+                            throw "Order Service failed to start.`n$(Get-StartupError $fallback)"
+                        }
+                        continue
                     }
-                    continue
                 }
+                throw "$($record.Service.Name) failed to start.`n$(Get-StartupError $record)"
             }
-            throw "$($record.Service.Name) failed to start.`n$(Get-StartupError $record)"
         }
     }
 

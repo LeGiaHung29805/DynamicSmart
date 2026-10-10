@@ -3,6 +3,7 @@ package com.dynamicmart.order_service.service;
 import com.dynamicmart.order_service.dto.response.OrderDetailResponse;
 import com.dynamicmart.order_service.dto.response.OrderPageResponse;
 import com.dynamicmart.order_service.dto.response.OrderTimelineResponse;
+import com.dynamicmart.order_service.dto.response.PurchasedItemResponse;
 import com.dynamicmart.order_service.entity.CustomerOrder;
 import com.dynamicmart.order_service.entity.OrderAddress;
 import com.dynamicmart.order_service.entity.OrderActorType;
@@ -130,6 +131,45 @@ public class OrderQueryService {
 
         return new com.dynamicmart.order_service.controller.OrderInternalController.ReviewEligibility(
                 true, order.getId(), orderItemId, customerId, item.getProductId(), item.getVariantId(), null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PurchasedItemResponse> listPurchasedItems(UUID customerId, UUID productId) {
+        requireId(customerId);
+        List<CustomerOrder> completedOrders = orders.findAllByCustomerIdAndStatus(customerId, OrderStatus.COMPLETED);
+        if (completedOrders.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, CustomerOrder> orderMap = completedOrders.stream()
+                .collect(java.util.stream.Collectors.toMap(CustomerOrder::getId, o -> o, (a, b) -> a));
+        List<UUID> orderIds = new java.util.ArrayList<>(orderMap.keySet());
+        List<OrderItem> allItems = items.findAllByOrderIdIn(orderIds);
+        return allItems.stream()
+                .filter(item -> productId == null || item.getProductId().equals(productId))
+                .map(item -> {
+                    CustomerOrder order = orderMap.get(item.getOrderId());
+                    Instant completedAt = null;
+                    String orderNumber = null;
+                    if (order != null) {
+                        orderNumber = order.getOrderNumber();
+                        completedAt = order.getCompletedAt() != null ? order.getCompletedAt() : order.getUpdatedAt();
+                    }
+                    return new PurchasedItemResponse(
+                            item.getOrderId(),
+                            orderNumber,
+                            item.getId(),
+                            item.getProductId(),
+                            item.getVariantId(),
+                            item.getProductName(),
+                            item.getVariantName(),
+                            item.getImageUrl(),
+                            item.getUnitPriceVnd(),
+                            item.getQuantity(),
+                            completedAt
+                    );
+                })
+                .sorted(Comparator.comparing(PurchasedItemResponse::completedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
     }
 
     private OrderPageResponse list(Query rawQuery, UUID customerId) {

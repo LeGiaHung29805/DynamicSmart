@@ -2,7 +2,7 @@
 
 import { AlertCircle, CheckCircle2, ImagePlus, Star, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { engagementApi } from "../api/engagement.api";
@@ -13,6 +13,8 @@ export interface CreateReviewModalProps {
   onClose: () => void;
   orderItemId?: string;
   productName?: string;
+  productImage?: string;
+  orderNumber?: string;
   onSuccess?: (review: ReviewItem) => void;
 }
 
@@ -29,6 +31,8 @@ export function CreateReviewModal({
   onClose,
   orderItemId: defaultOrderItemId = "",
   productName,
+  productImage,
+  orderNumber,
   onSuccess,
 }: Readonly<CreateReviewModalProps>) {
   const [orderItemId, setOrderItemId] = useState(defaultOrderItemId);
@@ -40,6 +44,13 @@ export function CreateReviewModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Đồng bộ orderItemId khi prop thay đổi
+  useEffect(() => {
+    if (defaultOrderItemId) {
+      setOrderItemId(defaultOrderItemId);
+    }
+  }, [defaultOrderItemId]);
 
   if (!isOpen) return null;
 
@@ -97,11 +108,18 @@ export function CreateReviewModal({
         setImageUrls([]);
       }, 1200);
     } catch (err: unknown) {
-      const errorObj = err as { message?: string; payload?: { message?: string } };
-      const serverMsg =
+      const errorObj = err as { message?: string; payload?: { message?: string }; status?: number };
+      let serverMsg =
         errorObj.payload?.message ||
         errorObj.message ||
         "Không thể gửi đánh giá. Hãy kiểm tra xem đơn hàng đã hoàn tất chưa.";
+      if (
+        errorObj.status === 409 ||
+        serverMsg.includes("đã được đánh giá") ||
+        serverMsg.includes("ALREADY_EXISTS")
+      ) {
+        serverMsg = "Dòng đơn hàng này đã được đánh giá trước đó. Mỗi sản phẩm trong một đơn hàng chỉ có thể đánh giá 1 lần.";
+      }
       setErrorMessage(serverMsg);
     } finally {
       setSubmitting(false);
@@ -109,6 +127,7 @@ export function CreateReviewModal({
   };
 
   const activeRating = hoverRating || rating;
+  const targetOrderItemId = (orderItemId || defaultOrderItemId).trim();
 
   return (
     <div
@@ -150,28 +169,47 @@ export function CreateReviewModal({
               </div>
             ) : null}
 
-            {/* Order Item ID */}
-            {!defaultOrderItemId ? (
-              <div>
-                <Input
-                  label="Mã dòng đơn hàng (OrderItem ID)"
-                  name="orderItemId"
-                  placeholder="Nhập UUID dòng đơn hàng đã mua..."
-                  required
-                  value={orderItemId}
-                  onChange={(e) => setOrderItemId(e.target.value)}
-                />
-                <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
-                  <span>Chỉ dòng đơn hoàn tất (COMPLETED) mới được đánh giá.</span>
-                  <Link className="font-semibold text-brand hover:underline" href="/customer/account/orders">
-                    Vào trang Đơn hàng →
-                  </Link>
-                </div>
+            {/* Product & Order Preview */}
+            {!targetOrderItemId ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+                <p className="font-bold">Chưa xác định dòng đơn hàng để đánh giá.</p>
+                <p className="mt-1 text-slate-600">
+                  Chỉ các sản phẩm thuộc đơn hàng đã hoàn tất (COMPLETED) mới có thể gửi đánh giá.
+                  Vui lòng truy cập mục <strong>Đánh giá của tôi</strong> trong hồ sơ cá nhân để đánh giá các sản phẩm đã mua.
+                </p>
+                <Link
+                  className="mt-2.5 inline-flex items-center font-bold text-brand hover:underline"
+                  href="/customer/account/reviews"
+                  onClick={onClose}
+                >
+                  Vào mục Đánh giá cá nhân →
+                </Link>
               </div>
             ) : (
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="font-semibold text-slate-900">Sản phẩm đánh giá:</span>{" "}
-                <span className="text-slate-800">{productName || "Sản phẩm trong đơn"}</span>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+                {productImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={productName || "Sản phẩm"}
+                    className="size-14 rounded-lg border border-slate-200 object-cover shrink-0"
+                    src={productImage}
+                  />
+                ) : (
+                  <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-emerald-100 text-xs font-bold text-emerald-800">
+                    SP
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-950 text-sm truncate">
+                    {productName || "Sản phẩm đã mua"}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    {orderNumber ? <span>Đơn hàng #{orderNumber}</span> : null}
+                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                      <CheckCircle2 className="size-3" /> Đã mua hàng
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -284,7 +322,7 @@ export function CreateReviewModal({
               <Button disabled={submitting} onClick={onClose} type="button" variant="outline">
                 Hủy bỏ
               </Button>
-              <Button disabled={submitting} type="submit">
+              <Button disabled={submitting || !targetOrderItemId} type="submit">
                 {submitting ? "Đang gửi…" : "Gửi đánh giá"}
               </Button>
             </div>

@@ -4,6 +4,7 @@ import com.dynamicmart.order_service.config.CurrentCustomer;
 import com.dynamicmart.order_service.dto.response.OrderDetailResponse;
 import com.dynamicmart.order_service.dto.response.OrderPageResponse;
 import com.dynamicmart.order_service.dto.response.OrderTimelineResponse;
+import com.dynamicmart.order_service.dto.response.PurchasedItemResponse;
 import com.dynamicmart.order_service.service.OrderQueryService;
 import com.dynamicmart.order_service.service.OrderQueryService.Query;
 import java.time.Instant;
@@ -40,6 +41,13 @@ public class OrderQueryController {
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         return queries.listCustomerOrders(
                 currentCustomer.idFrom(jwt), query(page, size, status, orderNumber, createdFrom, createdTo, sort));
+    }
+
+    @GetMapping("/purchased-items")
+    public java.util.List<PurchasedItemResponse> listPurchasedItems(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) UUID productId) {
+        return queries.listPurchasedItems(currentCustomer.idFrom(jwt), productId);
     }
 
     @GetMapping("/{orderId}")
