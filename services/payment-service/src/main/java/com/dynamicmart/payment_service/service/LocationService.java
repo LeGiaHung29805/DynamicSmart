@@ -16,14 +16,22 @@ public class LocationService {
     private final GhnLocationProvinceRepository provinces;
     private final GhnLocationDistrictRepository districts;
     private final GhnLocationWardRepository wards;
+    private final GhnLocationSyncService syncService;
 
-    public LocationService(GhnLocationProvinceRepository provinces, GhnLocationDistrictRepository districts, GhnLocationWardRepository wards) {
+    public LocationService(GhnLocationProvinceRepository provinces, GhnLocationDistrictRepository districts,
+                           GhnLocationWardRepository wards, GhnLocationSyncService syncService) {
         this.provinces = provinces; this.districts = districts;
         this.wards = wards;
+        this.syncService = syncService;
     }
 
     public List<LocationResponse> provinces() {
-        return provinces.findByActiveTrueOrderByNameAsc().stream().map(LocationMapper::toResponse).toList();
+        var active = provinces.findByActiveTrueOrderByNameAsc();
+        if (active.isEmpty()) {
+            syncService.sync();
+            active = provinces.findByActiveTrueOrderByNameAsc();
+        }
+        return active.stream().map(LocationMapper::toResponse).toList();
     }
 
     public List<LocationResponse> districts(int provinceId) {

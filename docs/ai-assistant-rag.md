@@ -27,18 +27,21 @@ FAQ/chính sách đơn giản -> embedding + Qdrant -> trích xuất có citatio
 Câu hỏi so sánh/tổng hợp/tư vấn -> embedding + Qdrant -> Ollama streaming (khi bật synthesis)
 ```
 
-FastAPI tái sử dụng kết nối HTTP, cache tối đa 128 embedding câu hỏi lặp lại và giữ model
-Ollama nóng trong 30 phút. Chat model mặc định dùng context 2048 token, sinh tối đa 160 token.
-Do `qwen2.5:0.5b` có thể diễn giải sai chính sách, môi trường mặc định đặt
-`RAG_ENABLE_LLM_SYNTHESIS=false`: câu trả lời chính sách được trích xuất có nguồn. Chỉ bật
-LLM synthesis khi đã chuyển sang model mạnh hơn và kiểm thử bộ câu hỏi nghiệp vụ.
+FastAPI tái sử dụng kết nối HTTP và cache tối đa 128 embedding câu hỏi lặp lại. Embedding model
+được giữ nóng 30 phút; chat model được giải phóng sau mỗi câu tổng hợp để tránh hai model chiếm
+GPU lâu và làm Ollama lỗi ở lượt truy xuất tiếp theo. Chat model dùng context 2048 token, sinh
+tối đa 160 token.
+Môi trường mặc định dùng `qwen3:1.7b` với `RAG_ENABLE_LLM_SYNTHESIS=true`. FAQ và câu hỏi nối
+tiếp dùng retrieval theo history nhưng vẫn đi theo nhánh trích xuất nhanh; câu hỏi yêu cầu giải
+thích, so sánh, tổng hợp hoặc tư vấn mới dùng LLM. Thinking bị tắt để giảm độ trễ. Câu sinh không đạt kiểm tra grounding sẽ tự động
+quay về câu trả lời trích xuất.
 
 Retriever dùng kết hợp semantic score và từ khóa tiếng Việt đã chuẩn hóa từ đồng nghĩa. Kết
 quả được giới hạn tối đa hai chunk mỗi file để context không bị một tài liệu chiếm hết. Splitter
 ưu tiên biên đoạn và câu, overlap theo đơn vị hoàn chỉnh; câu trả lời extractive chọn tối đa ba
 ý có liên quan và loại tiêu đề/câu giới hạn trợ lý không trả lời trực tiếp câu hỏi.
 
-Mô hình chat mặc định là `qwen2.5:0.5b`; embedding mặc định là
+Mô hình chat mặc định là `qwen3:1.7b`; embedding mặc định là
 `qwen3-embedding:0.6b`. Collection mặc định `ecommerce_knowledge_qwen3_06b` được tách khỏi
 collection của model embedding cũ để không trộn các vector khác kích thước. Khi Ollama không
 sẵn sàng trong môi trường phát triển, embedding băm chỉ được dùng để kiểm thử luồng và phần
@@ -101,7 +104,7 @@ cũ `danh-muc-va-san-pham-chi-tiet.md` không được loader lập chỉ mục.
 
 ## Chạy local
 
-1. Cài và chạy Ollama, tải `qwen2.5:0.5b` và `qwen3-embedding:0.6b`.
+1. Cài và chạy Ollama, tải `qwen3:1.7b` và `qwen3-embedding:0.6b`.
 2. Cài dependency và chạy FastAPI theo `services/ai-assistant-service/README.md`.
 3. Gateway dùng `AI_ASSISTANT_SERVICE_URL=http://127.0.0.1:8001` theo mặc định.
 4. Chạy Gateway và frontend như quy trình hiện có.

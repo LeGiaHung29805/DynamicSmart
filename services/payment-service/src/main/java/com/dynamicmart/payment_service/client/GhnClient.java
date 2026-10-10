@@ -82,6 +82,11 @@ public class GhnClient {
     public JsonNode districts(int provinceId) { return get("/shiip/public-api/master-data/district", Map.of("province_id", provinceId)); }
     public JsonNode wards(int districtId) { return get("/shiip/public-api/master-data/ward", Map.of("district_id", districtId)); }
 
+    public boolean isCatalogConfigured() {
+        return properties.baseUrl() != null && !properties.baseUrl().isBlank()
+                && properties.token() != null && !properties.token().isBlank();
+    }
+
     private JsonNode get(String path, Map<String, Object> query) {
         requireCatalogConfigured();
         try {
@@ -99,7 +104,7 @@ public class GhnClient {
             throw unavailable("Không thể kết nối tới danh mục địa giới GHN.");
         }
     }
-    private void requireCatalogConfigured() { if (properties.baseUrl() == null || properties.baseUrl().isBlank() || properties.token() == null || properties.token().isBlank()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "GHN chưa được cấu hình cho môi trường này."); }
+    private void requireCatalogConfigured() { if (!isCatalogConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "GHN chưa được cấu hình cho môi trường này."); }
     private void requireQuoteConfigured() { requireCatalogConfigured(); if (properties.shopId() == null || properties.shopId().isBlank() || properties.fromDistrictId() == null || properties.fromWardCode() == null || properties.fromWardCode().isBlank()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "Kho gửi GHN chưa được cấu hình cho môi trường này."); }
     private PaymentException unavailable() { return unavailable("GHN không phản hồi báo giá. Vui lòng thử lại."); }
     private PaymentException unavailable(String message) { return new PaymentException(HttpStatus.BAD_GATEWAY, "GHN_UNAVAILABLE", message); }

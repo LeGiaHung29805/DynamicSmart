@@ -25,6 +25,7 @@ class RagServiceTest(unittest.IsolatedAsyncioTestCase):
             ollama_embedding_model="test",
             ollama_timeout_seconds=0.1,
             ollama_keep_alive="30m",
+            ollama_embedding_keep_alive="30m",
             ollama_num_ctx=2048,
             ollama_num_predict=160,
             enable_llm_synthesis=True,
@@ -178,6 +179,27 @@ class RagServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("[Nội dung nhạy cảm đã được lược bỏ]", contextual_query)
         self.assertNotIn("123456", contextual_query)
 
+    def test_short_follow_up_is_resolved_from_history(self) -> None:
+        request = ChatRequest(
+            message="Còn phí giao hàng?",
+            history=[ChatTurn(role="user", content="Tôi muốn đổi địa chỉ nhận hàng")],
+        )
+
+        self.assertEqual(
+            "Tôi muốn đổi địa chỉ nhận hàng Còn phí giao hàng?",
+            RagService._contextual_query(request),
+        )
+
+    def test_generated_reply_is_cleaned_and_keeps_readable_spacing(self) -> None:
+        reply = RagService._normalize_generated_reply(
+            "<think>internal</think>\nTheo tài liệu đã kiểm duyệt: Ý thứ nhất.\n- Ý thứ hai."
+        )
+
+        self.assertEqual("Ý thứ nhất.\n\n- Ý thứ hai.", reply)
+
+        prose = RagService._normalize_generated_reply("Ý thứ nhất. Ý thứ hai rõ ràng hơn.")
+        self.assertEqual("Ý thứ nhất.\n\nÝ thứ hai rõ ràng hơn.", prose)
+
     async def test_fallback_extracts_the_sentence_matching_the_question(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -278,6 +300,35 @@ class RagServiceTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(RagService._numbers_are_grounded("Có 30 ngày.", results))
         self.assertTrue(RagService._numbers_are_grounded("Thời hạn chưa được công bố.", results))
+
+    def test_rejects_unsupported_negative_claim(self) -> None:
+        from app.rag.types import Chunk, SearchResult
+
+        results = [
+            SearchResult(
+                Chunk(
+                    "dynamicmart",
+                    "1",
+                    "shipping.md",
+                    "Giao hàng",
+                    "Đổi địa chỉ sẽ làm báo giá vận chuyển cũ không còn hợp lệ.",
+                ),
+                0.9,
+            )
+        ]
+
+        self.assertFalse(
+            RagService._negative_claims_are_grounded(
+                "Không cần thanh toán trước khi đổi địa chỉ.",
+                results,
+            )
+        )
+        self.assertTrue(
+            RagService._negative_claims_are_grounded(
+                "Báo giá cũ không còn hợp lệ.",
+                results,
+            )
+        )
 
     def test_extractive_answer_omits_heading_and_unrelated_assistant_disclaimer(self) -> None:
         from app.rag.types import Chunk, SearchResult

@@ -44,15 +44,15 @@ public class PayOsGateway {
     }
 
     public boolean validWebhook(JsonNode data, String signature) {
-        if (!configured() || data == null || !data.isObject() || signature == null) return false;
+        if (!isConfigured() || data == null || !data.isObject() || signature == null) return false;
         java.util.TreeMap<String, String> values = new java.util.TreeMap<>();
         data.properties().forEach(entry -> values.put(entry.getKey(), entry.getValue().isNull() ? "" : entry.getValue().isValueNode() ? entry.getValue().asText() : entry.getValue().toString()));
         String canonical = values.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(java.util.stream.Collectors.joining("&"));
         return HmacSigner.equalsHex(HmacSigner.sha256(properties.checksumKey(), canonical), signature);
     }
 
-    private boolean configured() { return present(properties.clientId()) && present(properties.apiKey()) && present(properties.checksumKey()) && present(properties.baseUrl()) && present(properties.returnUrl()) && present(properties.cancelUrl()); }
-    private void requireConfigured() { if (!configured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "PAYOS_NOT_CONFIGURED", "PayOS chưa được cấu hình."); }
+    public boolean isConfigured() { return present(properties.clientId()) && present(properties.apiKey()) && present(properties.checksumKey()) && present(properties.baseUrl()) && present(properties.returnUrl()) && present(properties.cancelUrl()); }
+    private void requireConfigured() { if (!isConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "PAYOS_NOT_CONFIGURED", "PayOS chưa được cấu hình."); }
     private boolean present(String value) { return value != null && !value.isBlank(); }
     private PaymentException unavailable() { return new PaymentException(HttpStatus.BAD_GATEWAY, "PAYOS_UNAVAILABLE", "PayOS không phản hồi. Vui lòng thử lại."); }
 }

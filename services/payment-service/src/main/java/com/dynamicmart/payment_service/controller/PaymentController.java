@@ -79,6 +79,12 @@ public class PaymentController {
         return paymentService.getByVnPayReference(reference, customerId);
     }
 
+    /** Public checkout capability; contains no provider credentials. */
+    @GetMapping("/methods")
+    public Map<String, List<String>> availableMethods() {
+        return Map.of("methods", paymentService.availableMethods());
+    }
+
     /** Admin read model. Gateway enforces ADMIN before forwarding this route. */
     @GetMapping
     public PaymentPageResponse list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {

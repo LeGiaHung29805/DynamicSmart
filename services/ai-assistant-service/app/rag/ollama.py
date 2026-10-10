@@ -31,6 +31,7 @@ class OllamaChatClient:
         return {
             "model": self.model,
             "stream": stream,
+            "think": False,
             "keep_alive": self.keep_alive,
             "messages": [
                 {"role": "system", "content": system_prompt},

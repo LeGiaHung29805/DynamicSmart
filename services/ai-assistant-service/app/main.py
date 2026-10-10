@@ -47,6 +47,9 @@ async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         embedding_provider=rag_service.embedding_provider.name,
+        embedding_model=settings.ollama_embedding_model,
+        chat_model=settings.ollama_chat_model,
+        llm_synthesis=settings.enable_llm_synthesis,
         vector_store="qdrant",
         vector_store_mode=rag_service.store.mode,
         tenants=rag_service.store.counts_by_tenant(),

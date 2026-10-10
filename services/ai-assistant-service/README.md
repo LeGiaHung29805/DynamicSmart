@@ -21,7 +21,8 @@ mã giảm giá/voucher, COD/thanh toán khi nhận hàng và wishlist/sản ph�
 Để giảm độ trễ, câu hỏi tìm sản phẩm đi thẳng đến Catalog Service và FAQ đơn giản trả lời
 trích xuất từ đoạn RAG phù hợp nhất. Khi bật LLM synthesis, chỉ câu hỏi cần so sánh, tổng hợp
 hoặc tư vấn mới gọi chat model. Kết nối HTTP đến Catalog/Ollama được tái sử dụng, embedding câu hỏi lặp lại được
-cache giới hạn và model được giữ nóng bằng `OLLAMA_KEEP_ALIVE`.
+cache giới hạn. Embedding model được giữ nóng bằng `OLLAMA_EMBEDDING_KEEP_ALIVE`; chat model
+mặc định giải phóng sau khi trả lời để tránh hai model chiếm GPU lâu và làm lỗi lượt hỏi sau.
 
 Mỗi thư mục con trong `knowledge/` là một `tenant`. Dữ liệu của hai dự án không được truy xuất chéo.
 
@@ -40,7 +41,7 @@ Yêu cầu Python 3.12 và Ollama. Từ thư mục service:
 ```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
-ollama pull qwen2.5:0.5b
+ollama pull qwen3:1.7b
 ollama pull qwen3-embedding:0.6b
 docker compose up -d qdrant
 .venv\Scripts\python run.py
@@ -91,14 +92,16 @@ không?”. Frontend chỉ giữ lịch sử trong phiên trang hiện tại và
 không lưu hội thoại vào database hay Qdrant. Nội dung có dấu hiệu chứa mật khẩu, OTP, token,
 CVV hoặc số thẻ bị lược bỏ trước khi đưa vào truy vấn/prompt.
 
-Các biến tối ưu Ollama mặc định là `OLLAMA_KEEP_ALIVE=30m`, `OLLAMA_NUM_CTX=2048` và
+Các biến tối ưu Ollama mặc định là `OLLAMA_KEEP_ALIVE=0`,
+`OLLAMA_EMBEDDING_KEEP_ALIVE=30m`, `OLLAMA_NUM_CTX=2048` và
 `OLLAMA_NUM_PREDICT=160`. Có thể tăng giới hạn nếu cần câu trả lời dài hơn, đổi lại thời gian
 và VRAM sẽ tăng. Retriever mặc định lấy 5 chunk, kích thước 700 ký tự và overlap 100 ký tự.
 Embedding mặc định là `qwen3-embedding:0.6b`; collection mặc định mới
 `ecommerce_knowledge_qwen3_06b` tách biệt với vector cũ để tránh trộn vector khác kích thước.
-Với model nhỏ `qwen2.5:0.5b`, `RAG_ENABLE_LLM_SYNTHESIS=false` được dùng mặc định để ưu tiên
-tốc độ và tránh model diễn giải thêm ngoài tài liệu. Chỉ bật cờ này sau khi dùng model mạnh hơn
-và đã chạy bộ câu hỏi đánh giá chất lượng; streaming vẫn sẵn sàng khi cờ được bật.
+Chat model mặc định là `qwen3:1.7b` và `RAG_ENABLE_LLM_SYNTHESIS=true`. FAQ và câu hỏi nối tiếp
+vẫn dùng retrieval theo history cùng câu trả lời trích xuất nhanh; câu hỏi yêu cầu giải thích,
+so sánh hoặc tư vấn mới gọi chat model để diễn đạt rõ hơn. Chế độ thinking bị tắt để giảm độ trễ; mọi câu trả lời sinh vẫn được
+kiểm tra số liệu và quy tắc grounding, nếu không đạt sẽ quay về câu trả lời trích xuất.
 
 Response giữ contract chung:
 

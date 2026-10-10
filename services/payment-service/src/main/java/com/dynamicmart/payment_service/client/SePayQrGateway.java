@@ -25,7 +25,7 @@ public class SePayQrGateway {
     }
 
     public boolean validWebhook(String rawBody, String timestamp, String signature) {
-        if (!configured() || timestamp == null || signature == null) return false;
+        if (!isConfigured() || timestamp == null || signature == null) return false;
         try {
             long sentAt = Long.parseLong(timestamp);
             if (Math.abs(Instant.now().getEpochSecond() - sentAt) > 300) return false;
@@ -34,8 +34,8 @@ public class SePayQrGateway {
         } catch (NumberFormatException ignored) { return false; }
     }
 
-    private void requireConfigured() { if (!configured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "SEPAY_NOT_CONFIGURED", "QR ngân hàng/SePay chưa được cấu hình."); }
-    private boolean configured() { return present(properties.webhookSecret()) && present(properties.bankId()) && present(properties.accountNo()) && present(properties.qrBaseUrl()); }
+    private void requireConfigured() { if (!isConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "SEPAY_NOT_CONFIGURED", "QR ngân hàng/SePay chưa được cấu hình."); }
+    public boolean isConfigured() { return present(properties.webhookSecret()) && present(properties.bankId()) && present(properties.accountNo()) && present(properties.qrBaseUrl()); }
     private boolean present(String value) { return value != null && !value.isBlank(); }
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 }

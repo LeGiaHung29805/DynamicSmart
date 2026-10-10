@@ -31,7 +31,7 @@ function StateCard({ actionLabel, description, onAction, title }: Readonly<PageS
   return (
     <section className="rounded-xl border border-border bg-surface p-6 text-center">
       <h2 className="text-lg font-semibold">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">{description}</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
       {actionLabel && onAction ? <Button className="mt-5" onClick={onAction}>{actionLabel}</Button> : null}
     </section>
   );

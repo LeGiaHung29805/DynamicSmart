@@ -141,6 +141,10 @@ public class PaymentService {
         return new PaymentPageResponse(page.getContent().stream().map(payment -> response(payment, null)).toList(), page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
     }
 
+    public List<String> availableMethods() {
+        return gateways.availableMethods();
+    }
+
     @Transactional(readOnly = true)
     public List<PaymentAttemptResponse> attempts(UUID paymentId) {
         requirePayment(paymentId);
@@ -268,5 +272,14 @@ public class PaymentService {
     private PaymentResponse response(Payment payment, String redirectUrl) {
         return PaymentMapper.toResponse(payment, redirectUrl);
     }
-    private void validateCombination(OrderPaymentContextRequest request) { if (request.method() == OrderPaymentContextRequest.PaymentMethod.COD && request.timing() != OrderPaymentContextRequest.PaymentTiming.POSTPAID) throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "PREPAID_COD_FORBIDDEN", "COD chỉ hỗ trợ thanh toán trả sau."); }
+    private void validateCombination(OrderPaymentContextRequest request) {
+        if (request.method() == OrderPaymentContextRequest.PaymentMethod.COD
+                && request.timing() != OrderPaymentContextRequest.PaymentTiming.POSTPAID) {
+            throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "PREPAID_COD_FORBIDDEN", "COD chỉ hỗ trợ thanh toán trả sau.");
+        }
+        if (!gateways.isAvailable(request.method().name())) {
+            throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_METHOD_NOT_CONFIGURED",
+                    "Phương thức thanh toán này chưa được cấu hình trên máy chủ.");
+        }
+    }
 }

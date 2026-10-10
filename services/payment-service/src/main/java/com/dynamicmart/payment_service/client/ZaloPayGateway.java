@@ -47,11 +47,11 @@ public class ZaloPayGateway {
     }
 
     public boolean validCallback(String data, String mac) {
-        return configured() && HmacSigner.equalsHex(HmacSigner.sha256(properties.key2(), data), mac);
+        return isConfigured() && HmacSigner.equalsHex(HmacSigner.sha256(properties.key2(), data), mac);
     }
 
-    private boolean configured() { return present(properties.appId()) && present(properties.key1()) && present(properties.key2()) && present(properties.createUrl()) && present(properties.callbackUrl()) && present(properties.returnUrl()); }
-    private void requireConfigured() { if (!configured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "ZALOPAY_NOT_CONFIGURED", "ZaloPay chưa được cấu hình."); }
+    public boolean isConfigured() { return present(properties.appId()) && present(properties.key1()) && present(properties.key2()) && present(properties.createUrl()) && present(properties.callbackUrl()) && present(properties.returnUrl()); }
+    private void requireConfigured() { if (!isConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "ZALOPAY_NOT_CONFIGURED", "ZaloPay chưa được cấu hình."); }
     private boolean present(String value) { return value != null && !value.isBlank(); }
     private PaymentException unavailable() { return new PaymentException(HttpStatus.BAD_GATEWAY, "ZALOPAY_UNAVAILABLE", "ZaloPay không phản hồi. Vui lòng thử lại."); }
 }

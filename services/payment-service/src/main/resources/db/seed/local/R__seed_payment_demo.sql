@@ -1,17 +1,4 @@
--- Minimal local GHN catalog for the configured warehouse/customer address.
-INSERT INTO ghn_location_provinces (id, name, name_normalized, synced_at, is_active)
-VALUES (201, 'Hà Nội', 'ha noi', NOW(), TRUE)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO ghn_location_districts (id, province_id, name, name_normalized, synced_at, is_active)
-VALUES (1482, 201, 'Quận Bắc Từ Liêm', 'quan bac tu liem', NOW(), TRUE)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO ghn_location_wards (
-    id, province_id, district_id, ghn_ward_code, name, name_normalized, synced_at, is_active
-)
-VALUES (11007, 201, 1482, '11007', 'Phường Phú Diễn', 'phuong phu dien', NOW(), TRUE)
-ON CONFLICT (id) DO NOTHING;
+-- GHN administrative locations are synchronized from the provider API at runtime.
 
 INSERT INTO payments (
     id, order_id, customer_id, timing, method, amount_vnd, status,

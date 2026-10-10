@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import unicodedata
 from collections import OrderedDict, defaultdict
 from collections.abc import AsyncIterator
 from typing import Any
@@ -31,7 +32,7 @@ class RagService:
             settings.ollama_base_url,
             settings.ollama_embedding_model,
             settings.ollama_timeout_seconds,
-            settings.ollama_keep_alive,
+            settings.ollama_embedding_keep_alive,
         )
         self.hash_embeddings = HashEmbeddingProvider()
         self.embedding_provider = self.ollama_embeddings
@@ -107,6 +108,7 @@ class RagService:
                     self._system_prompt(request.tenant),
                     self._user_prompt(request.message, relevant, request),
                 )
+                reply = self._normalize_generated_reply(reply)
                 if not self._is_grounded_reply(reply, request.message, relevant):
                     reply = self._retrieval_fallback(contextual_query, relevant)
             except Exception:
@@ -143,7 +145,7 @@ class RagService:
             ):
                 parts.append(token)
                 yield {"type": "token", "content": token}
-            reply = "".join(parts).strip()
+            reply = self._normalize_generated_reply("".join(parts))
             if not self._is_grounded_reply(reply, request.message, relevant):
                 reply = self._retrieval_fallback(contextual_query, relevant)
                 yield {"type": "replace", "content": reply}
@@ -248,7 +250,14 @@ class RagService:
             "thế còn", "vậy còn", "thì sao", "còn cái", "phương thức đó", "trường hợp đó",
             "như trên", "vừa rồi", "ở trên",
         )
-        return any(term in normalized for term in reference_terms)
+        if any(term in normalized for term in reference_terms):
+            return True
+        words = re.findall(r"[\wÀ-ỹ]+", normalized, flags=re.UNICODE)
+        short_follow_up_starts = (
+            "còn ", "vậy ", "thế ", "nếu ", "giá ", "phí ",
+            "bao nhiêu", "được không", "có không", "khi nào",
+        )
+        return len(words) <= 9 and normalized.startswith(short_follow_up_starts)
 
     @staticmethod
     def _safe_history_content(content: str) -> str:
@@ -295,9 +304,12 @@ class RagService:
         normalized = question.casefold()
         synthesis_terms = (
             "so sánh", "khác nhau", "tóm tắt", "tổng hợp", "phân tích",
-            "tư vấn", "nên chọn", "đề xuất",
+            "tư vấn", "nên chọn", "đề xuất", "giải thích", "vì sao",
         )
-        return len(normalized) > 180 or any(term in normalized for term in synthesis_terms)
+        return (
+            len(normalized) > 180
+            or any(term in normalized for term in synthesis_terms)
+        )
 
     @staticmethod
     def _product_response(request: ChatRequest) -> ChatResponse:
@@ -348,8 +360,8 @@ class RagService:
             f"CÂU HỎI: {question}\n\nTRẢ LỜI:"
         )
 
-    @staticmethod
-    def _retrieval_fallback(question: str, results: list[SearchResult]) -> str:
+    @classmethod
+    def _retrieval_fallback(cls, question: str, results: list[SearchResult]) -> str:
         candidates: list[tuple[float, float, SearchResult, str]] = []
         question_lower = question.casefold()
         for result in results:
@@ -376,7 +388,7 @@ class RagService:
 
         if not candidates:
             excerpt = " ".join(results[0].chunk.content.split())[:420]
-            return f"Theo tài liệu “{results[0].chunk.title}”: {excerpt}"
+            return excerpt
 
         candidates.sort(key=lambda item: item[0], reverse=True)
         best_score = candidates[0][0]
@@ -386,7 +398,11 @@ class RagService:
         total_length = 0
         for score, lexical, result, candidate in candidates:
             normalized = re.sub(r"\W+", " ", candidate.casefold()).strip()
-            if normalized in seen or source_counts[result.chunk.source] >= 2:
+            if (
+                normalized in seen
+                or cls._is_redundant_candidate(normalized, seen)
+                or source_counts[result.chunk.source] >= 2
+            ):
                 continue
             if selected and lexical < 0.25:
                 continue
@@ -406,17 +422,70 @@ class RagService:
             return excerpt
         return "\n\n".join(f"• {excerpt}" for _, excerpt in selected)
 
+    @staticmethod
+    def _is_redundant_candidate(candidate: str, selected: set[str]) -> bool:
+        candidate_tokens = set(candidate.split())
+        if not candidate_tokens:
+            return True
+        for existing in selected:
+            existing_tokens = set(existing.split())
+            overlap = len(candidate_tokens & existing_tokens)
+            denominator = max(1, min(len(candidate_tokens), len(existing_tokens)))
+            if overlap / denominator >= 0.55:
+                return True
+        return False
+
+    @staticmethod
+    def _normalize_generated_reply(reply: str) -> str:
+        cleaned = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(r"\[(?:tài liệu|nguồn)\s*\d+\]", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(
+            r"(?i)^\s*(?:theo (?:các )?(?:tài liệu|nguồn)(?: đã kiểm duyệt)?[^:]*:\s*)",
+            "",
+            cleaned,
+        )
+        lines = [line.strip() for line in cleaned.replace("\r", "").split("\n") if line.strip()]
+        formatted: list[str] = []
+        for line in lines:
+            if line.startswith(("- ", "• ", "* ")):
+                formatted.append(line)
+                continue
+            sentences = re.split(r"(?<=[.!?])\s+(?=[A-ZÀ-ỸĐ])", line)
+            formatted.extend(sentence.strip() for sentence in sentences if sentence.strip())
+        return "\n\n".join(formatted).strip()
+
     @classmethod
     def _is_grounded_reply(cls, reply: str, question: str, results: list[SearchResult]) -> bool:
         if not reply or len(reply.strip()) < 10:
             return False
         if not cls._numbers_are_grounded(reply, results):
             return False
+        if any(term in reply.casefold() for term in ("theo tài liệu", "nguồn tham khảo", "tài liệu số")):
+            return False
+        if not cls._negative_claims_are_grounded(reply, results):
+            return False
         # Phát hiện ảo giác trái ngược chính sách nghiêm trọng (hallucination)
         reply_lower = reply.lower()
         context_lower = " ".join(r.chunk.content.lower() for r in results)
         if "không thể tự hủy" in context_lower and ("vẫn có thể tự hủy" in reply_lower or ("có thể tự hủy" in reply_lower and "không thể" not in reply_lower)):
             return False
+        return True
+
+    @staticmethod
+    def _negative_claims_are_grounded(reply: str, results: list[SearchResult]) -> bool:
+        def words(value: str) -> list[str]:
+            normalized = unicodedata.normalize("NFD", value.casefold())
+            normalized = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+            return re.findall(r"[a-z0-9]{2,}", normalized)
+
+        context = " ".join(words(" ".join(result.chunk.content for result in results)))
+        reply_words = words(reply)
+        for index, token in enumerate(reply_words):
+            if token not in {"khong", "chua"}:
+                continue
+            phrase = " ".join(reply_words[index:index + 3])
+            if len(phrase.split()) >= 3 and phrase not in context:
+                return False
         return True
 
     @staticmethod

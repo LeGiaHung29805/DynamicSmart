@@ -17,6 +17,7 @@ import type { Address, LocationOption, VoucherWalletItem } from "@/features/cust
 import { locationApi } from "@/features/shipping";
 import type { PaymentMethod, PaymentTiming } from "@/features/order/types/order.types";
 import { orderStatusLabel } from "@/features/order/utils/order-format";
+import { paymentMethodsApi, type AvailablePaymentMethod } from "@/features/payment/api/payment-methods.api";
 import { isApiError } from "@/lib/api/error";
 import { useAuthSession } from "@/lib/auth/session";
 import { checkoutApi } from "../api/checkout.api";
@@ -60,6 +61,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
   const [shippingVoucherId, setShippingVoucherId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("COD");
   const [paymentTiming, setPaymentTiming] = useState<PaymentTiming>("POSTPAID");
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<AvailablePaymentMethod[]>(["COD"]);
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
   const [order, setOrder] = useState<CreateOrderResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,10 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
   const shippingVouchers = useMemo(
     () => vouchers.filter((value) => value.scope === "SHIPPING_DISCOUNT"),
     [vouchers],
+  );
+  const availablePaymentChoices = useMemo(
+    () => paymentChoices.filter((choice) => availablePaymentMethods.includes(choice.method as AvailablePaymentMethod)),
+    [availablePaymentMethods],
   );
 
   useEffect(() => {
@@ -102,22 +108,28 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
           cartBootstrap.current = bootstrap;
           sessionPromise = bootstrap;
         }
-        const [nextSession, nextAddresses, nextVouchers] = await Promise.all([
+        const [nextSession, nextAddresses, nextVouchers, paymentMethods] = await Promise.all([
           sessionPromise,
           addressApi.list(),
           customerApi.vouchers(),
+          paymentMethodsApi.available().catch(() => ({ methods: ["COD"] as AvailablePaymentMethod[] })),
         ]);
         if (ignored) return;
         setSession(nextSession);
         setAddresses(nextAddresses);
         setVouchers(nextVouchers);
+        setAvailablePaymentMethods(paymentMethods.methods);
         if (initialVoucherId) {
           const initialVoucher = nextVouchers.find((item) => item.id === initialVoucherId && item.scope !== "SHIPPING_DISCOUNT");
           if (initialVoucher) setMerchandiseVoucherId(initialVoucher.id);
         }
         setAddressId(nextSession.addressId ?? nextAddresses.find((item) => item.defaultAddress)?.id ?? nextAddresses[0]?.id ?? "");
-        setPaymentMethod(nextSession.paymentMethod ?? "COD");
-        setPaymentTiming(nextSession.paymentTiming ?? "POSTPAID");
+        const restoredMethod = nextSession.paymentMethod
+          && paymentMethods.methods.includes(nextSession.paymentMethod as AvailablePaymentMethod)
+          ? nextSession.paymentMethod
+          : "COD";
+        setPaymentMethod(restoredMethod);
+        setPaymentTiming(restoredMethod === "COD" ? "POSTPAID" : (nextSession.paymentTiming ?? "PREPAID"));
         if (!initialSessionId) router.replace(`/checkout?sessionId=${encodeURIComponent(nextSession.id)}`);
       } catch (cause) {
         if (!ignored) setMessage(errorMessage(cause, "Không thể khởi tạo phiên thanh toán."));
@@ -237,7 +249,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
         <section className="rounded-xl border bg-white p-5 sm:p-7">
           {step === "address" ? <AddressStep addresses={addresses} addressId={addressId} disabled={working} select={(id) => { setAddressId(id); invalidateDraft(); }} showForm={showAddressForm} toggleForm={() => setShowAddressForm((value) => !value)} saved={async (address) => { const rows = await reloadAccountData(); setAddressId(rows.find((item) => item.id === address.id)?.id ?? address.id); setShowAddressForm(false); invalidateDraft(); }} next={() => void saveAndPreview("shipping")} /> : null}
           {step === "shipping" ? <ShippingStep disabled={working} merchandise={merchandiseVouchers} merchandiseVoucherId={merchandiseVoucherId} shipping={shippingVouchers} shippingVoucherId={shippingVoucherId} preview={preview} back={() => setStep("address")} changeMerchandise={(value) => { setMerchandiseVoucherId(value); invalidateDraft(); }} changeShipping={(value) => { setShippingVoucherId(value); invalidateDraft(); }} next={() => void saveAndPreview("payment")} /> : null}
-          {step === "payment" ? <PaymentStep disabled={working} method={paymentMethod} timing={paymentTiming} back={() => setStep("shipping")} select={(choice) => { setPaymentMethod(choice.method); setPaymentTiming(choice.timing); invalidateDraft(); }} next={() => void saveAndPreview("confirm")} /> : null}
+          {step === "payment" ? <PaymentStep choices={availablePaymentChoices} disabled={working} method={paymentMethod} timing={paymentTiming} back={() => setStep("shipping")} select={(choice) => { setPaymentMethod(choice.method); setPaymentTiming(choice.timing); invalidateDraft(); }} next={() => void saveAndPreview("confirm")} /> : null}
           {step === "confirm" ? <ConfirmStep disabled={working} order={order} paymentTiming={paymentTiming} back={() => setStep("payment")} create={() => void createOrder()} /> : null}
         </section>
         <CheckoutSummary preview={preview} session={session} />
@@ -265,8 +277,52 @@ function ShippingStep({ disabled, merchandise, merchandiseVoucherId, shipping, s
   return <div className="space-y-5"><h2 className="text-xl font-semibold">2. Giao hàng và mã giảm giá</h2><VoucherSelect label="Mã giảm hàng hóa" values={merchandise} value={merchandiseVoucherId} change={changeMerchandise} /><VoucherSelect label="Mã giảm phí giao hàng" values={shipping} value={shippingVoucherId} change={changeShipping} />{preview ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><strong>{preview.shipping.serviceName}</strong><p className="mt-1">Dự kiến giao: {preview.shipping.eta || "Theo lịch GHN"}</p></div> : null}<div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={next}>Kiểm tra lại và tiếp tục<ChevronRight /></Button></div></div>;
 }
 
-function PaymentStep({ disabled, method, timing, back, select, next }: Readonly<{ disabled: boolean; method: PaymentMethod; timing: PaymentTiming; back: () => void; select: (choice: PaymentChoice) => void; next: () => void }>) {
-  return <div className="space-y-5"><div><h2 className="text-xl font-black">3. Phương thức thanh toán</h2><p className="mt-1 text-sm text-slate-500">Kết quả chỉ được ghi nhận sau khi máy chủ xác minh thông báo từ cổng thanh toán.</p></div><div className="grid gap-3 sm:grid-cols-2">{paymentChoices.map((choice) => { const selected = method === choice.method && timing === choice.timing; return <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${selected ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-slate-200 hover:border-rose-200"}`} key={`${choice.method}-${choice.timing}`}><input className="mt-1 accent-rose-600" type="radio" checked={selected} disabled={disabled} onChange={() => select(choice)} /><span><strong className="block text-sm">{choice.label}</strong><span className="mt-1 block text-xs leading-5 text-slate-500">{choice.description}</span></span></label>; })}</div><div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={next}>Xác nhận lựa chọn<ChevronRight /></Button></div></div>;
+function PaymentStep({ choices, disabled, method, timing, back, select, next }: Readonly<{
+  choices: PaymentChoice[];
+  disabled: boolean;
+  method: PaymentMethod;
+  timing: PaymentTiming;
+  back: () => void;
+  select: (choice: PaymentChoice) => void;
+  next: () => void;
+}>) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-black">3. Phương thức thanh toán</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Chỉ các phương thức đang hoạt động trên máy chủ được hiển thị. Kết quả online được ghi nhận sau khi máy chủ xác minh callback.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {choices.map((choice) => {
+          const selected = method === choice.method && timing === choice.timing;
+          return (
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${selected ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-slate-200 hover:border-rose-200"}`}
+              key={`${choice.method}-${choice.timing}`}
+            >
+              <input
+                className="mt-1 accent-rose-600"
+                type="radio"
+                checked={selected}
+                disabled={disabled}
+                onChange={() => select(choice)}
+              />
+              <span>
+                <strong className="block text-sm">{choice.label}</strong>
+                <span className="mt-1 block text-xs leading-5 text-slate-500">{choice.description}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="flex justify-between">
+        <Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button>
+        <Button disabled={disabled} onClick={next}>Xác nhận lựa chọn<ChevronRight /></Button>
+      </div>
+    </div>
+  );
 }
 
 function ConfirmStep({ disabled, order, paymentTiming, back, create }: Readonly<{ disabled: boolean; order: CreateOrderResult | null; paymentTiming: PaymentTiming; back: () => void; create: () => void }>) {

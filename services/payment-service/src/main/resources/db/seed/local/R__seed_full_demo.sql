@@ -1,13 +1,6 @@
 -- Local-only repeatable demo seed. Flyway loads this file from db/seed/local.
 -- UUIDs are shared across services so catalog, cart, order, payment and engagement data align.
-
-INSERT INTO ghn_location_provinces (id, name, name_normalized, synced_at, is_active)
-VALUES (201, 'Hà Nội', 'ha noi', NOW(), TRUE)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, name_normalized = EXCLUDED.name_normalized, synced_at = NOW(), is_active = TRUE;
-
-INSERT INTO ghn_location_wards (id, province_id, name, name_normalized, synced_at, is_active)
-VALUES (11007, 201, 'Phường Phú Diễn', 'phuong phu dien', NOW(), TRUE)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, name_normalized = EXCLUDED.name_normalized, synced_at = NOW(), is_active = TRUE;
+-- GHN provinces/districts/wards are synchronized from the provider API at runtime.
 
 WITH data AS (
     SELECT i,
