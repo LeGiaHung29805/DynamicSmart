@@ -26,7 +26,7 @@ import type {
 import {
   AdminAttributeValueFields, attributeInputs, attributeMap, type AttributeValueMap,
 } from "./AdminAttributeValueFields";
-import { errorMessage, fieldClass, Label, optionalNumber, textAreaClass, toDateTimeLocal } from "./form-utils";
+import { errorMessage, fieldClass, Label, optionalNumber, textAreaClass, toDateTimeLocal, toSlug } from "./form-utils";
 
 interface ProductDraft {
   categoryId: string;
@@ -197,6 +197,7 @@ export function AdminProductFormPanel({ productId }: Readonly<{ productId?: stri
   const [attributes, setAttributes] = useState<AttributeAdmin[]>([]);
   const [mappings, setMappings] = useState<CategoryAttributeAdmin[]>([]);
   const [draft, setDraft] = useState<ProductDraft>(emptyProduct);
+  const [slugCustomized, setSlugCustomized] = useState(Boolean(productId));
   const [attributeValues, setAttributeValues] = useState<AttributeValueMap>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -214,8 +215,10 @@ export function AdminProductFormPanel({ productId }: Readonly<{ productId?: stri
       setAttributes(attributeItems);
       if (product) {
         setDraft(productDraft(product));
+        setSlugCustomized(true);
         setAttributeValues(attributeMap(product.attributes));
       } else {
+        setSlugCustomized(false);
         setDraft({ ...emptyProduct, categoryId: categoryItems.find((item) => item.status === "ACTIVE")?.id ?? categoryItems[0]?.id ?? "" });
       }
     }).catch((caught) => {
@@ -235,6 +238,30 @@ export function AdminProductFormPanel({ productId }: Readonly<{ productId?: stri
     return () => { active = false; };
   }, [draft.categoryId]);
 
+  function changeProductName(name: string) {
+    setDraft((current) => ({
+      ...current,
+      name,
+      slug: !productId && !slugCustomized ? toSlug(name) : current.slug,
+    }));
+  }
+
+  function changeProductSlug(value: string) {
+    const normalized = toSlug(value);
+    if (!normalized && !productId) {
+      setSlugCustomized(false);
+      setDraft((current) => ({ ...current, slug: toSlug(current.name) }));
+      return;
+    }
+    setSlugCustomized(true);
+    setDraft((current) => ({ ...current, slug: normalized }));
+  }
+
+  function resetProductSlug() {
+    setSlugCustomized(false);
+    setDraft((current) => ({ ...current, slug: toSlug(current.name) }));
+  }
+
   async function saveProduct(event: FormEvent) {
     event.preventDefault();
     try {
@@ -243,7 +270,7 @@ export function AdminProductFormPanel({ productId }: Readonly<{ productId?: stri
       const input: ProductInput = {
         categoryId: draft.categoryId,
         name: draft.name.trim(),
-        slug: draft.slug.trim(),
+        slug: productId || slugCustomized ? draft.slug.trim() : "",
         shortDescription: draft.shortDescription.trim() || null,
         description: draft.description.trim() || null,
         defaultWeightGrams: optionalNumber(draft.defaultWeightGrams),
@@ -279,7 +306,23 @@ export function AdminProductFormPanel({ productId }: Readonly<{ productId?: stri
           <div><p className="text-xs font-black tracking-wider text-brand uppercase">Bước 1</p><h3 className="mt-1 text-xl font-black">Thông tin chung</h3></div>
           <div className="mt-5 space-y-4">
             <label><Label>Danh mục</Label><select className={fieldClass} onChange={(event) => { setDraft({ ...draft, categoryId: event.target.value }); setAttributeValues({}); }} required value={draft.categoryId}><option value="">Chọn danh mục</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name} ({category.status})</option>)}</select></label>
-            <div className="grid gap-4 md:grid-cols-2"><label><Label>Tên sản phẩm</Label><input className={fieldClass} maxLength={300} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required value={draft.name} /></label><label><Label>Đường dẫn (slug)</Label><input className={fieldClass} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="dynamic-phone-pro" required value={draft.slug} /></label></div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label><Label>Tên sản phẩm</Label><input className={fieldClass} maxLength={300} onChange={(event) => changeProductName(event.target.value)} required value={draft.name} /></label>
+              <label>
+                <div className="flex items-start justify-between gap-3">
+                  <Label>Đường dẫn (slug)</Label>
+                  <button className="text-xs font-bold text-emerald-700 hover:text-emerald-900" onClick={resetProductSlug} type="button">Tạo lại từ tên</button>
+                </div>
+                <input className={fieldClass} maxLength={330} onChange={(event) => changeProductSlug(event.target.value)} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="dynamic-phone-pro" required value={draft.slug} />
+                <span className="mt-1.5 block text-xs text-slate-500">
+                  {productId
+                    ? "Slug hiện tại được giữ nguyên; chỉ thay đổi khi bạn sửa trường này."
+                    : slugCustomized
+                      ? "Slug do bạn nhập sẽ không đổi khi sửa tên sản phẩm."
+                      : "Đang tự tạo theo tên; Catalog Service sẽ thêm -2, -3 nếu bị trùng."}
+                </span>
+              </label>
+            </div>
             <label><Label>Mô tả ngắn</Label><textarea className={textAreaClass} maxLength={1000} onChange={(event) => setDraft({ ...draft, shortDescription: event.target.value })} value={draft.shortDescription} /></label>
             <label><Label>Mô tả chi tiết</Label><textarea className={`${textAreaClass} min-h-40`} maxLength={20000} onChange={(event) => setDraft({ ...draft, description: event.target.value })} value={draft.description} /></label>
           </div>

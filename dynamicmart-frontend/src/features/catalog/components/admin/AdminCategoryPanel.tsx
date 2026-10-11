@@ -14,7 +14,7 @@ import {
 } from "../../api/admin-catalog.api";
 import type { CategoryAdmin } from "../../types";
 import { catalogStatusLabel } from "../../utils/catalog-format";
-import { errorMessage, fieldClass, Label, textAreaClass } from "./form-utils";
+import { errorMessage, fieldClass, Label, textAreaClass, toSlug } from "./form-utils";
 
 const emptyDraft: CategoryInput = { parentId: null, code: "", name: "", slug: "", description: "", sortOrder: 0 };
 
@@ -74,17 +74,6 @@ function collectUnavailableParentIds(categories: CategoryAdmin[], editingId?: st
     }
   }
   return unavailable;
-}
-
-function toSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function toCode(value: string) {
