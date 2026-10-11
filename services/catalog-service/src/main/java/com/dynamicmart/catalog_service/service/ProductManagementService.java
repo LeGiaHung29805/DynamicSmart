@@ -28,9 +28,11 @@ import com.dynamicmart.catalog_service.repository.ProductImageRepository;
 import com.dynamicmart.catalog_service.repository.ProductRepository;
 import com.dynamicmart.catalog_service.repository.ProductVariantRepository;
 import com.dynamicmart.catalog_service.repository.VariantAttributeValueRepository;
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -42,6 +44,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProductManagementService {
     private static final long MAX_IMAGE_SIZE_BYTES = 5L * 1024 * 1024;
+    private static final int MAX_SLUG_LENGTH = 330;
+    private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}+");
+    private static final Pattern NON_SLUG_CHARACTERS = Pattern.compile("[^a-z0-9]+");
+    private static final Pattern EDGE_HYPHENS = Pattern.compile("^-+|-+$");
+    private static final Pattern TRAILING_HYPHENS = Pattern.compile("-+$");
     private static final java.util.Set<String> ALLOWED_IMAGE_TYPES = java.util.Set.of(
             "image/jpeg", "image/png", "image/webp", "image/avif");
 
@@ -78,8 +85,7 @@ public class ProductManagementService {
     @Transactional
     public AdminProductResponse createProduct(CreateProductRequest request) {
         requireCategory(request.categoryId());
-        String slug = normalizeSlug(request.slug());
-        requireUniqueSlug(slug, null);
+        String slug = resolveCreateSlug(request.name(), request.slug());
         Product product = new Product(UUID.randomUUID(), request.categoryId(), request.name().trim(),
                 slug, trimToNull(request.shortDescription()), trimToNull(request.description()),
                 request.defaultWeightGrams(), request.defaultLengthCm(), request.defaultWidthCm(),
@@ -340,6 +346,25 @@ public class ProductManagementService {
                 "Đường dẫn sản phẩm đã tồn tại.");
     }
 
+    private String resolveCreateSlug(String productName, String requestedSlug) {
+        if (requestedSlug != null && !requestedSlug.isBlank()) {
+            String customSlug = normalizeSlug(requestedSlug);
+            requireUniqueSlug(customSlug, null);
+            return customSlug;
+        }
+
+        String baseSlug = normalizeSlug(productName);
+        if (!productRepository.existsBySlugIgnoreCase(baseSlug)) return baseSlug;
+
+        for (int suffixNumber = 2; suffixNumber < Integer.MAX_VALUE; suffixNumber++) {
+            String suffix = "-" + suffixNumber;
+            String candidate = truncateSlug(baseSlug, MAX_SLUG_LENGTH - suffix.length()) + suffix;
+            if (!productRepository.existsBySlugIgnoreCase(candidate)) return candidate;
+        }
+        throw new CatalogException(HttpStatus.CONFLICT, "PRODUCT_SLUG_EXHAUSTED",
+                "Không thể tạo đường dẫn duy nhất cho sản phẩm.");
+    }
+
     private void requireUniqueSku(String sku, UUID excludedId) {
         boolean duplicate = excludedId == null ? variantRepository.existsBySkuIgnoreCase(sku)
                 : variantRepository.existsBySkuIgnoreCaseAndIdNot(sku, excludedId);
@@ -367,7 +392,24 @@ public class ProductManagementService {
     }
 
     private String normalizeSlug(String value) {
-        return value.trim().toLowerCase(Locale.ROOT);
+        String source = value == null ? "" : value.trim()
+                .replace('đ', 'd')
+                .replace('Đ', 'D');
+        String withoutAccents = COMBINING_MARKS.matcher(
+                Normalizer.normalize(source, Normalizer.Form.NFD)).replaceAll("");
+        String slug = EDGE_HYPHENS.matcher(NON_SLUG_CHARACTERS.matcher(
+                withoutAccents.toLowerCase(Locale.ROOT)).replaceAll("-")).replaceAll("");
+        slug = truncateSlug(slug, MAX_SLUG_LENGTH);
+        if (slug.isBlank()) {
+            throw new CatalogException(HttpStatus.BAD_REQUEST, "PRODUCT_SLUG_INVALID",
+                    "Không thể tạo đường dẫn hợp lệ cho sản phẩm.");
+        }
+        return slug;
+    }
+
+    private String truncateSlug(String slug, int maximumLength) {
+        if (slug.length() <= maximumLength) return slug;
+        return TRAILING_HYPHENS.matcher(slug.substring(0, maximumLength)).replaceAll("");
     }
 
     private String normalizeSku(String value) {
