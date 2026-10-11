@@ -13,7 +13,7 @@ Tài liệu này mô tả contract do `catalog-service` cung cấp cho frontend,
 
 ## Cấu trúc `catalog_db`
 
-Flyway tạo schema P0 trong `V1__initial_schema.sql`, bổ sung index/publication field trong `V2__catalog_publication_and_indexes.sql` và số liệu rating tổng hợp trong `V3__add_rating_columns.sql`.
+Flyway tạo schema P0 trong `V1__initial_schema.sql`, bổ sung index/publication field trong `V2__catalog_publication_and_indexes.sql`, số liệu rating tổng hợp trong `V3__add_rating_columns.sql`, đồng bộ kiểu hash idempotency trong `V4__align_idempotency_hash_type.sql` và chỉ mục tìm kiếm thông minh trong `V5__smart_product_search.sql`.
 
 | Nhóm | Bảng |
 |---|---|
@@ -32,18 +32,21 @@ Các ràng buộc chính gồm SKU/slug/code duy nhất; giá và tồn không �
 | `GET` | `/api/v1/catalog/categories/{slug}` | Chi tiết danh mục |
 | `GET` | `/api/v1/catalog/categories/{slug}/filters` | Schema bộ lọc động theo thuộc tính |
 | `GET` | `/api/v1/catalog/products` | Tìm kiếm/lọc/sắp xếp/phân trang phía server |
+| `GET` | `/api/v1/catalog/products/suggestions?q={keyword}` | Gợi ý tối đa 6 sản phẩm và 3 danh mục khi nhập từ 2 ký tự |
 | `GET` | `/api/v1/catalog/products/{slug}` | ProductDetail cùng Variant, ảnh, giá và tồn |
 | `GET` | `/api/v1/catalog/variants/{variantId}` | Dữ liệu mới nhất của một Variant |
 
 Query của danh sách sản phẩm:
 
-- `keyword`: tên, slug, mô tả ngắn, SKU hoặc tên Variant.
+- `keyword`: tên, slug, mô tả sản phẩm, tên danh mục, SKU hoặc tên Variant.
 - `categoryId`: gồm cả danh mục con đang hoạt động.
 - `minimumPriceVnd`, `maximumPriceVnd`.
 - `featured=true|false`.
 - `attribute=CODE:value`; có thể lặp tối đa 20 lần.
-- `sort=NEWEST|PRICE_ASC|PRICE_DESC|BEST_SELLER`.
+- `sort=RELEVANCE|NEWEST|PRICE_ASC|PRICE_DESC|BEST_SELLER`; khi có từ khóa và không truyền `sort`, mặc định là `RELEVANCE`.
 - `page` bắt đầu từ `0`, `size` từ `1` đến `100`.
+
+Tìm kiếm chuẩn hóa chữ hoa/thường, dấu tiếng Việt, dấu cách/gạch nối và từ viết liền; hỗ trợ nhóm từ đồng nghĩa nghiệp vụ cùng sai chính tả nhẹ bằng PostgreSQL `unaccent`, full-text search và `pg_trgm`. Kết quả ưu tiên khớp chính xác, tiền tố, full-text rồi độ tương đồng. Phiên bản này chỉ gợi ý **sản phẩm và danh mục**, chưa có thực thể hay logic thương hiệu.
 
 Chỉ Product `ACTIVE`, đã phát hành và có ít nhất một Variant `ACTIVE` còn tồn khả dụng được trả trong danh sách. Với `BEST_SELLER`, Catalog lấy thứ tự từ Reporting thuộc Engagement Service và fallback an toàn khi service đó chưa sẵn sàng. Direct sale được Catalog lấy từ Cart Promotion API và fallback về giá niêm yết nếu Cart chậm/lỗi. Engagement cập nhật rating tổng hợp qua `PUT /api/v1/catalog/internal/products/{productId}/rating`; chi tiết review vẫn do Engagement sở hữu.
 
@@ -123,7 +126,7 @@ Envelope gồm `eventId`, `aggregateType`, `aggregateId`, `eventType`, `eventVer
 1. Sao chép biến môi trường từ `services/catalog-service/.env.example` vào Run Configuration hoặc file `.env` không commit.
 2. Tạo `catalog_db`, chạy PostgreSQL và RabbitMQ.
 3. Profile `local` nạp dữ liệu demo bằng `db/seed/local/R__seed_catalog_demo.sql` sau Flyway.
-4. Chạy test tại `services/catalog-service` bằng Maven; bộ hiện tại kiểm tra query động, trạng thái public, rule thuộc tính, oversell, khóa/điều chỉnh và idempotency reservation.
+4. Chạy test tại `services/catalog-service` bằng Maven; bộ hiện tại kiểm tra query động, tìm kiếm bỏ dấu/viết liền/từ đồng nghĩa/sai chính tả nhẹ, migration PostgreSQL, trạng thái public, rule thuộc tính, oversell, khóa/điều chỉnh và idempotency reservation.
 
 Nếu các service của thành viên khác chưa sẵn sàng, dùng profile cô lập theo hướng dẫn tại [`services/catalog-service/README_STANDALONE_DEMO.md`](../services/catalog-service/README_STANDALONE_DEMO.md). Profile này cung cấp auth, direct-sale và cart/buy-now handoff chỉ dành cho demo; không được bật trong môi trường tích hợp.
 
