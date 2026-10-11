@@ -224,7 +224,7 @@ export function AdminInventoryPanel() {
                     <td className="px-4 py-3 text-right font-black tabular-nums text-emerald-800">{item.availableQuantity}</td>
                     <td className="px-4 py-3"><StatusBadge label={stockState.label} tone={stockState.tone} /></td>
                     <td className="px-4 py-3">
-                      <StatusBadge label={item.variantStatus} tone={item.variantStatus === "ACTIVE" ? "success" : "neutral"} />
+                      <StatusBadge label={catalogStatusLabel(item.variantStatus)} tone={item.variantStatus === "ACTIVE" ? "success" : "neutral"} />
                     </td>
                   </tr>
                 );
