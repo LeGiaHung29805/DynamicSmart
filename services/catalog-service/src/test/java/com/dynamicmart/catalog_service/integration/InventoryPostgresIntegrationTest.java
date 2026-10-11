@@ -11,6 +11,9 @@ import com.dynamicmart.catalog_service.dto.request.ReserveInventoryRequest;
 import com.dynamicmart.catalog_service.dto.response.InventoryReservationResponse;
 import com.dynamicmart.catalog_service.entity.InventoryReservationStatus;
 import com.dynamicmart.catalog_service.exception.CatalogException;
+import com.dynamicmart.catalog_service.query.CatalogProductQueryRepository;
+import com.dynamicmart.catalog_service.query.ProductSearchCriteria;
+import com.dynamicmart.catalog_service.query.ProductSort;
 import com.dynamicmart.catalog_service.service.InventoryAdjustmentService;
 import com.dynamicmart.catalog_service.service.InventoryExpirationScheduler;
 import com.dynamicmart.catalog_service.service.InventoryReservationService;
@@ -47,6 +50,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 })
 class InventoryPostgresIntegrationTest {
     private static final UUID CATEGORY_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
+    private static final UUID PARENT_CATEGORY_ID = UUID.fromString("10000000-0000-0000-0000-000000000002");
     private static final UUID PRODUCT_ID = UUID.fromString("20000000-0000-0000-0000-000000000001");
     private static final UUID VARIANT_ID = UUID.fromString("30000000-0000-0000-0000-000000000001");
 
@@ -67,6 +71,7 @@ class InventoryPostgresIntegrationTest {
     @Autowired private InventoryAdjustmentService adjustmentService;
     @Autowired private InventoryExpirationScheduler expirationScheduler;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private CatalogProductQueryRepository productQueryRepository;
 
     private ExecutorService executor;
 
@@ -206,6 +211,37 @@ class InventoryPostgresIntegrationTest {
                 .isEqualTo(1);
     }
 
+    @Test
+    void smartSearchSupportsAccentsJoinedWordsSynonymsAndSuggestions() {
+        jdbcTemplate.update("""
+                INSERT INTO categories (id, code, name, slug, status, sort_order)
+                VALUES (?, 'FASHION', 'Thời trang', 'thoi-trang', 'ACTIVE', 0)
+                """, PARENT_CATEGORY_ID);
+        jdbcTemplate.update("""
+                UPDATE categories
+                SET parent_id = ?, name = 'Áo nam', slug = 'ao-nam'
+                WHERE id = ?
+                """, PARENT_CATEGORY_ID, CATEGORY_ID);
+        jdbcTemplate.update("""
+                UPDATE products
+                SET name = 'Áo thun nam cao cấp', slug = 'ao-thun-nam-cao-cap',
+                    short_description = 'Áo cotton form rộng'
+                WHERE id = ?
+                """, PRODUCT_ID);
+        jdbcTemplate.update("""
+                UPDATE product_variants
+                SET name = 'Áo thun đen', sku = 'AO-THUN-DEN-M'
+                WHERE id = ?
+                """, VARIANT_ID);
+
+        assertThat(searchIds("ao phong")).containsExactly(PRODUCT_ID);
+        assertThat(searchIds("aothun")).containsExactly(PRODUCT_ID);
+        assertThat(searchIds("ao thn")).containsExactly(PRODUCT_ID);
+
+        var suggestions = productQueryRepository.suggest("thoi trang", 6, 3);
+        assertThat(suggestions.categories()).extracting("id").contains(PARENT_CATEGORY_ID);
+    }
+
     private Attempt reserveWhenReleased(CountDownLatch ready, CountDownLatch start) {
         ready.countDown();
         try {
@@ -224,6 +260,12 @@ class InventoryPostgresIntegrationTest {
     private ReserveInventoryRequest request(UUID checkoutId, Instant expiresAt, int quantity) {
         return new ReserveInventoryRequest(checkoutId, expiresAt,
                 List.of(new InventoryReservationItemRequest(VARIANT_ID, quantity)));
+    }
+
+    private List<UUID> searchIds(String keyword) {
+        return productQueryRepository.search(new ProductSearchCriteria(
+                keyword, null, null, null, null, List.of(),
+                ProductSort.RELEVANCE, 0, 20)).productIds();
     }
 
     private void insertPurchasableVariant(int onHandQuantity) {

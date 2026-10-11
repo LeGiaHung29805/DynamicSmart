@@ -14,6 +14,17 @@ export function optionalNumber(value: string): number | null {
   return value.trim() ? Number(value) : null;
 }
 
+export function toSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function parseJsonObject(value: string): unknown {
   return value.trim() ? JSON.parse(value) : null;
 }

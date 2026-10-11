@@ -2,18 +2,21 @@ import Link from "next/link";
 import { Heart, Menu, ShoppingBag, TicketPercent } from "lucide-react";
 import { AccountMenu } from "@/features/auth";
 import { AssistantWidget } from "@/features/assistant";
+import { ProductSearchBox } from "@/features/catalog/components/ProductSearchBox";
 
 export function StoreLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="flex min-h-screen flex-col bg-[#f7f8f6]">
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[4.5rem] w-full max-w-[90rem] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[4.5rem] w-full max-w-[90rem] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:flex-nowrap lg:gap-5 lg:px-8">
           <Link aria-label="DynamicMart - Trang chủ" className="group flex items-center gap-2.5" href="/">
             <span className="grid size-9 place-items-center rounded-xl bg-emerald-950 text-sm font-black text-white shadow-sm transition group-hover:-rotate-3 group-hover:bg-brand">D</span>
-            <span className="text-xl font-black tracking-[-0.055em] text-slate-950">DYNAMIC<span className="text-brand">MART</span></span>
+            <span className="hidden text-xl font-black tracking-[-0.055em] text-slate-950 sm:inline">DYNAMIC<span className="text-brand">MART</span></span>
           </Link>
 
-          <nav aria-label="Điều hướng chính" className="hidden h-full items-center gap-7 text-sm font-bold text-slate-600 xl:flex">
+          <ProductSearchBox className="order-3 w-full lg:order-none lg:max-w-md lg:flex-1" />
+
+          <nav aria-label="Điều hướng chính" className="hidden h-full items-center gap-6 text-sm font-bold text-slate-600 2xl:flex">
             <Link className="flex h-full items-center border-b-2 border-transparent transition hover:border-brand hover:text-brand" href="/products">Sản phẩm</Link>
             <Link className="flex h-full items-center border-b-2 border-transparent transition hover:border-brand hover:text-brand" href="/products?sort=newest">Hàng mới</Link>
             <Link className="flex h-full items-center border-b-2 border-transparent transition hover:border-brand hover:text-brand" href="/products?sort=best-selling">Bán chạy</Link>
@@ -21,11 +24,11 @@ export function StoreLayout({ children }: Readonly<{ children: React.ReactNode }
           </nav>
 
           <div className="flex items-center gap-1">
-            <Link className="hidden h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-brand sm:flex lg:px-3" href="/wishlist"><Heart className="size-[1.15rem]" /><span className="hidden lg:inline">Yêu thích</span></Link>
-            <Link className="hidden h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-600 transition hover:bg-amber-50 hover:text-amber-700 md:flex lg:px-3" href="/vouchers"><TicketPercent className="size-[1.15rem]" /><span className="hidden lg:inline">Voucher</span></Link>
-            <Link className="relative flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-brand lg:px-3" href="/cart"><ShoppingBag className="size-[1.15rem]" /><span className="hidden lg:inline">Giỏ hàng</span><span className="absolute top-1 right-1 size-2 rounded-full bg-amber-400 ring-2 ring-white" /></Link>
+            <Link className="hidden h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-brand sm:flex lg:px-3" href="/wishlist"><Heart className="size-[1.15rem]" /><span className="hidden xl:inline">Yêu thích</span></Link>
+            <Link className="hidden h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-600 transition hover:bg-amber-50 hover:text-amber-700 md:flex lg:px-3" href="/vouchers"><TicketPercent className="size-[1.15rem]" /><span className="hidden xl:inline">Voucher</span></Link>
+            <Link className="relative flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-brand lg:px-3" href="/cart"><ShoppingBag className="size-[1.15rem]" /><span className="hidden xl:inline">Giỏ hàng</span><span className="absolute top-1 right-1 size-2 rounded-full bg-amber-400 ring-2 ring-white" /></Link>
             <AccountMenu />
-            <Link aria-label="Xem sản phẩm" className="ml-1 grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-brand xl:hidden" href="/products"><Menu className="size-5" /></Link>
+            <Link aria-label="Xem sản phẩm" className="ml-1 grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-brand 2xl:hidden" href="/products"><Menu className="size-5" /></Link>
           </div>
         </div>
       </header>

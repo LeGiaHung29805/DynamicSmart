@@ -4,6 +4,7 @@ import com.dynamicmart.catalog_service.dto.response.ApiResponse;
 import com.dynamicmart.catalog_service.dto.response.PageResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductDetailResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductSummaryResponse;
+import com.dynamicmart.catalog_service.dto.response.ProductSearchSuggestionsResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductVariantResponse;
 import com.dynamicmart.catalog_service.query.ProductSearchCriteria;
 import com.dynamicmart.catalog_service.query.ProductSort;
@@ -37,13 +38,22 @@ public class PublicProductController {
             @RequestParam(required = false) @Min(0) Long maximumPriceVnd,
             @RequestParam(required = false) Boolean featured,
             @RequestParam(name = "attribute", required = false) List<String> attributes,
-            @RequestParam(defaultValue = "NEWEST") ProductSort sort,
+            @RequestParam(required = false) ProductSort sort,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        ProductSort resolvedSort = sort != null
+                ? sort
+                : keyword != null && !keyword.isBlank() ? ProductSort.RELEVANCE : ProductSort.NEWEST;
         ProductSearchCriteria criteria = new ProductSearchCriteria(keyword, categoryId,
                 minimumPriceVnd, maximumPriceVnd, featured,
-                queryService.parseAttributeFilters(attributes), sort, page, size);
+                queryService.parseAttributeFilters(attributes), resolvedSort, page, size);
         return ApiResponse.of(queryService.search(criteria));
+    }
+
+    @GetMapping("/products/suggestions")
+    public ApiResponse<ProductSearchSuggestionsResponse> suggestions(
+            @RequestParam(name = "q") String query) {
+        return ApiResponse.of(queryService.suggest(query));
     }
 
     @GetMapping("/products/{slug}")

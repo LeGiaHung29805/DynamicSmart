@@ -1,24 +1,51 @@
 -- Local-only repeatable demo seed. Flyway loads this file from db/seed/local.
 -- UUIDs are shared across services so catalog, cart, order, payment and engagement data align.
 
-INSERT INTO categories (id, code, name, slug, description, status, sort_order)
+-- Keep the storefront taxonomy intentionally shallow: a small set of root
+-- categories for discovery and concrete leaf categories for assigning products.
+-- The first electronics root and its Phone/Laptop children are created by
+-- R__seed_catalog_demo.sql; this seed extends that tree instead of duplicating it.
+INSERT INTO categories (id, parent_id, code, name, slug, description, status, sort_order)
 VALUES
-    ('b1000000-0000-4000-8000-000000000001', 'SEED-ELECTRONICS', 'Điện tử', 'seed-dien-tu', 'Thiết bị điện tử và phụ kiện', 'ACTIVE', 10),
-    ('b1000000-0000-4000-8000-000000000002', 'SEED-FASHION', 'Thời trang', 'seed-thoi-trang', 'Quần áo và phụ kiện thời trang', 'ACTIVE', 20),
-    ('b1000000-0000-4000-8000-000000000003', 'SEED-HOME', 'Nhà cửa', 'seed-nha-cua', 'Đồ dùng nhà cửa và đời sống', 'ACTIVE', 30),
-    ('b1000000-0000-4000-8000-000000000004', 'SEED-BEAUTY', 'Làm đẹp', 'seed-lam-dep', 'Chăm sóc cá nhân và làm đẹp', 'ACTIVE', 40),
-    ('b1000000-0000-4000-8000-000000000005', 'SEED-SPORT', 'Thể thao', 'seed-the-thao', 'Dụng cụ thể thao và dã ngoại', 'ACTIVE', 50),
-    ('b1000000-0000-4000-8000-000000000006', 'SEED-BOOK', 'Sách & văn phòng', 'seed-sach-van-phong', 'Sách và dụng cụ văn phòng', 'ACTIVE', 60)
+    ('10000000-0000-0000-0000-000000000001', NULL,
+     'ELECTRONICS', 'Điện tử & Công nghệ', 'dien-tu', 'Điện thoại, laptop, âm thanh và phụ kiện công nghệ', 'ACTIVE', 10),
+    ('b1000000-0000-4000-8000-000000000001', '10000000-0000-0000-0000-000000000001',
+     'AUDIO', 'Tai nghe & Âm thanh', 'tai-nghe-am-thanh', 'Tai nghe và thiết bị âm thanh cá nhân', 'ACTIVE', 30),
+    ('b1000000-0000-4000-8000-000000000002', NULL,
+     'FASHION', 'Thời trang', 'thoi-trang', 'Quần áo và phụ kiện thời trang', 'ACTIVE', 20),
+    ('b1100000-0000-4000-8000-000000000002', 'b1000000-0000-4000-8000-000000000002',
+     'T_SHIRT', 'Áo thun', 'ao-thun', 'Áo thun mặc hằng ngày', 'ACTIVE', 10),
+    ('b1000000-0000-4000-8000-000000000003', NULL,
+     'HOME_LIVING', 'Nhà cửa & Đời sống', 'nha-cua-doi-song', 'Đồ dùng giúp không gian sống tiện nghi hơn', 'ACTIVE', 30),
+    ('b1100000-0000-4000-8000-000000000003', 'b1000000-0000-4000-8000-000000000003',
+     'LIGHTING', 'Đèn & Chiếu sáng', 'den-chieu-sang', 'Đèn bàn và thiết bị chiếu sáng', 'ACTIVE', 10),
+    ('b1000000-0000-4000-8000-000000000004', NULL,
+     'BEAUTY_PERSONAL_CARE', 'Làm đẹp & Chăm sóc cá nhân', 'lam-dep-cham-soc-ca-nhan', 'Sản phẩm chăm sóc cá nhân và làm đẹp', 'ACTIVE', 40),
+    ('b1100000-0000-4000-8000-000000000004', 'b1000000-0000-4000-8000-000000000004',
+     'FACIAL_CLEANSER', 'Sữa rửa mặt', 'sua-rua-mat', 'Sản phẩm làm sạch và chăm sóc da mặt', 'ACTIVE', 10),
+    ('b1000000-0000-4000-8000-000000000005', NULL,
+     'SPORT_OUTDOOR', 'Thể thao & Dã ngoại', 'the-thao-da-ngoai', 'Dụng cụ thể thao và hoạt động ngoài trời', 'ACTIVE', 50),
+    ('b1100000-0000-4000-8000-000000000005', 'b1000000-0000-4000-8000-000000000005',
+     'SPORT_BOTTLE', 'Bình nước thể thao', 'binh-nuoc-the-thao', 'Bình nước dùng khi luyện tập và dã ngoại', 'ACTIVE', 10),
+    ('b1000000-0000-4000-8000-000000000006', NULL,
+     'BOOK_STATIONERY', 'Sách & Văn phòng phẩm', 'sach-van-phong-pham', 'Sách, sổ và dụng cụ học tập, văn phòng', 'ACTIVE', 60),
+    ('b1100000-0000-4000-8000-000000000006', 'b1000000-0000-4000-8000-000000000006',
+     'NOTEBOOK', 'Sổ tay', 'so-tay', 'Sổ ghi chép cho học tập và công việc', 'ACTIVE', 10)
 ON CONFLICT (id) DO UPDATE SET
+    parent_id = EXCLUDED.parent_id,
+    code = EXCLUDED.code,
     name = EXCLUDED.name,
+    slug = EXCLUDED.slug,
     description = EXCLUDED.description,
     status = 'ACTIVE',
+    sort_order = EXCLUDED.sort_order,
     updated_at = NOW();
 
 WITH source AS (
     SELECT i,
            ((i - 1) % 6) + 1 AS category_no,
-           (ARRAY['Tai nghe Bluetooth','Áo thun cotton','Đèn bàn LED','Sữa rửa mặt','Bình nước thể thao','Sổ tay cao cấp'])[((i - 1) % 6) + 1] AS base_name
+           (ARRAY['Tai nghe Bluetooth','Áo thun cotton','Đèn bàn LED','Sữa rửa mặt','Bình nước thể thao','Sổ tay cao cấp'])[((i - 1) % 6) + 1] AS base_name,
+           (ARRAY['tai-nghe-bluetooth','ao-thun-cotton','den-ban-led','sua-rua-mat','binh-nuoc-the-thao','so-tay-cao-cap'])[((i - 1) % 6) + 1] AS base_slug
     FROM generate_series(1, 120) AS s(i)
 )
 INSERT INTO products (
@@ -29,9 +56,12 @@ INSERT INTO products (
 )
 SELECT
     ('b2000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
-    ('b1000000-0000-4000-8000-' || lpad(category_no::text, 12, '0'))::uuid,
+    CASE category_no
+        WHEN 1 THEN 'b1000000-0000-4000-8000-000000000001'::uuid
+        ELSE ('b1100000-0000-4000-8000-' || lpad(category_no::text, 12, '0'))::uuid
+    END,
     base_name || ' DM-' || lpad(i::text, 3, '0'),
-    'seed-san-pham-' || lpad(i::text, 3, '0'),
+    base_slug || '-dm-' || lpad(i::text, 3, '0'),
     format('Sản phẩm mẫu số %s dùng để kiểm thử DynamicMart.', i),
     format('Dữ liệu đầy đủ cho luồng danh mục, tồn kho, giỏ hàng, đặt hàng, thanh toán và đánh giá. Mã sản phẩm %s.', i),
     'ACTIVE', NOW() - make_interval(days => 120 - (i % 90)), i <= 12,
@@ -41,6 +71,7 @@ FROM source
 ON CONFLICT (id) DO UPDATE SET
     category_id = EXCLUDED.category_id,
     name = EXCLUDED.name,
+    slug = EXCLUDED.slug,
     short_description = EXCLUDED.short_description,
     description = EXCLUDED.description,
     status = 'ACTIVE',
@@ -61,7 +92,14 @@ SELECT
     ('b3000000-0000-4000-8000-' || lpad(serial::text, 12, '0'))::uuid,
     ('b2000000-0000-4000-8000-' || lpad(p::text, 12, '0'))::uuid,
     'DM-' || lpad(p::text, 3, '0') || '-' || v,
-    (ARRAY['Tiêu chuẩn','Nâng cao','Cao cấp'])[v],
+    CASE ((p - 1) % 6) + 1
+        WHEN 1 THEN (ARRAY['Đen nhám','Trắng ngọc','Xanh navy'])[v]
+        WHEN 2 THEN (ARRAY['Size S','Size M','Size L'])[v]
+        WHEN 3 THEN (ARRAY['5 W','9 W','12 W'])[v]
+        WHEN 4 THEN (ARRAY['100 ml','150 ml','200 ml'])[v]
+        WHEN 5 THEN (ARRAY['500 ml','750 ml','1 lít'])[v]
+        ELSE (ARRAY['A5 · 100 trang','A5 · 200 trang','A4 · 200 trang'])[v]
+    END,
     79000 + p * 7000 + (v - 1) * 25000,
     250 + (p % 8) * 100,
     20 + (p % 5), 15 + (p % 4), 5 + (p % 3),

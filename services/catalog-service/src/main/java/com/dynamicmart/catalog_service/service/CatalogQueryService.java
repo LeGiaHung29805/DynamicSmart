@@ -2,6 +2,9 @@ package com.dynamicmart.catalog_service.service;
 
 import com.dynamicmart.catalog_service.dto.response.PageResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductDetailResponse;
+import com.dynamicmart.catalog_service.dto.response.CategorySearchSuggestionResponse;
+import com.dynamicmart.catalog_service.dto.response.ProductSearchSuggestionResponse;
+import com.dynamicmart.catalog_service.dto.response.ProductSearchSuggestionsResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductSummaryResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductVariantResponse;
 import com.dynamicmart.catalog_service.entity.CatalogStatus;
@@ -35,6 +38,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CatalogQueryService {
     private static final Pattern ATTRIBUTE_CODE = Pattern.compile("^[A-Za-z0-9_-]+$");
+    private static final int MIN_SUGGESTION_QUERY_LENGTH = 2;
+    private static final int MAX_SUGGESTION_QUERY_LENGTH = 100;
+    private static final int PRODUCT_SUGGESTION_LIMIT = 6;
+    private static final int CATEGORY_SUGGESTION_LIMIT = 3;
 
     private final CatalogProductQueryRepository queryRepository;
     private final ProductRepository productRepository;
@@ -82,6 +89,32 @@ public class CatalogQueryService {
                 : (int) Math.ceil((double) result.totalElements() / criteria.size());
         return new PageResponse<>(content, criteria.page(), criteria.size(), result.totalElements(),
                 totalPages, criteria.page() == 0, criteria.page() + 1 >= totalPages);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductSearchSuggestionsResponse suggest(String query) {
+        String safeQuery = query == null ? "" : query.trim();
+        if (safeQuery.length() < MIN_SUGGESTION_QUERY_LENGTH) {
+            return ProductSearchSuggestionsResponse.empty();
+        }
+        if (safeQuery.length() > MAX_SUGGESTION_QUERY_LENGTH) {
+            throw new CatalogException(HttpStatus.BAD_REQUEST, "KEYWORD_TOO_LONG",
+                    "Từ khóa gợi ý chỉ được dài tối đa 100 ký tự.");
+        }
+
+        var suggestions = queryRepository.suggest(
+                safeQuery, PRODUCT_SUGGESTION_LIMIT, CATEGORY_SUGGESTION_LIMIT);
+        List<ProductSearchSuggestionResponse> products = suggestions.products().stream()
+                .map(product -> new ProductSearchSuggestionResponse(
+                        product.id(), product.name(), product.slug(),
+                        product.categoryName(), product.categorySlug(),
+                        product.imageUrl(), product.minimumPriceVnd()))
+                .toList();
+        List<CategorySearchSuggestionResponse> categories = suggestions.categories().stream()
+                .map(category -> new CategorySearchSuggestionResponse(
+                        category.id(), category.name(), category.slug()))
+                .toList();
+        return new ProductSearchSuggestionsResponse(products, categories);
     }
 
     private PageResponse<ProductSummaryResponse> bestSellerSearch(ProductSearchCriteria criteria,

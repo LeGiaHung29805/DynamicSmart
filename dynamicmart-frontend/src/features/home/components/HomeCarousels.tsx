@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
+  Cpu,
   Dumbbell,
   Footprints,
   Gem,
@@ -41,6 +43,8 @@ const categoryIcons: Record<string, LucideIcon> = {
   headphones: Headphones,
   house: House,
   dumbbell: Dumbbell,
+  bookOpen: BookOpen,
+  cpu: Cpu,
 };
 
 function useAutoplay(total: number, delay: number) {
@@ -62,19 +66,19 @@ function useAutoplay(total: number, delay: number) {
   };
 }
 
-function useItemsPerPage() {
+function useItemsPerPage(desktopItems = 5) {
   const [itemsPerPage, setItemsPerPage] = useState(2);
 
   useEffect(() => {
     const update = () => {
-      if (window.innerWidth >= 1024) setItemsPerPage(5);
+      if (window.innerWidth >= 1024) setItemsPerPage(desktopItems);
       else if (window.innerWidth >= 640) setItemsPerPage(3);
       else setItemsPerPage(2);
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
+  }, [desktopItems]);
 
   return itemsPerPage;
 }
@@ -150,8 +154,8 @@ export function HeroCarousel() {
             </Link>
           </div>
           <div className="mt-12 flex flex-wrap gap-x-8 gap-y-4 border-t border-white/15 pt-7 text-sm text-slate-300">
-            <p><strong className="mr-2 text-xl text-white">10K+</strong>Sản phẩm chọn lọc</p>
-            <p><strong className="mr-2 text-xl text-white">100%</strong>Chính hãng</p>
+            <p><strong className="mr-2 text-xl text-white">6</strong>Danh mục chính</p>
+            <p><strong className="mr-2 text-xl text-white">120+</strong>Sản phẩm demo</p>
             <p><strong className="mr-2 text-xl text-white">7 ngày</strong>Đổi trả</p>
           </div>
         </div>
@@ -179,7 +183,7 @@ export function HeroCarousel() {
 }
 
 export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ items?: readonly HomeCategoryItem[] }>) {
-  const itemsPerPage = useItemsPerPage();
+  const itemsPerPage = useItemsPerPage(6);
   const uniqueItems = useMemo(() => {
     const seen = new Set<string>();
     return items.filter((category) => {
@@ -203,12 +207,12 @@ export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ item
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <p className="mb-2 text-xs font-black tracking-[0.2em] text-brand uppercase">Chọn theo phong cách</p>
+          <p className="mb-2 text-xs font-black tracking-[0.2em] text-brand uppercase">Khám phá theo nhu cầu</p>
           <h2 className="text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl">Danh mục nổi bật</h2>
         </div>
-        <CarouselControls current={safeIndex} label="danh mục" onNext={next} onPrevious={previous} total={total} />
+        {total > 1 ? <CarouselControls current={safeIndex} label="danh mục" onNext={next} onPrevious={previous} total={total} /> : null}
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" key={`${itemsPerPage}-${safeIndex}`}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" key={`${itemsPerPage}-${safeIndex}`}>
         {visibleItems.map((category, itemIndex) => {
           const Icon = categoryIcons[category.icon];
           return (
@@ -229,9 +233,9 @@ export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ item
           );
         })}
       </div>
-      <div className="mt-5 flex justify-center gap-1.5">
+      {total > 1 ? <div className="mt-5 flex justify-center gap-1.5">
         {Array.from({ length: total }, (_, page) => <button aria-label={`Trang danh mục ${page + 1}`} className={`h-1.5 rounded-full transition-all ${page === safeIndex ? "w-8 bg-brand" : "w-2 bg-slate-200 hover:bg-slate-300"}`} key={page} onClick={() => setIndex(page)} type="button" />)}
-      </div>
+      </div> : null}
     </div>
   );
 }

@@ -34,7 +34,7 @@ function fromFilters(filters: CatalogFilters): DraftFilters {
     minimumPriceVnd: filters.minimumPriceVnd ?? "",
     maximumPriceVnd: filters.maximumPriceVnd ?? "",
     attributes,
-    sort: filters.sort ?? "newest",
+    sort: filters.sort ?? (filters.q ? "relevance" : "newest"),
   };
 }
 
@@ -47,7 +47,8 @@ function catalogUrl(draft: DraftFilters): string {
   Object.entries(draft.attributes).forEach(([code, value]) => {
     if (value) params.append("attribute", `${code}:${value}`);
   });
-  if (draft.sort !== "newest") params.set("sort", draft.sort);
+  const defaultSort = draft.q.trim() ? "relevance" : "newest";
+  if (draft.sort !== defaultSort) params.set("sort", draft.sort);
   return `/products${params.size ? `?${params.toString()}` : ""}`;
 }
 
@@ -174,13 +175,13 @@ export function CatalogFilterControls({ categories, definitions, filters, total,
           <div className="flex flex-col gap-3 rounded-[1.75rem] border border-slate-200/80 bg-white p-3 shadow-sm md:flex-row md:items-center">
             <form className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-slate-50 px-4 py-2 focus-within:ring-2 focus-within:ring-emerald-200" onSubmit={submit}>
               <Search className="size-5 shrink-0 text-slate-400" /><label className="sr-only" htmlFor="catalog-search">Tìm sản phẩm</label>
-              <input className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none" id="catalog-search" onChange={(event) => setDraft({ ...draft, q: event.target.value })} placeholder="Tên sản phẩm hoặc mã hàng..." value={draft.q} />
+              <input className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none" id="catalog-search" onChange={(event) => setDraft({ ...draft, q: event.target.value, sort: event.target.value.trim() ? "relevance" : "newest" })} placeholder="Tên sản phẩm, danh mục hoặc mã SKU..." value={draft.q} />
               <button className="rounded-xl bg-emerald-950 px-5 py-2 text-sm font-bold text-white" disabled={pending} type="submit">Tìm</button>
             </form>
             <div className="flex gap-2">
               <button className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-bold lg:hidden" onClick={() => dialogRef.current?.showModal()} type="button"><SlidersHorizontal className="size-4" />Bộ lọc{activeCount ? ` (${activeCount})` : ""}</button>
               <select aria-label="Sắp xếp sản phẩm" className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none" onChange={(event) => navigate({ ...applied, sort: event.target.value })} value={applied.sort}>
-                <option value="newest">Mới nhất</option><option value="best-selling">Bán chạy</option><option value="price-asc">Giá tăng dần</option><option value="price-desc">Giá giảm dần</option>
+                {applied.q ? <option value="relevance">Phù hợp nhất</option> : null}<option value="newest">Mới nhất</option><option value="best-selling">Bán chạy</option><option value="price-asc">Giá tăng dần</option><option value="price-desc">Giá giảm dần</option>
               </select>
             </div>
           </div>
