@@ -1,10 +1,10 @@
-import { apiClient } from "@/lib/api/client";
+import { apiRequest } from "@/lib/api/request";
 import type { ProductSearchSuggestions } from "../types";
 
 export function getProductSearchSuggestions(query: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ q: query });
-  return apiClient.get<ProductSearchSuggestions>(
+  return apiRequest<ProductSearchSuggestions>(
     `/api/v1/catalog/products/suggestions?${params.toString()}`,
-    { signal },
+    { method: "GET", signal },
   );
 }
