@@ -44,9 +44,9 @@ public class GhnLocationSyncService {
     }
 
     private Iterable<JsonNode> data(JsonNode response) { JsonNode value = response == null ? null : response.path("data"); return value != null && value.isArray() ? value : List.of(); }
-    private int integer(JsonNode source, String... fields) { for (String field : fields) { String value = source.path(field).asText(""); try { return Integer.parseInt(value); } catch (NumberFormatException ignored) { } } return -1; }
+    private int integer(JsonNode source, String... fields) { for (String field : fields) { String value = source.path(field).asString(""); try { return Integer.parseInt(value); } catch (NumberFormatException ignored) { } } return -1; }
     private int localWardId(String wardCode) { try { return Integer.parseInt(wardCode); } catch (NumberFormatException ignored) { return Math.max(1, Math.floorMod(wardCode.hashCode(), Integer.MAX_VALUE)); } }
-    private String text(JsonNode source, String... fields) { for (String field : fields) { String value = source.path(field).asText("").trim(); if (!value.isBlank()) return value; } return ""; }
+    private String text(JsonNode source, String... fields) { for (String field : fields) { String value = source.path(field).asString("").trim(); if (!value.isBlank()) return value; } return ""; }
     private String normalize(String value) { return value.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " "); }
 
     public record ProvinceData(int id, String name, String normalizedName) { }

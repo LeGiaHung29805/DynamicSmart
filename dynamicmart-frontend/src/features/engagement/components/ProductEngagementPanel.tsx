@@ -94,30 +94,31 @@ export function ProductEngagementPanel({
 
   // Kiểm tra điều kiện đã mua hàng thành công và đã đánh giá chưa
   useEffect(() => {
-    if (!productId || session.status !== "authenticated") {
-      setPurchasedItems([]);
-      setMyProductReviews([]);
-      return;
-    }
+    if (!productId || session.status !== "authenticated") return;
     let cancelled = false;
-    setCheckingEligibility(true);
-    Promise.all([
-      customerOrdersApi.getPurchasedItems(productId).catch(() => []),
-      engagementApi.reviews.getMyProductReviews(productId).catch(() => []),
-    ]).then(([orders, myRevs]) => {
-      if (cancelled) return;
-      setPurchasedItems(orders);
-      setMyProductReviews(myRevs);
-    }).finally(() => {
-      if (!cancelled) setCheckingEligibility(false);
-    });
-    return () => { cancelled = true; };
+    const timer = window.setTimeout(() => {
+      setCheckingEligibility(true);
+      Promise.all([
+        customerOrdersApi.getPurchasedItems(productId).catch(() => []),
+        engagementApi.reviews.getMyProductReviews(productId).catch(() => []),
+      ]).then(([orders, myRevs]) => {
+        if (cancelled) return;
+        setPurchasedItems(orders);
+        setMyProductReviews(myRevs);
+      }).finally(() => {
+        if (!cancelled) setCheckingEligibility(false);
+      });
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [productId, session.status]);
 
-  const eligibleUnreviewedItem = purchasedItems.find(
+  const eligibleUnreviewedItem = session.status === "authenticated" ? purchasedItems.find(
     (item) => !myProductReviews.some((r) => r.orderItemId === item.orderItemId)
-  );
-  const hasReviewedThisProduct = myProductReviews.length > 0;
+  ) : undefined;
+  const hasReviewedThisProduct = session.status === "authenticated" && myProductReviews.length > 0;
 
   const getReviewerName = (rev: ReviewItem) => {
     if (rev.customerName) return rev.customerName;

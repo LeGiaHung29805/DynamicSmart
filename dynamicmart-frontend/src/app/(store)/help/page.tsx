@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { 
   HelpCircle, 
-  ShoppingBag, 
-  CreditCard, 
   Truck, 
   RotateCcw, 
   ShieldCheck, 
@@ -11,7 +9,6 @@ import {
   Mail, 
   Phone, 
   ChevronRight,
-  Search
 } from "lucide-react";
 
 export const metadata: Metadata = {

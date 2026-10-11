@@ -140,6 +140,6 @@ public class OrderCheckoutIntegrationService {
     private UUID merchandise(List<ReservationBenefit> values) { return values.stream().filter(value -> !"SHIPPING_DISCOUNT".equals(value.scope())).map(ReservationBenefit::voucherId).findFirst().orElse(null); }
     private UUID shipping(List<ReservationBenefit> values) { return values.stream().filter(value -> "SHIPPING_DISCOUNT".equals(value.scope())).map(ReservationBenefit::voucherId).findFirst().orElse(null); }
     private void requireEligible(boolean eligible, String reason) { if (!eligible) throw invalid("VOUCHER_INELIGIBLE", reason == null ? "Voucher không còn hợp lệ." : reason); }
-    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, code, message); }
+    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_CONTENT, code, message); }
     private record EnrichedLine(UUID productId, UUID categoryId, UUID variantId, int quantity, long unitPrice, long lineTotal) { }
 }

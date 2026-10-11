@@ -14,7 +14,9 @@ $services = @(
     @{ Name = "cart";       Path = "services/cart-service";       Port = 8083 },
     @{ Name = "order";      Path = "services/order-service";      Port = 8084 },
     @{ Name = "payment";    Path = "services/payment-service";    Port = 8085 },
-    @{ Name = "engagement"; Path = "services/engagement-service"; Port = 8086 }
+    @{ Name = "engagement";   Path = "services/engagement-service";   Port = 8086 },
+    @{ Name = "notification"; Path = "services/notification-service"; Port = 8087; Database = "notification_db" },
+    @{ Name = "reporting";    Path = "services/reporting-service";    Port = 8088; Database = "reporting_db" }
 )
 $gateway = @{ Name = "gateway"; Path = "api-gateway"; Port = 8080 }
 
@@ -57,7 +59,34 @@ function Set-ProcessEnvironment($Values) {
     }
 }
 
-function Start-BackendProcess($Service, $SharedSecurity, [switch]$OrderFallback) {
+function Ensure-PostgresDatabase([string]$Database, $SharedRuntime) {
+    if ($Database -notmatch '^[a-z][a-z0-9_]*$') {
+        throw "Unsafe PostgreSQL database name: $Database"
+    }
+    $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
+    $psqlPath = if ($psqlCommand) { $psqlCommand.Source } else { $null }
+    if (-not $psqlPath) {
+        $commonPsql = "C:\Program Files\PostgreSQL\15\bin\psql.exe"
+        if (Test-Path -LiteralPath $commonPsql) { $psqlPath = $commonPsql }
+    }
+    if (-not $psqlPath) {
+        throw "psql was not found. Create database $Database manually or add PostgreSQL bin to PATH."
+    }
+    $previousPassword = $env:PGPASSWORD
+    try {
+        $env:PGPASSWORD = $SharedRuntime["DB_PASSWORD"]
+        $exists = & $psqlPath -h 127.0.0.1 -p 5432 -U $SharedRuntime["DB_USERNAME"] -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$Database'" 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "Cannot inspect PostgreSQL databases: $exists" }
+        if (($exists | Out-String).Trim() -ne "1") {
+            $created = & $psqlPath -h 127.0.0.1 -p 5432 -U $SharedRuntime["DB_USERNAME"] -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE `"$Database`"" 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "Cannot create PostgreSQL database ${Database}: $created" }
+            Write-Host "Created PostgreSQL database: $Database" -ForegroundColor DarkGreen
+        }
+    }
+    finally { $env:PGPASSWORD = $previousPassword }
+}
+
+function Start-BackendProcess($Service, $SharedSecurity, $SharedRuntime, [switch]$OrderFallback) {
     if (Test-TcpPort $Service.Port) {
         Write-Host ("{0,-12} already running at http://localhost:{1}" -f $Service.Name, $Service.Port) -ForegroundColor DarkGreen
         return $null
@@ -69,7 +98,25 @@ function Start-BackendProcess($Service, $SharedSecurity, [switch]$OrderFallback)
         throw "Maven Wrapper not found: $wrapper"
     }
 
-    Set-ProcessEnvironment (Read-EnvFile (Join-Path $workingDirectory ".env"))
+    $serviceEnvPath = Join-Path $workingDirectory ".env"
+    if (Test-Path -LiteralPath $serviceEnvPath) {
+        Set-ProcessEnvironment (Read-EnvFile $serviceEnvPath)
+    }
+    elseif ($Service.Database) {
+        $generatedEnvironment = @{
+            SPRING_PROFILES_ACTIVE = "local"
+            SERVER_PORT = [string]$Service.Port
+            DB_URL = "jdbc:postgresql://localhost:5432/$($Service.Database)"
+        }
+        foreach ($entry in $SharedRuntime.GetEnumerator()) {
+            $generatedEnvironment[$entry.Key] = $entry.Value
+        }
+        Set-ProcessEnvironment $generatedEnvironment
+        Write-Host ("{0,-12} using shared local infrastructure configuration for database {1}" -f $Service.Name, $Service.Database) -ForegroundColor DarkGray
+    }
+    else {
+        throw "Missing configuration file: $serviceEnvPath"
+    }
     Set-ProcessEnvironment $SharedSecurity
     $env:SPRING_FLYWAY_VALIDATE_ON_MIGRATE = "false"
     $env:MAVEN_OPTS = "-Xms64m -Xmx256m"
@@ -154,10 +201,19 @@ if (-not (Test-TcpPort 5672)) {
 }
 
 $identityEnv = Read-EnvFile (Join-Path $root "services/identity-service/.env")
+$engagementEnv = Read-EnvFile (Join-Path $root "services/engagement-service/.env")
 $sharedSecurity = @{
     JWT_HMAC_SECRET_BASE64 = $identityEnv["JWT_HMAC_SECRET_BASE64"]
     JWT_ISSUER = $identityEnv["JWT_ISSUER"]
     INTERNAL_API_KEY = $identityEnv["INTERNAL_API_KEY"]
+}
+$sharedRuntime = @{
+    DB_USERNAME = $engagementEnv["DB_USERNAME"]
+    DB_PASSWORD = $engagementEnv["DB_PASSWORD"]
+    RABBITMQ_HOST = $engagementEnv["RABBITMQ_HOST"]
+    RABBITMQ_PORT = $engagementEnv["RABBITMQ_PORT"]
+    RABBITMQ_USERNAME = $engagementEnv["RABBITMQ_USERNAME"]
+    RABBITMQ_PASSWORD = $engagementEnv["RABBITMQ_PASSWORD"]
 }
 
 foreach ($entry in $sharedSecurity.GetEnumerator()) {
@@ -165,13 +221,21 @@ foreach ($entry in $sharedSecurity.GetEnumerator()) {
         throw "Missing $($entry.Key) in services/identity-service/.env"
     }
 }
+foreach ($entry in $sharedRuntime.GetEnumerator()) {
+    if ([string]::IsNullOrWhiteSpace($entry.Value)) {
+        throw "Missing $($entry.Key) in services/engagement-service/.env"
+    }
+}
+
+Ensure-PostgresDatabase "notification_db" $sharedRuntime
+Ensure-PostgresDatabase "reporting_db" $sharedRuntime
 
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
 try {
     $records = @()
     foreach ($service in $services) {
-        $record = Start-BackendProcess $service $sharedSecurity
+        $record = Start-BackendProcess $service $sharedSecurity $sharedRuntime
         if ($null -ne $record) {
             $records += $record
             if (-not (Wait-BackendPort $record $StartupTimeoutSeconds)) {
@@ -179,7 +243,7 @@ try {
                     $log = Get-StartupError $record
                     if ($log -match 'payment_id.*already exists|V9__add_order_saga_payment_checkpoint') {
                         Write-Warning "Order DB has legacy Flyway history. Restarting Order in local compatibility mode."
-                        $fallback = Start-BackendProcess $record.Service $sharedSecurity -OrderFallback
+                        $fallback = Start-BackendProcess $record.Service $sharedSecurity $sharedRuntime -OrderFallback
                         if (-not (Wait-BackendPort $fallback $StartupTimeoutSeconds)) {
                             throw "Order Service failed to start.`n$(Get-StartupError $fallback)"
                         }
@@ -191,7 +255,7 @@ try {
         }
     }
 
-    $gatewayRecord = Start-BackendProcess $gateway $sharedSecurity
+    $gatewayRecord = Start-BackendProcess $gateway $sharedSecurity $sharedRuntime
     if (-not (Wait-BackendPort $gatewayRecord $StartupTimeoutSeconds)) {
         throw "API Gateway failed to start.`n$(Get-StartupError $gatewayRecord)"
     }
@@ -205,6 +269,8 @@ try {
     Write-Host "  order        http://localhost:8084"
     Write-Host "  payment      http://localhost:8085"
     Write-Host "  engagement   http://localhost:8086"
+    Write-Host "  notification http://localhost:8087"
+    Write-Host "  reporting    http://localhost:8088"
     Write-Host "Log: $logDirectory" -ForegroundColor DarkGray
     Write-Host "Press Ctrl+C to stop processes started by this window." -ForegroundColor Yellow
 

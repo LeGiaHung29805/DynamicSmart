@@ -275,7 +275,7 @@ public class PaymentService {
     private void validateCombination(OrderPaymentContextRequest request) {
         if (request.method() == OrderPaymentContextRequest.PaymentMethod.COD
                 && request.timing() != OrderPaymentContextRequest.PaymentTiming.POSTPAID) {
-            throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "PREPAID_COD_FORBIDDEN", "COD chỉ hỗ trợ thanh toán trả sau.");
+            throw new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "PREPAID_COD_FORBIDDEN", "COD chỉ hỗ trợ thanh toán trả sau.");
         }
         if (!gateways.isAvailable(request.method().name())) {
             throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_METHOD_NOT_CONFIGURED",

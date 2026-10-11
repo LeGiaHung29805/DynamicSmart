@@ -60,7 +60,6 @@ public class GatewaySecurityConfig {
                                 "/api/v1/reviews/products/**",
                                 "/api/v1/product-questions/products/**",
                                 "/api/v1/reports/products/best-sellers").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/engagement/internal/events/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments", "/api/v1/payments/*/callback-audits", "/api/v1/payments/*/attempts").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**", "/api/v1/cart/admin/**", "/api/v1/reports/**").hasRole("ADMIN")

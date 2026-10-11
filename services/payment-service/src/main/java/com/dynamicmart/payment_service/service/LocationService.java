@@ -47,7 +47,7 @@ public class LocationService {
     public LocationValidationResponse validate(int provinceId, int wardId) {
         requireProvince(provinceId);
         var ward = wards.findById(wardId).filter(value -> value.isActive() && value.getProvinceId() == provinceId)
-                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_LOCATION_MISMATCH",
+                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "GHN_LOCATION_MISMATCH",
                         "Phường/Xã không thuộc Tỉnh/Thành phố đã chọn hoặc đã ngừng hỗ trợ."));
         return new LocationValidationResponse(true, provinceId, ward.getId());
     }
@@ -56,19 +56,19 @@ public class LocationService {
         requireProvince(provinceId);
         var ward = wards.findById(wardId).filter(w -> w.isActive() && w.getProvinceId() == provinceId
                         && w.getDistrictId() != null && w.getGhnWardCode() != null && !w.getGhnWardCode().isBlank())
-                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_LOCATION_MISMATCH", "Phường/Xã không thuộc Tỉnh/Thành phố đã chọn hoặc đã ngừng hỗ trợ."));
+                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "GHN_LOCATION_MISMATCH", "Phường/Xã không thuộc Tỉnh/Thành phố đã chọn hoặc đã ngừng hỗ trợ."));
         var district = districts.findById(ward.getDistrictId()).filter(d -> d.isActive() && d.getProvinceId() == provinceId)
-                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_LOCATION_MISMATCH", "Địa giới GHN không còn hợp lệ hoặc đã ngừng hỗ trợ."));
+                .orElseThrow(() -> new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "GHN_LOCATION_MISMATCH", "Địa giới GHN không còn hợp lệ hoặc đã ngừng hỗ trợ."));
         return new ValidatedLocation(provinceId, district.getId(), ward.getId(), ward.getGhnWardCode());
     }
 
     private void requireProvince(int id) {
         if (provinces.findById(id).filter(p -> p.isActive()).isEmpty()) {
-            throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "PROVINCE_NOT_SUPPORTED", "Tỉnh/Thành phố không hợp lệ hoặc đã ngừng hỗ trợ.");
+            throw new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "PROVINCE_NOT_SUPPORTED", "Tỉnh/Thành phố không hợp lệ hoặc đã ngừng hỗ trợ.");
         }
     }
     private void requireDistrict(int id) {
-        if (districts.findById(id).filter(d -> d.isActive()).isEmpty()) throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "DISTRICT_NOT_SUPPORTED", "Quận/Huyện không hợp lệ hoặc đã ngừng hỗ trợ.");
+        if (districts.findById(id).filter(d -> d.isActive()).isEmpty()) throw new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "DISTRICT_NOT_SUPPORTED", "Quận/Huyện không hợp lệ hoặc đã ngừng hỗ trợ.");
     }
 
     public record ValidatedLocation(int provinceId, int districtId, int wardId, String wardCode) { }

@@ -37,7 +37,7 @@ public class PayOsGateway {
             JsonNode response = restClient.post().uri(properties.baseUrl() + "/v2/payment-requests")
                     .header("x-client-id", properties.clientId()).header("x-api-key", properties.apiKey())
                     .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(JsonNode.class);
-            String url = response == null ? "" : response.path("data").path("checkoutUrl").asText("");
+            String url = response == null ? "" : response.path("data").path("checkoutUrl").asString("");
             if (url.isBlank()) throw unavailable();
             return new PaymentGatewayRouter.CreatedPayment(reference, url);
         } catch (RestClientException exception) { throw unavailable(); }
@@ -46,7 +46,7 @@ public class PayOsGateway {
     public boolean validWebhook(JsonNode data, String signature) {
         if (!isConfigured() || data == null || !data.isObject() || signature == null) return false;
         java.util.TreeMap<String, String> values = new java.util.TreeMap<>();
-        data.properties().forEach(entry -> values.put(entry.getKey(), entry.getValue().isNull() ? "" : entry.getValue().isValueNode() ? entry.getValue().asText() : entry.getValue().toString()));
+        data.properties().forEach(entry -> values.put(entry.getKey(), entry.getValue().isNull() ? "" : entry.getValue().isValueNode() ? entry.getValue().asString() : entry.getValue().toString()));
         String canonical = values.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).collect(java.util.stream.Collectors.joining("&"));
         return HmacSigner.equalsHex(HmacSigner.sha256(properties.checksumKey(), canonical), signature);
     }

@@ -18,29 +18,11 @@ spring:
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
   cloud:
-    function:
-      definition: engagementEvents
     stream:
       bindings:
-        engagementEvents-in-0:
-          destination: dynamicmart.events
-          group: engagement-service
-          content-type: application/json
-          consumer:
-            max-attempts: 5
         reviewEvents-out-0:
           destination: dynamicmart.events
           content-type: application/json
-      rabbit:
-        bindings:
-          engagementEvents-in-0:
-            consumer:
-              auto-bind-dlq: true
-              republish-to-dlq: true
-              requeue-rejected: false
-              dead-letter-exchange: dynamicmart.events.dlx
-              dead-letter-queue-name: dynamicmart.events.engagement-service.dlq
-              dead-letter-routing-key: engagement-service.failed
 
 server:
   port: ${SERVER_PORT:8086}

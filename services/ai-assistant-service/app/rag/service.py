@@ -162,14 +162,15 @@ class RagService:
             return self._product_response(request)
         if request.tenant != "dynamicmart":
             return None
+        catalog_query = self._catalog_query(request, contextual_query)
+        if not DynamicMartCatalogClient.is_product_question(catalog_query):
+            return None
         try:
-            catalog_products = await self.catalog_client.products_for_question(
-                self._catalog_query(request, contextual_query)
-            )
+            catalog_products = await self.catalog_client.products_for_question(catalog_query)
         except (httpx.HTTPError, ValueError, TypeError):
-            return None
+            catalog_products = []
         if catalog_products is None:
-            return None
+            catalog_products = []
         return self._product_response(request.model_copy(update={"products": catalog_products}))
 
     async def _retrieve(self, request: ChatRequest, contextual_query: str) -> list[SearchResult]:

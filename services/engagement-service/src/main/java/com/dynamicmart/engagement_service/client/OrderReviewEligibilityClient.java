@@ -33,7 +33,7 @@ public class OrderReviewEligibilityClient {
                 String reason = response == null || response.reason() == null
                         ? "Dòng đơn hàng chưa đủ điều kiện đánh giá."
                         : response.reason();
-                throw new EngagementException(HttpStatus.UNPROCESSABLE_ENTITY, "REVIEW_NOT_ELIGIBLE", reason);
+                throw new EngagementException(HttpStatus.UNPROCESSABLE_CONTENT, "REVIEW_NOT_ELIGIBLE", reason);
             }
             return response;
         } catch (EngagementException exception) {

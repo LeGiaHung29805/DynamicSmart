@@ -251,7 +251,8 @@ export function AdminDashboard() {
   }, [isAdmin]);
 
   useEffect(() => {
-    fetchLiveStats();
+    const timer = window.setTimeout(() => void fetchLiveStats(), 0);
+    return () => window.clearTimeout(timer);
   }, [fetchLiveStats]);
 
   return (

@@ -180,12 +180,21 @@ export function HeroCarousel() {
 
 export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ items?: readonly HomeCategoryItem[] }>) {
   const itemsPerPage = useItemsPerPage();
-  const total = Math.max(1, Math.ceil(items.length / itemsPerPage));
+  const uniqueItems = useMemo(() => {
+    const seen = new Set<string>();
+    return items.filter((category) => {
+      const identity = `${category.name.trim().toLocaleLowerCase("vi")}|${category.href}`;
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
+  }, [items]);
+  const total = Math.max(1, Math.ceil(uniqueItems.length / itemsPerPage));
   const { index, next, previous, setIndex, setPaused } = useAutoplay(total, 5200);
   const safeIndex = Math.min(index, total - 1);
   const visibleItems = useMemo(
-    () => items.slice(safeIndex * itemsPerPage, safeIndex * itemsPerPage + itemsPerPage),
-    [items, itemsPerPage, safeIndex],
+    () => uniqueItems.slice(safeIndex * itemsPerPage, safeIndex * itemsPerPage + itemsPerPage),
+    [uniqueItems, itemsPerPage, safeIndex],
   );
 
   useEffect(() => setIndex(0), [itemsPerPage, setIndex]);
@@ -206,7 +215,7 @@ export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ item
             <Link
               className="group animate-in fade-in slide-in-from-right-3 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-950/5 sm:p-5"
               href={category.href}
-              key={category.name}
+              key={`${category.name}-${category.href}`}
               style={{ animationDelay: `${itemIndex * 65}ms` }}
             >
               <span className={`grid aspect-square place-items-center rounded-2xl bg-gradient-to-br ${category.color}`}>

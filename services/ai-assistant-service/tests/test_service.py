@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import httpx
+
 from app.config import Settings
 from app.rag.service import RagService
 from app.schemas import ChatRequest, ChatTurn, ProductInput
@@ -104,6 +106,27 @@ class RagServiceTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual("product_search", response.intent)
             self.assertEqual("Dynamic Phone Pro", response.products[0]["name"])
             self.assertEqual(15_490_000, response.products[0]["price"])
+
+    async def test_product_question_never_falls_through_to_policy_when_catalog_is_unavailable(self) -> None:
+        class UnavailableCatalogClient:
+            @staticmethod
+            def is_product_question(_: str) -> bool:
+                return True
+
+            async def products_for_question(self, _: str) -> list[ProductInput]:
+                raise httpx.ConnectError("Catalog unavailable")
+
+        with tempfile.TemporaryDirectory() as directory:
+            service = RagService(self.settings(Path(directory)))
+            service.catalog_client = UnavailableCatalogClient()  # type: ignore[assignment]
+
+            response = await service.ask(
+                ChatRequest(tenant="dynamicmart", message="Các hàng về văn phòng")
+            )
+
+            self.assertEqual("product_search", response.intent)
+            self.assertEqual([], response.products)
+            self.assertIn("chưa tìm thấy sản phẩm", response.reply.casefold())
 
     async def test_product_follow_up_resolves_product_name_from_history(self) -> None:
         class FakeCatalogClient:

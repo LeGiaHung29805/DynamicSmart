@@ -157,8 +157,8 @@ public class AttributeValueService {
         }
         switch (definition.getDataType()) {
             case TEXT -> {
-                require(value.isTextual(), "ATTRIBUTE_VALUE_TYPE", "Thuộc tính phải là chuỗi.");
-                validateTextConfig(definition, value.asText());
+                require(value.isString(), "ATTRIBUTE_VALUE_TYPE", "Thuộc tính phải là chuỗi.");
+                validateTextConfig(definition, value.asString());
             }
             case NUMBER -> {
                 require(value.isIntegralNumber(), "ATTRIBUTE_VALUE_TYPE", "Thuộc tính phải là số nguyên.");
@@ -171,21 +171,21 @@ public class AttributeValueService {
             case BOOLEAN -> require(value.isBoolean(), "ATTRIBUTE_VALUE_TYPE",
                     "Thuộc tính phải là true hoặc false.");
             case SELECT -> {
-                require(value.isTextual(), "ATTRIBUTE_VALUE_TYPE",
+                require(value.isString(), "ATTRIBUTE_VALUE_TYPE",
                         "Thuộc tính lựa chọn phải là mã lựa chọn.");
-                requireOption(value.asText(), options);
+                requireOption(value.asString(), options);
             }
             case MULTI_SELECT -> {
                 require(value.isArray() && value.size() > 0, "ATTRIBUTE_VALUE_TYPE",
                         "Thuộc tính nhiều lựa chọn phải là mảng không rỗng.");
                 Set<String> unique = new HashSet<>();
                 for (JsonNode item : value) {
-                    require(item.isTextual(), "ATTRIBUTE_VALUE_TYPE",
+                    require(item.isString(), "ATTRIBUTE_VALUE_TYPE",
                             "Mỗi lựa chọn phải là mã dạng chuỗi.");
-                    String normalized = item.asText().toUpperCase(Locale.ROOT);
+                    String normalized = item.asString().toUpperCase(Locale.ROOT);
                     require(unique.add(normalized), "ATTRIBUTE_VALUE_DUPLICATED",
                             "Danh sách thuộc tính chứa lựa chọn trùng.");
-                    requireOption(item.asText(), options);
+                    requireOption(item.asString(), options);
                 }
             }
         }
@@ -205,9 +205,9 @@ public class AttributeValueService {
                     "Giá trị thuộc tính dài hơn giới hạn.");
         }
         JsonNode regex = config.get("pattern");
-        if (regex != null && regex.isTextual()) {
+        if (regex != null && regex.isString()) {
             try {
-                require(Pattern.matches(regex.asText(), value), "ATTRIBUTE_VALUE_PATTERN",
+                require(Pattern.matches(regex.asString(), value), "ATTRIBUTE_VALUE_PATTERN",
                         "Giá trị thuộc tính không đúng định dạng.");
             } catch (PatternSyntaxException exception) {
                 throw new CatalogException(HttpStatus.CONFLICT, "ATTRIBUTE_CONFIG_INVALID",

@@ -33,7 +33,7 @@ class AddressServiceTest {
         UUID user = UUID.randomUUID();
         var request = new AddressRequest("Thảo", "0900000000", "12 Nguyễn Huệ", 1, 999, false);
         when(addresses.findAllByUserIdAndStatusOrderByDefaultAddressDescUpdatedAtDesc(any(), any())).thenReturn(List.of());
-        when(locations.validateAndResolve(1, 999)).thenThrow(new IdentityException(HttpStatus.UNPROCESSABLE_ENTITY, "ADDRESS_LOCATION_INVALID", "Địa giới đã chọn không hợp lệ."));
+        when(locations.validateAndResolve(1, 999)).thenThrow(new IdentityException(HttpStatus.UNPROCESSABLE_CONTENT, "ADDRESS_LOCATION_INVALID", "Địa giới đã chọn không hợp lệ."));
         assertThatThrownBy(() -> service.create(user, request)).isInstanceOf(IdentityException.class).hasMessageContaining("Địa giới");
         verify(addresses, never()).save(any());
     }

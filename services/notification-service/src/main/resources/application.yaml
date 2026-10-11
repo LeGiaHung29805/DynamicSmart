@@ -1,0 +1,59 @@
+spring:
+  config:
+    import: "optional:file:./.env[.properties],optional:file:./notification-service/.env[.properties],optional:file:./services/notification-service/.env[.properties]"
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+  application:
+    name: notification-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/notification_db}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  cloud:
+    function:
+      definition: notificationEvents
+    stream:
+      bindings:
+        notificationEvents-in-0:
+          destination: dynamicmart.events
+          group: notification-service
+          content-type: application/json
+          consumer:
+            max-attempts: 5
+      rabbit:
+        bindings:
+          notificationEvents-in-0:
+            consumer:
+              auto-bind-dlq: true
+              republish-to-dlq: true
+              requeue-rejected: false
+              dead-letter-exchange: dynamicmart.events.dlx
+              dead-letter-queue-name: dynamicmart.events.notification-service.dlq
+              dead-letter-routing-key: notification-service.failed
+
+server:
+  port: ${SERVER_PORT:8087}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:dynamicmart-identity-service}
+      hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}

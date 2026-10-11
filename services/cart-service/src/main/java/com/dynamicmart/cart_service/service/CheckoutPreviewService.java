@@ -71,5 +71,5 @@ public class CheckoutPreviewService {
     private List<VoucherService.DiscountableItem> discountable(List<PreviewItem> values) { return values.stream().map(value -> new VoucherService.DiscountableItem(value.productId(), value.categoryId(), value.lineTotalVnd())).toList(); }
     private int positive(Integer value) { return value == null || value < 1 ? 1 : value; }
     private boolean blank(String value) { return value == null || value.isBlank(); }
-    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, code, message); }
+    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_CONTENT, code, message); }
 }

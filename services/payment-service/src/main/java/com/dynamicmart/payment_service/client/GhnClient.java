@@ -43,7 +43,7 @@ public class GhnClient {
         int width = items.stream().mapToInt(i -> i.widthCm()).max().orElseThrow();
         long totalHeight = items.stream().mapToLong(i -> (long) i.quantity() * i.heightCm()).sum();
         if (totalWeight > Integer.MAX_VALUE || totalHeight > Integer.MAX_VALUE) {
-            throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_PACKAGE_SIZE_INVALID", "Khối lượng hoặc kích thước kiện hàng vượt giới hạn hỗ trợ.");
+            throw new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "GHN_PACKAGE_SIZE_INVALID", "Khối lượng hoặc kích thước kiện hàng vượt giới hạn hỗ trợ.");
         }
         int weight = Math.toIntExact(totalWeight);
         int height = Math.toIntExact(totalHeight);
@@ -68,7 +68,7 @@ public class GhnClient {
                 throw unavailable("GHN trả về dữ liệu báo giá không hợp lệ.");
             }
             JsonNode result = data.path("data");
-            return new Rate(result.path("total").asLong(-1), result.path("service_id").asInt(2), result.path("service_name").asText("GHN tiêu chuẩn"), result.path("expected_delivery_time").asText("Theo lịch GHN"));
+            return new Rate(result.path("total").asLong(-1), result.path("service_id").asInt(2), result.path("service_name").asString("GHN tiêu chuẩn"), result.path("expected_delivery_time").asString("Theo lịch GHN"));
         } catch (RestClientResponseException exception) {
             log.warn("GHN fee request rejected with HTTP {}: {}", exception.getStatusCode().value(), safeBody(exception.getResponseBodyAsString()));
             throw unavailable("GHN từ chối báo giá (HTTP " + exception.getStatusCode().value() + ").");

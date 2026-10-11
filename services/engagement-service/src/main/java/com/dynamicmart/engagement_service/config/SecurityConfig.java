@@ -25,10 +25,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/api/v1/reviews/products/**",
-                                "/api/v1/product-questions/products/**",
-                                "/api/v1/engagement/internal/events/**",
-                                "/api/v1/reports/products/best-sellers").permitAll()
-                        .requestMatchers("/api/v1/admin/**", "/api/v1/reports/**").hasRole("ADMIN")
+                                "/api/v1/product-questions/products/**").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .build();

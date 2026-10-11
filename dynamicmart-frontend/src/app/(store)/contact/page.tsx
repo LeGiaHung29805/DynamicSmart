@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Mail, Phone, MapPin, Clock, MessageSquare, Send } from "lucide-react";
+import { Mail, Phone, MapPin, MessageSquare } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Liên hệ | DynamicMart",

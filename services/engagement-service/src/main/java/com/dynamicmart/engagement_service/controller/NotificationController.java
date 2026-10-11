@@ -7,6 +7,7 @@ import com.dynamicmart.engagement_service.service.NotificationService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.UUID;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Profile("legacy-engagement-analytics")
 @Validated
 @RestController
 @RequestMapping("/api/v1/notifications")

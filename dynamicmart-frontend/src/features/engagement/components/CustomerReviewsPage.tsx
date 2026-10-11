@@ -6,7 +6,6 @@ import {
   Clock,
   ExternalLink,
   MessageSquare,
-  Package,
   RefreshCw,
   ShoppingBag,
   Star,
@@ -62,33 +61,33 @@ export function CustomerReviewsPage() {
   const [selectedItemForReview, setSelectedItemForReview] = useState<PurchasedOrderItem | null>(null);
 
   useEffect(() => {
-    if (session.status !== "authenticated") {
-      setLoading(false);
-      return;
-    }
+    if (session.status !== "authenticated") return;
 
     let cancelled = false;
-    setLoading(true);
-    setErrorMsg("");
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setErrorMsg("");
 
-    Promise.all([
-      customerOrdersApi.getPurchasedItems().catch(() => []),
-      engagementApi.reviews.getMyReviews(0, 100).catch(() => ({ content: [] })),
-    ])
-      .then(([items, reviewsRes]) => {
-        if (cancelled) return;
-        setPurchasedItems(items);
-        setMyReviews(reviewsRes.content ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setErrorMsg("Không thể tải danh sách đánh giá của bạn. Vui lòng thử lại sau.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      Promise.all([
+        customerOrdersApi.getPurchasedItems().catch(() => []),
+        engagementApi.reviews.getMyReviews(0, 100).catch(() => ({ content: [] })),
+      ])
+        .then(([items, reviewsRes]) => {
+          if (cancelled) return;
+          setPurchasedItems(items);
+          setMyReviews(reviewsRes.content ?? []);
+        })
+        .catch(() => {
+          if (!cancelled) setErrorMsg("Không thể tải danh sách đánh giá của bạn. Vui lòng thử lại sau.");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [session.status, refreshTrigger]);
 

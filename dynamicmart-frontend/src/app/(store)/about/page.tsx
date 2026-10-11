@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Sparkles, ShoppingBag, ShieldCheck, HeartHandshake, Users, ArrowRight } from "lucide-react";
+import { Sparkles, ShoppingBag, ShieldCheck, HeartHandshake, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Về chúng tôi | DynamicMart",

@@ -7,8 +7,6 @@ import {
   Clock, 
   PackageCheck, 
   CreditCard, 
-  ShieldCheck, 
-  HelpCircle,
   ArrowRight
 } from "lucide-react";
 

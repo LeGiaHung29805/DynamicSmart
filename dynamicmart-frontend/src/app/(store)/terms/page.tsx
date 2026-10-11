@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ShieldCheck, FileText, Lock, CheckCircle2 } from "lucide-react";
+import { FileText } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Điều khoản dịch vụ | DynamicMart",

@@ -62,12 +62,7 @@ export function AdminEngagementPage() {
   const [loadingChatDetail, setLoadingChatDetail] = useState(false);
 
   useEffect(() => {
-    if (!isAdmin) {
-      if (session.status !== "loading") {
-        setLoading(false);
-      }
-      return;
-    }
+    if (!isAdmin) return;
     let ignore = false;
     async function load() {
       let anyLive = false;
@@ -141,9 +136,10 @@ export function AdminEngagementPage() {
       }
     }
 
-    void load();
+    const timer = window.setTimeout(() => void load(), 0);
     return () => {
       ignore = true;
+      window.clearTimeout(timer);
     };
   }, [isAdmin, session.status, refreshTrigger]);
 

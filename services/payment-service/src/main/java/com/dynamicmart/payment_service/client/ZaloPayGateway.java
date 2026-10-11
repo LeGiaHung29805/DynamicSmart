@@ -40,7 +40,7 @@ public class ZaloPayGateway {
         form.add("mac", HmacSigner.sha256(properties.key1(), data));
         try {
             JsonNode response = restClient.post().uri(properties.createUrl()).contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve().body(JsonNode.class);
-            String url = response == null ? "" : response.path("order_url").asText("");
+            String url = response == null ? "" : response.path("order_url").asString("");
             if (url.isBlank()) throw unavailable();
             return new PaymentGatewayRouter.CreatedPayment(reference, url);
         } catch (RestClientException exception) { throw unavailable(); }

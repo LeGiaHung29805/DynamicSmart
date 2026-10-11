@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,31 +54,31 @@ public class PaymentController {
     @GetMapping("/orders/{orderId}")
     public PaymentResponse getByOrder(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID orderId) { internalApi.require(apiKey); return paymentService.getByOrderId(orderId); }
 
-    /** Customer read model scoped by the authenticated identity injected by the Gateway. */
+    /** Customer read model scoped by the subject of the validated JWT. */
     @GetMapping("/my-orders/{orderId}")
     public PaymentResponse getCustomerPaymentByOrder(
-            @RequestHeader("X-Authenticated-User-Id") UUID customerId,
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID orderId) {
-        return paymentService.getCustomerPaymentByOrder(orderId, customerId);
+        return paymentService.getCustomerPaymentByOrder(orderId, customerId(jwt));
     }
 
     /** Reuses a live provider attempt or creates a new one without trusting payment data from the browser. */
     @PostMapping("/my-orders/{orderId}/attempts")
     public PaymentResponse createCustomerAttempt(
-            @RequestHeader("X-Authenticated-User-Id") UUID customerId,
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID orderId) {
-        return paymentService.createCustomerOnlineAttempt(orderId, customerId);
+        return paymentService.createCustomerOnlineAttempt(orderId, customerId(jwt));
     }
 
     /** Customer-facing authoritative state for the browser return page; TxnRef alone is never sufficient without JWT ownership. */
     @GetMapping("/vnpay/return-status")
-    public PaymentResponse returnStatus(@RequestHeader("X-Authenticated-User-Id") UUID customerId, @RequestParam("vnp_TxnRef") String reference) {
-        return paymentService.getByVnPayReference(reference, customerId);
+    public PaymentResponse returnStatus(@AuthenticationPrincipal Jwt jwt, @RequestParam("vnp_TxnRef") String reference) {
+        return paymentService.getByVnPayReference(reference, customerId(jwt));
     }
 
     @GetMapping("/return-status")
-    public PaymentResponse providerReturnStatus(@RequestHeader("X-Authenticated-User-Id") UUID customerId, @RequestParam String reference) {
-        return paymentService.getByVnPayReference(reference, customerId);
+    public PaymentResponse providerReturnStatus(@AuthenticationPrincipal Jwt jwt, @RequestParam String reference) {
+        return paymentService.getByVnPayReference(reference, customerId(jwt));
     }
 
     /** Public checkout capability; contains no provider credentials. */
@@ -85,7 +87,7 @@ public class PaymentController {
         return Map.of("methods", paymentService.availableMethods());
     }
 
-    /** Admin read model. Gateway enforces ADMIN before forwarding this route. */
+    /** Admin read model. Both Gateway and Payment Service enforce the ADMIN role. */
     @GetMapping
     public PaymentPageResponse list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         int safePage = Math.max(0, page); int safeSize = Math.max(1, Math.min(size, 100));
@@ -129,5 +131,9 @@ public class PaymentController {
                                             @RequestHeader("X-SePay-Signature") String signature,
                                             @RequestBody String rawBody) {
         return providerCallbacks.sePay(rawBody, timestamp, signature);
+    }
+
+    private UUID customerId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 }

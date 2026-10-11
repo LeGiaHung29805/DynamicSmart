@@ -2,9 +2,8 @@
 
 import { AlertCircle, CheckCircle2, ImagePlus, Star, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { engagementApi } from "../api/engagement.api";
 import type { CreateReviewPayload, ReviewItem } from "../types/engagement.types";
 
@@ -35,7 +34,6 @@ export function CreateReviewModal({
   orderNumber,
   onSuccess,
 }: Readonly<CreateReviewModalProps>) {
-  const [orderItemId, setOrderItemId] = useState(defaultOrderItemId);
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [content, setContent] = useState("");
@@ -44,13 +42,6 @@ export function CreateReviewModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-
-  // Đồng bộ orderItemId khi prop thay đổi
-  useEffect(() => {
-    if (defaultOrderItemId) {
-      setOrderItemId(defaultOrderItemId);
-    }
-  }, [defaultOrderItemId]);
 
   if (!isOpen) return null;
 
@@ -78,9 +69,9 @@ export function CreateReviewModal({
     e.preventDefault();
     setErrorMessage("");
 
-    const targetOrderItemId = (orderItemId || defaultOrderItemId).trim();
+    const targetOrderItemId = defaultOrderItemId.trim();
     if (!targetOrderItemId) {
-      setErrorMessage("Vui lòng nhập mã dòng đơn hàng (OrderItem ID) đã mua.");
+      setErrorMessage("Không xác định được sản phẩm đã mua để đánh giá.");
       return;
     }
 
@@ -127,7 +118,7 @@ export function CreateReviewModal({
   };
 
   const activeRating = hoverRating || rating;
-  const targetOrderItemId = (orderItemId || defaultOrderItemId).trim();
+  const targetOrderItemId = defaultOrderItemId.trim();
 
   return (
     <div

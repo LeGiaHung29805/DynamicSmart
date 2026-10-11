@@ -22,7 +22,7 @@
         </processorPath>
         <module name="order-service" />
       </profile>
-      <profile name="Annotation profile for catalog-service" enabled="true">
+      <profile name="Annotation profile for payment-service" enabled="true">
         <sourceOutputDir name="../generated-sources/annotations" />
         <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
         <processorPath useClasspath="false">
