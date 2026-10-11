@@ -45,4 +45,23 @@ class ReportingServiceTest {
         verify(dailySales, never()).save(org.mockito.ArgumentMatchers.any());
         verify(dailyProducts, never()).save(org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    void deserializesOrderCompletedPayloadWithExtraFields() {
+        tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+        String json = "{\"orderId\":\"" + UUID.randomUUID() + "\",\"orderNumber\":\"DM-001\",\"customerId\":\"" + UUID.randomUUID() + "\"}";
+        tools.jackson.databind.JsonNode node = mapper.readTree(json);
+        OrderCompletedPayload payload = mapper.treeToValue(node, OrderCompletedPayload.class);
+        assertThat(payload).isNotNull();
+    }
+
+    @Test
+    void deserializesEventEnvelopeWithJsonNode() {
+        tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
+        String json = "{\"eventId\":\"" + UUID.randomUUID() + "\",\"eventType\":\"OrderCompleted\",\"eventVersion\":1,\"producer\":\"order-service\",\"aggregateId\":\"" + UUID.randomUUID() + "\",\"occurredAt\":\"2026-10-11T10:00:00Z\",\"correlationId\":\"" + UUID.randomUUID() + "\",\"payload\":{\"orderId\":\"" + UUID.randomUUID() + "\",\"customerId\":\"" + UUID.randomUUID() + "\"}}";
+        EventEnvelope<tools.jackson.databind.JsonNode> envelope = mapper.readValue(json, new tools.jackson.core.type.TypeReference<EventEnvelope<tools.jackson.databind.JsonNode>>() {});
+        assertThat(envelope).isNotNull();
+        assertThat(envelope.eventType()).isEqualTo("OrderCompleted");
+        assertThat(envelope.payload()).isNotNull();
+    }
 }

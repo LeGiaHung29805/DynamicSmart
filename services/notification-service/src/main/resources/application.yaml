@@ -56,4 +56,4 @@ app:
   security:
     jwt:
       issuer: ${JWT_ISSUER:dynamicmart-identity-service}
-      hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}
+      hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64:CiYZjVClqyvwboeDW62WjNYyVrBx0rnxn1H5RqWOfCY=}

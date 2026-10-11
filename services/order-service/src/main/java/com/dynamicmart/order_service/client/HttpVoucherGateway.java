@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReservationGateway {
@@ -44,7 +45,18 @@ public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReserva
     private <T> T post(String uri, Object body, Class<T> type, Object... variables) {
         try { T value = client.post().uri(uri, variables).body(body).retrieve().body(type); if (value == null) throw contractInvalid(); return value; }
         catch (OrderException exception) { throw exception; }
+        catch (RestClientResponseException exception) { throw translateCartRejection(exception); }
         catch (RestClientException exception) { throw unavailable(); }
+    }
+    private OrderException translateCartRejection(RestClientResponseException exception) {
+        HttpStatus status = HttpStatus.resolve(exception.getStatusCode().value());
+        CartError error = exception.getResponseBodyAs(CartError.class);
+        if (status != null && status.is4xxClientError() && status != HttpStatus.UNAUTHORIZED && status != HttpStatus.FORBIDDEN
+                && error != null && error.code() != null && !error.code().isBlank()
+                && error.message() != null && !error.message().isBlank()) {
+            return new OrderException(status, error.code(), error.message());
+        }
+        return unavailable();
     }
     private OrderException unavailable() { return new OrderException(HttpStatus.SERVICE_UNAVAILABLE, "CART_VOUCHER_UNAVAILABLE", "Không thể kết nối nghiệp vụ Voucher của Cart Service."); }
     private OrderException contractInvalid() { return new OrderException(HttpStatus.BAD_GATEWAY, "CART_VOUCHER_CONTRACT_INVALID", "Cart Service trả dữ liệu Voucher không hợp lệ."); }
@@ -58,4 +70,5 @@ public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReserva
     private record GroupResponse(UUID reservationId) { }
     private record ConsumeBody(UUID orderId) { }
     private record ReleaseBody(String reason) { }
+    private record CartError(String code, String message) { }
 }

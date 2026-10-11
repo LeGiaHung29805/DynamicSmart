@@ -3,15 +3,6 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-      <profile name="Annotation profile for api-gateway" enabled="true">
-        <sourceOutputDir name="../generated-sources/annotations" />
-        <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/4.1.1/spring-boot-configuration-processor-4.1.1.jar" />
-        </processorPath>
-        <module name="api-gateway.main" />
-        <module name="api-gateway.test" />
-      </profile>
       <profile name="Annotation profile for order-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -22,25 +13,17 @@
         </processorPath>
         <module name="order-service" />
       </profile>
-      <profile name="Annotation profile for payment-service" enabled="true">
+      <profile name="Annotation profile for reporting-service" enabled="true">
         <sourceOutputDir name="../generated-sources/annotations" />
         <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/4.1.1/spring-boot-configuration-processor-4.1.1.jar" />
         </processorPath>
-        <module name="identity-service.main" />
-        <module name="payment-service.test" />
-        <module name="identity.test" />
         <module name="identity.main" />
-        <module name="payment-service.main" />
-        <module name="engagement-service.test" />
-        <module name="catalog-service.main" />
-        <module name="cart-service.main" />
-        <module name="cart-service.test" />
-        <module name="identity-service.test" />
-        <module name="catalog-service.test" />
-        <module name="engagement-service.main" />
+        <module name="reporting-service.main" />
+        <module name="reporting-service.test" />
+        <module name="identity.test" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -68,12 +51,18 @@
       <module name="identity-service.test" options="-parameters" />
       <module name="identity.main" options="-parameters" />
       <module name="identity.test" options="-parameters" />
+      <module name="notification-service" options="-parameters" />
+      <module name="notification-service.main" options="-parameters" />
+      <module name="notification-service.test" options="-parameters" />
       <module name="order-service" options="-parameters -parameters -Xlint:deprecation" />
       <module name="order-service.main" options="-parameters" />
       <module name="order-service.test" options="-parameters" />
       <module name="payment-service" options="-parameters" />
       <module name="payment-service.main" options="-parameters" />
       <module name="payment-service.test" options="-parameters" />
+      <module name="reporting-service" options="-parameters" />
+      <module name="reporting-service.main" options="-parameters" />
+      <module name="reporting-service.test" options="-parameters" />
     </option>
   </component>
 </project>

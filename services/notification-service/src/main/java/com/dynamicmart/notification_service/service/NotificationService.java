@@ -25,12 +25,23 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public PageResponse<NotificationResponse> list(UUID customerId, int page, int size) {
-        var source = notifications.findAllByCustomerIdOrderByCreatedAtDesc(customerId, PageRequest.of(page, size));
+        if (customerId == null) {
+            throw new NotificationException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Yêu cầu đăng nhập.");
+        }
+        int safePage = Math.max(0, page);
+        int safeSize = (size <= 0) ? 20 : Math.min(size, 100);
+        var source = notifications.findAllByCustomerIdOrderByCreatedAtDesc(customerId, PageRequest.of(safePage, safeSize));
         return PageResponse.from(source.map(mapper::toResponse));
     }
 
     @Transactional
     public NotificationResponse markRead(UUID customerId, UUID notificationId) {
+        if (customerId == null) {
+            throw new NotificationException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "Yêu cầu đăng nhập.");
+        }
+        if (notificationId == null) {
+            throw new NotificationException(HttpStatus.BAD_REQUEST, "NOTIFICATION_ID_REQUIRED", "Mã thông báo là bắt buộc.");
+        }
         Notification notification = notifications.findByIdAndCustomerId(notificationId, customerId)
                 .orElseThrow(() -> new NotificationException(HttpStatus.NOT_FOUND,
                         "NOTIFICATION_NOT_FOUND", "Không tìm thấy thông báo."));
@@ -39,6 +50,9 @@ public class NotificationService {
     }
 
     public Notification create(UUID customerId, String type, String title, String content, Instant now) {
-        return notifications.save(new Notification(customerId, type, title, content, now));
+        if (customerId == null) {
+            throw new IllegalArgumentException("customerId không được để trống.");
+        }
+        return notifications.save(new Notification(customerId, type, title, content, now != null ? now : Instant.now()));
     }
 }

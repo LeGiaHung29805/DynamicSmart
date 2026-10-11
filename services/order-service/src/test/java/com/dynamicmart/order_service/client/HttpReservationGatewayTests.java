@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import com.dynamicmart.order_service.client.InventoryReservationGateway.CommitInventoryRequest;
 import com.dynamicmart.order_service.client.InventoryReservationGateway.InventoryLine;
@@ -117,6 +118,43 @@ class HttpReservationGatewayTests {
     }
 
     @Test
+    void treatsExpiredInventoryReservationAsAlreadyReleased() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        HttpInventoryReservationGateway gateway = new HttpInventoryReservationGateway(builder
+                .baseUrl("http://catalog.test").build());
+        server.expect(requestTo("http://catalog.test/api/v1/catalog/internal/inventory/reservations/"
+                        + RESERVATION_ID + "/release"))
+                .andRespond(withSuccess("{\"data\":{\"reservationId\":\"" + RESERVATION_ID
+                        + "\",\"status\":\"EXPIRED\"}}", MediaType.APPLICATION_JSON));
+
+        gateway.release(new ReleaseInventoryRequest(
+                OPERATION_ID, SAGA_ID, CORRELATION_ID, RESERVATION_ID, "PAYMENT_FAILED"));
+
+        server.verify();
+    }
+
+    @Test
+    void preservesActionableCatalogRejection() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        HttpInventoryReservationGateway gateway = new HttpInventoryReservationGateway(builder
+                .baseUrl("http://catalog.test").build());
+        server.expect(requestTo("http://catalog.test/api/v1/catalog/internal/inventory/reservations/"
+                        + RESERVATION_ID + "/release"))
+                .andRespond(withStatus(HttpStatus.CONFLICT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"RESERVATION_ALREADY_COMMITTED\","
+                                + "\"message\":\"Tồn kho đã được chốt.\"}"));
+
+        OrderException exception = assertThrows(OrderException.class, () -> gateway.release(
+                new ReleaseInventoryRequest(OPERATION_ID, SAGA_ID, CORRELATION_ID, RESERVATION_ID, "PAYMENT_FAILED")));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatus());
+        assertEquals("RESERVATION_ALREADY_COMMITTED", exception.getCode());
+        server.verify();
+    }
+    @Test
     void rejectsMismatchedInventoryCommitResponse() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -182,6 +220,26 @@ class HttpReservationGatewayTests {
         assertEquals(1, result.vouchers().size());
         assertEquals(30_000, result.vouchers().get(0).discountAmountVnd());
         assertEquals(30_000, result.lineDiscounts().get(0).orderDiscountVnd());
+        server.verify();
+    }
+
+    @Test
+    void preservesActionableVoucherRejectionFromCart() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        HttpVoucherGateway gateway = new HttpVoucherGateway(builder.baseUrl("http://cart.test").build());
+        server.expect(requestTo("http://cart.test/api/v1/cart/internal/voucher-pricing/preview"))
+                .andRespond(withStatus(HttpStatus.UNPROCESSABLE_CONTENT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"VOUCHER_INELIGIBLE\",\"message\":\"Voucher không còn hợp lệ.\"}"));
+
+        OrderException exception = assertThrows(OrderException.class, () -> gateway.preview(new VoucherPreviewRequest(
+                CUSTOMER_ID, VOUCHER_ID, null, 30_000,
+                List.of(new VoucherItem(PRODUCT_ID, VARIANT_ID, 2, 150_000)))));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, exception.getStatus());
+        assertEquals("VOUCHER_INELIGIBLE", exception.getCode());
+        assertEquals("Voucher không còn hợp lệ.", exception.getMessage());
         server.verify();
     }
 

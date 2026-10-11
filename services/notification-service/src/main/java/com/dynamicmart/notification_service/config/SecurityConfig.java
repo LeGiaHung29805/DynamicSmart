@@ -24,7 +24,7 @@ public class SecurityConfig {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .build();
@@ -33,7 +33,12 @@ public class SecurityConfig {
     @Bean
     JwtDecoder jwtDecoder(@Value("${app.security.jwt.issuer}") String issuer,
                           @Value("${app.security.jwt.hmac-secret-base64}") String secret) {
-        byte[] bytes = Base64.getDecoder().decode(secret);
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(secret);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("JWT_HMAC_SECRET_BASE64 không phải Base64 hợp lệ.", exception);
+        }
         if (bytes.length < 32) {
             throw new IllegalStateException("JWT_HMAC_SECRET_BASE64 phải giải mã được ít nhất 32 bytes.");
         }
@@ -52,9 +57,13 @@ public class SecurityConfig {
 
     private java.util.Collection<org.springframework.security.core.GrantedAuthority> toAuthorities(Jwt jwt) {
         String role = jwt.getClaimAsString("role");
-        if (!"CUSTOMER".equals(role) && !"ADMIN".equals(role)) {
+        if (role == null) {
             return java.util.List.of();
         }
-        return java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role));
+        String upperRole = role.toUpperCase();
+        if (!"CUSTOMER".equals(upperRole) && !"ADMIN".equals(upperRole)) {
+            return java.util.List.of();
+        }
+        return java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + upperRole));
     }
 }

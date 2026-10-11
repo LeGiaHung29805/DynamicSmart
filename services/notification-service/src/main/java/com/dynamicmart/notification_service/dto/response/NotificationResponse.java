@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record NotificationResponse(
         UUID id,
+        UUID customerId,
         String type,
         String title,
         String content,
@@ -13,3 +14,4 @@ public record NotificationResponse(
         Instant createdAt
 ) {
 }
+

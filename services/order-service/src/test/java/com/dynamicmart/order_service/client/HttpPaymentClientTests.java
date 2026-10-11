@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withResourceNotFound;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import com.dynamicmart.order_service.client.PaymentClient.OrderPaymentContextRequest;
 import com.dynamicmart.order_service.client.PaymentClient.QuoteValidationRequest;
@@ -180,6 +181,23 @@ class HttpPaymentClientTests {
 
         assertEquals("PAYMENT_REQUEST_REJECTED", exception.getCode());
         assertEquals(422, exception.getStatus().value());
+        server.verify();
+    }
+
+    @Test
+    void preservesGhnFailureDetailsFromPaymentService() {
+        server.expect(requestTo("http://payment.test/api/v1/shipping/quotes"))
+                .andRespond(withStatus(org.springframework.http.HttpStatus.BAD_GATEWAY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"GHN_UNAVAILABLE\",\"message\":\"GHN từ chối báo giá (HTTP 401).\"}"));
+
+        OrderException exception = assertThrows(OrderException.class, () -> client.createShippingQuote(new ShippingQuoteRequest(
+                CUSTOMER_ID, CHECKOUT_SESSION_ID, 202, 1450,
+                List.of(new ShippingItemRequest(VARIANT_ID, 2, 500, 20, 10, 6)), 0, null)));
+
+        assertEquals("GHN_UNAVAILABLE", exception.getCode());
+        assertEquals(502, exception.getStatus().value());
+        assertEquals("GHN từ chối báo giá (HTTP 401).", exception.getMessage());
         server.verify();
     }
 
