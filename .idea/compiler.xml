@@ -20,10 +20,14 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/4.1.1/spring-boot-configuration-processor-4.1.1.jar" />
         </processorPath>
-        <module name="identity.main" />
+        <module name="payment-service.test" />
         <module name="reporting-service.main" />
-        <module name="reporting-service.test" />
         <module name="identity.test" />
+        <module name="notification-service.main" />
+        <module name="identity.main" />
+        <module name="payment-service.main" />
+        <module name="notification-service.test" />
+        <module name="reporting-service.test" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>

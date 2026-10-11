@@ -28,6 +28,7 @@ import type {
   CategoryAdmin,
   CategoryAttributeAdmin,
 } from "../../types";
+import { attributeDataTypeLabel, catalogStatusLabel } from "../../utils/catalog-format";
 import { errorMessage, fieldClass, Label, parseJsonObject, textAreaClass } from "./form-utils";
 
 interface AttributeDraft {
@@ -342,7 +343,7 @@ export function AdminAttributePanel() {
                   <div>
                     <p className="font-bold">{mapping.attributeName}</p>
                     <p className="text-xs text-slate-500">
-                      {mapping.appliesTo} · {mapping.required ? "Bắt buộc" : "Tùy chọn"} · {mapping.filterable ? "Có bộ lọc" : "Không lọc"}
+                      {mapping.appliesTo === "PRODUCT" ? "Sản phẩm" : "Biến thể"} · {mapping.required ? "Bắt buộc" : "Tùy chọn"} · {mapping.filterable ? "Có bộ lọc" : "Không lọc"}
                     </p>
                   </div>
                   <button
@@ -479,9 +480,9 @@ export function AdminAttributePanel() {
                             </span>
                           </button>
                         </td>
-                        <td className="px-4 py-3 text-xs font-bold">{attribute.dataType}</td>
+                        <td className="px-4 py-3 text-xs font-bold">{attributeDataTypeLabel(attribute.dataType)}</td>
                         <td className="px-4 py-3">
-                          <StatusBadge label={attribute.status} tone={attribute.status === "ACTIVE" ? "success" : "neutral"} />
+                          <StatusBadge label={catalogStatusLabel(attribute.status)} tone={attribute.status === "ACTIVE" ? "success" : "neutral"} />
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
@@ -569,7 +570,7 @@ export function AdminAttributePanel() {
                       })}
                       value={attributeDraft.dataType}
                     >
-                      {dataTypes.map((type) => <option key={type}>{type}</option>)}
+                      {dataTypes.map((type) => <option key={type} value={type}>{attributeDataTypeLabel(type)}</option>)}
                     </select>
                   </label>
                 </div>
@@ -627,7 +628,7 @@ export function AdminAttributePanel() {
                         <p className="font-mono text-xs text-slate-500">{option.code} · thứ tự {option.sortOrder}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <StatusBadge label={option.status} tone={option.status === "ACTIVE" ? "success" : "neutral"} />
+                        <StatusBadge label={catalogStatusLabel(option.status)} tone={option.status === "ACTIVE" ? "success" : "neutral"} />
                         <button
                           aria-label={`Sửa ${option.label}`}
                           className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50"

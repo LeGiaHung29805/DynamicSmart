@@ -14,7 +14,17 @@ import { customerPaymentsApi, type CustomerPayment } from "@/features/payment";
 import { paymentStatusLabel, paymentStatusTone } from "@/features/payment/utils/payment-format";
 import { isApiError } from "@/lib/api/error";
 import { customerOrdersApi, type CustomerOrder, type CustomerOrderItem } from "../api/customer-orders.api";
-import { formatDateTime, formatVnd, orderActorLabel, orderStatusLabel, orderStatusTone, paymentMethodLabel, paymentTimingLabel } from "../utils/order-format";
+import {
+  formatDateTime,
+  formatVnd,
+  orderActorLabel,
+  orderCancelReasonLabel,
+  orderStatusLabel,
+  orderStatusTone,
+  orderTimelineReasonLabel,
+  paymentMethodLabel,
+  paymentTimingLabel,
+} from "../utils/order-format";
 
 export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) {
   const [order, setOrder] = useState<CustomerOrder | null>(null);
@@ -108,7 +118,7 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
 
           <SurfacePanel>
             <div className="flex items-center gap-3"><Clock3 className="size-5 text-brand" /><h2 className="font-black text-slate-950">Lịch sử xử lý</h2></div>
-            <ol className="mt-5 space-y-4">{order.timeline.map((entry) => <li className="relative border-l-2 border-rose-200 pb-1 pl-5" key={entry.historyId}><span className="absolute -left-[7px] top-1 size-3 rounded-full bg-rose-500 ring-4 ring-white" /><p className="font-bold">{orderStatusLabel(entry.toStatus)}</p><p className="mt-1 text-xs text-slate-500">{formatDateTime(entry.createdAt)} · {orderActorLabel(entry.actorType)}</p>{entry.reason ? <p className="mt-1 text-sm text-slate-600">{entry.reason}</p> : null}</li>)}</ol>
+            <ol className="mt-5 space-y-4">{order.timeline.map((entry) => <li className="relative border-l-2 border-rose-200 pb-1 pl-5" key={entry.historyId}><span className="absolute -left-[7px] top-1 size-3 rounded-full bg-rose-500 ring-4 ring-white" /><p className="font-bold">{orderStatusLabel(entry.toStatus)}</p><p className="mt-1 text-xs text-slate-500">{formatDateTime(entry.createdAt)} · {orderActorLabel(entry.actorType)}</p>{entry.reason ? <p className="mt-1 text-sm text-slate-600">{orderTimelineReasonLabel(entry.reason)}</p> : null}</li>)}</ol>
           </SurfacePanel>
         </div>
 
@@ -124,6 +134,7 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
 
           {order.availableActions.includes("CONFIRM_RECEIVED") ? <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5"><div className="flex gap-3"><PackageCheck className="mt-0.5 size-6 text-emerald-700" /><div><h2 className="font-black text-emerald-950">Bạn đã nhận được hàng?</h2><p className="mt-1 text-sm leading-6 text-emerald-800">Chỉ xác nhận sau khi đã nhận và kiểm tra kiện hàng. Với COD, hệ thống đồng thời ghi nhận đã thanh toán.</p></div></div><Button className="mt-4 w-full" disabled={submitting} onClick={() => void confirmReceived()}>{submitting ? "Đang xác nhận…" : "Tôi đã nhận hàng"}</Button></section> : null}
           {order.status === "COMPLETED" ? <section className="flex gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900"><CheckCircle2 className="size-6 shrink-0 text-emerald-600" /><div><p className="font-black">Đơn hàng đã hoàn tất.</p><p className="mt-1 text-xs leading-5">Cảm ơn bạn đã mua sắm. Bạn có thể đánh giá từng sản phẩm trong đơn.</p></div></section> : null}
+          {order.status === "CANCELLED" ? <section className="flex gap-3 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-rose-900"><div className="w-full"><p className="font-black">Đơn hàng đã bị hủy.</p>{order.cancelReason ? <p className="mt-1 text-xs leading-5">Lý do: {orderCancelReasonLabel(order.cancelReason)}</p> : null}</div></section> : null}
           <Button className="w-full" variant="outline" onClick={() => void load()}><RefreshCw />Làm mới trạng thái</Button>
         </aside>
       </div>

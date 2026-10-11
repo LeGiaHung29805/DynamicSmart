@@ -153,11 +153,11 @@ export function HeroCarousel() {
               {slide.secondaryLabel}
             </Link>
           </div>
-          <div className="mt-12 flex flex-wrap gap-x-8 gap-y-4 border-t border-white/15 pt-7 text-sm text-slate-300">
+          {/* <div className="mt-12 flex flex-wrap gap-x-8 gap-y-4 border-t border-white/15 pt-7 text-sm text-slate-300">
             <p><strong className="mr-2 text-xl text-white">6</strong>Danh mục chính</p>
             <p><strong className="mr-2 text-xl text-white">120+</strong>Sản phẩm demo</p>
             <p><strong className="mr-2 text-xl text-white">7 ngày</strong>Đổi trả</p>
-          </div>
+          </div> */}
         </div>
       </div>
 

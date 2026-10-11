@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/components/ui/Toast";
 import { adjustInventory, listInventory, listInventoryAdjustments } from "../../api/admin-catalog.api";
 import type { AdminInventoryItem, InventoryAdjustment } from "../../types";
+import { catalogStatusLabel } from "../../utils/catalog-format";
 import { errorMessage, fieldClass, Label, textAreaClass } from "./form-utils";
 
 type StockFilter = "ALL" | "LOW" | "OUT";
