@@ -31,7 +31,8 @@ class CatalogProductQueryRepositoryTest {
                 org.mockito.ArgumentMatchers.<RowMapper<UUID>>any())).thenReturn(List.of());
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(0L);
-        CatalogProductQueryRepository repository = new CatalogProductQueryRepository(jdbcTemplate);
+        CatalogProductQueryRepository repository = new CatalogProductQueryRepository(
+                jdbcTemplate, new SearchTermNormalizer());
         ProductSearchCriteria criteria = new ProductSearchCriteria("iphone", UUID.randomUUID(),
                 1_000_000L, 30_000_000L, true,
                 List.of(new ProductAttributeFilter("COLOR", "black")),
@@ -46,7 +47,9 @@ class CatalogProductQueryRepositoryTest {
                 org.mockito.ArgumentMatchers.<RowMapper<UUID>>any());
         assertTrue(sql.getValue().startsWith("WITH RECURSIVE selected_categories"));
         assertTrue(sql.getValue().contains("variant_attribute_values"));
-        assertTrue(sql.getValue().contains("websearch_to_tsquery"));
+        assertTrue(sql.getValue().contains("plainto_tsquery"));
+        assertTrue(sql.getValue().contains("catalog_normalize_search_text(category.name)"));
+        assertTrue(sql.getValue().contains("word_similarity"));
         assertTrue(sql.getValue().contains("inventory.on_hand_qty - inventory.reserved_qty > 0"));
         assertTrue(sql.getValue().contains("ORDER BY ("));
         assertInstanceOf(Timestamp.class, parameters.getValue().getValue("now"));
