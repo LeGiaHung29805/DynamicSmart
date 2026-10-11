@@ -14,7 +14,7 @@ export interface ProductQuery {
   maximumPriceVnd?: number;
   featured?: boolean;
   attributes?: string[];
-  sort?: "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "BEST_SELLER";
+  sort?: "RELEVANCE" | "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "BEST_SELLER";
   page?: number;
   size?: number;
 }
@@ -37,7 +37,7 @@ export function getProducts(query: ProductQuery = {}) {
   if (query.maximumPriceVnd !== undefined) params.set("maximumPriceVnd", String(query.maximumPriceVnd));
   if (query.featured !== undefined) params.set("featured", String(query.featured));
   query.attributes?.forEach((attribute) => params.append("attribute", attribute));
-  params.set("sort", query.sort ?? "NEWEST");
+  params.set("sort", query.sort ?? (query.keyword ? "RELEVANCE" : "NEWEST"));
   params.set("page", String(query.page ?? 0));
   params.set("size", String(query.size ?? 20));
   return serverApiRequest<PageResponse<ProductSummary>>(`/api/v1/catalog/products?${params.toString()}`);

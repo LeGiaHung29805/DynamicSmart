@@ -139,6 +139,27 @@ export interface ProductDetail {
   variants: ProductVariant[];
 }
 
+export interface ProductSearchSuggestion {
+  id: string;
+  name: string;
+  slug: string;
+  categoryName: string;
+  categorySlug: string;
+  imageUrl?: string | null;
+  minimumPriceVnd?: number | null;
+}
+
+export interface CategorySearchSuggestion {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface ProductSearchSuggestions {
+  products: ProductSearchSuggestion[];
+  categories: CategorySearchSuggestion[];
+}
+
 export interface CategoryAdmin extends CategoryBrief {
   parentId?: string | null;
   description?: string | null;

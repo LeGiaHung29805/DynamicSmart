@@ -9,6 +9,10 @@ export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   baseUrl?: string;
 };
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const { baseUrl = getApiBaseUrl(), body, headers, ...init } = options;
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
@@ -33,13 +37,15 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   let response: Response;
   try {
     response = await fetchFrom(baseUrl);
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     if (!fallbackUrl || fallbackUrl === baseUrl) {
       throw new ApiError(0, { code: "NETWORK_ERROR", message: "Không thể kết nối đến hệ thống. Vui lòng thử lại." });
     }
     try {
       response = await fetchFrom(fallbackUrl);
-    } catch {
+    } catch (fallbackError) {
+      if (isAbortError(fallbackError)) throw fallbackError;
       throw new ApiError(0, { code: "NETWORK_ERROR", message: "Không thể kết nối API Gateway tại cổng 8080 hoặc 28080." });
     }
   }

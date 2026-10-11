@@ -19,11 +19,12 @@ function positiveNumber(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function apiSort(value: string | undefined) {
+function apiSort(value: string | undefined, hasKeyword: boolean) {
   if (value === "price-asc") return "PRICE_ASC" as const;
   if (value === "price-desc") return "PRICE_DESC" as const;
   if (value === "best-selling") return "BEST_SELLER" as const;
-  return "NEWEST" as const;
+  if (value === "newest") return "NEWEST" as const;
+  return hasKeyword ? "RELEVANCE" as const : "NEWEST" as const;
 }
 
 function pageHref(filters: CatalogFilters, page: number): string {
@@ -63,7 +64,7 @@ export async function CatalogPage({ filters }: Readonly<{ filters: CatalogFilter
         minimumPriceVnd: positiveNumber(filters.minimumPriceVnd),
         maximumPriceVnd: positiveNumber(filters.maximumPriceVnd),
         attributes: filters.attribute,
-        sort: apiSort(filters.sort),
+        sort: apiSort(filters.sort, Boolean(filters.q?.trim())),
         page: requestedPage - 1,
         size: 18,
       }),
