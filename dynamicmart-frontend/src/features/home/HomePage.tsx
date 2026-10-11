@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { CatalogProductCard } from "@/features/catalog/components/CatalogProductCard";
 import { getCategories, getProducts } from "@/features/catalog/api/catalog.api";
 import type { CategoryTree, ProductSummary } from "@/features/catalog/types";
-import { BrandCarousel, CategoryCarousel, HeroCarousel, type HomeCategoryItem } from "./components/HomeCarousels";
+import { CategoryCarousel, HeroCarousel, type HomeCategoryItem } from "./components/HomeCarousels";
 
 function SectionTitle({
   eyebrow,
@@ -36,30 +36,52 @@ function SectionTitle({
 //   { icon: BadgeCheck, title: "Thanh toán an toàn", detail: "Bảo mật mọi giao dịch" },
 // ];
 
-const categoryPresentation: Pick<HomeCategoryItem, "icon" | "color">[] = [
-  { icon: "shirt", color: "from-sky-100 to-blue-50 text-sky-700" },
-  { icon: "sparkles", color: "from-rose-100 to-pink-50 text-rose-700" },
-  { icon: "watch", color: "from-amber-100 to-orange-50 text-amber-700" },
-  { icon: "footprints", color: "from-violet-100 to-purple-50 text-violet-700" },
-  { icon: "shoppingBag", color: "from-emerald-100 to-teal-50 text-emerald-700" },
-  { icon: "gift", color: "from-red-100 to-orange-50 text-red-700" },
-  { icon: "gem", color: "from-fuchsia-100 to-pink-50 text-fuchsia-700" },
-  { icon: "headphones", color: "from-cyan-100 to-sky-50 text-cyan-700" },
-  { icon: "house", color: "from-lime-100 to-green-50 text-lime-700" },
-  { icon: "dumbbell", color: "from-indigo-100 to-blue-50 text-indigo-700" },
-];
+const categoryPresentation = [
+  { tokens: ["electronics", "dien-tu"], icon: "cpu", color: "from-cyan-100 to-sky-50 text-cyan-700" },
+  { tokens: ["fashion", "thoi-trang"], icon: "shirt", color: "from-sky-100 to-blue-50 text-sky-700" },
+  { tokens: ["home_living", "nha-cua"], icon: "house", color: "from-lime-100 to-green-50 text-lime-700" },
+  { tokens: ["beauty", "lam-dep"], icon: "sparkles", color: "from-rose-100 to-pink-50 text-rose-700" },
+  { tokens: ["sport", "the-thao"], icon: "dumbbell", color: "from-indigo-100 to-blue-50 text-indigo-700" },
+  { tokens: ["book", "sach-van-phong"], icon: "bookOpen", color: "from-amber-100 to-orange-50 text-amber-700" },
+] satisfies ReadonlyArray<Pick<HomeCategoryItem, "icon" | "color"> & { tokens: readonly string[] }>;
 
-function flattenCategories(categories: CategoryTree[]): CategoryTree[] {
-  return categories.flatMap((category) => [category, ...flattenCategories(category.children)]);
+const defaultCategoryPresentation: Pick<HomeCategoryItem, "icon" | "color"> = {
+  icon: "shoppingBag",
+  color: "from-emerald-100 to-teal-50 text-emerald-700",
+};
+
+function categoryPresentationIndex(category: CategoryTree): number {
+  const searchable = `${category.code} ${category.slug}`.toLowerCase();
+  return categoryPresentation.findIndex(({ tokens }) => tokens.some((token) => searchable.includes(token)));
 }
 
 function presentCategories(categories: CategoryTree[]): HomeCategoryItem[] {
-  return flattenCategories(categories).slice(0, 10).map((category, index) => ({
-    ...categoryPresentation[index % categoryPresentation.length],
-    name: category.name,
-    caption: category.description?.trim() || "Khám phá sản phẩm",
-    href: `/products?category=${encodeURIComponent(category.slug)}`,
-  }));
+  const seenGroups = new Set<string>();
+
+  return categories
+    .filter((category) => {
+      const presentationIndex = categoryPresentationIndex(category);
+      const groupKey = presentationIndex >= 0 ? `known-${presentationIndex}` : category.id;
+      if (seenGroups.has(groupKey)) return false;
+      seenGroups.add(groupKey);
+      return true;
+    })
+    .slice(0, 6)
+    .map((category) => {
+      const presentationIndex = categoryPresentationIndex(category);
+      const presentation = presentationIndex >= 0
+        ? categoryPresentation[presentationIndex]
+        : defaultCategoryPresentation;
+      const childSummary = category.children.slice(0, 3).map((child) => child.name).join(" · ");
+
+      return {
+        icon: presentation.icon,
+        color: presentation.color,
+        name: category.name,
+        caption: childSummary || category.description?.trim() || "Khám phá sản phẩm",
+        href: `/products?category=${encodeURIComponent(category.slug)}`,
+      };
+    });
 }
 
 function CatalogUnavailable() {
@@ -106,16 +128,6 @@ export async function HomePage() {
         </div>
       </div>
 
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <form action="/products" className="group flex min-w-0 flex-1 items-center rounded-2xl border border-slate-200 bg-slate-50 p-1.5 transition focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/10">
-            <Search className="ml-2.5 size-4 shrink-0 text-slate-400 transition group-focus-within:text-brand" />
-            <input aria-label="Tìm sản phẩm" className="min-w-0 flex-1 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-slate-400" name="q" placeholder="Tìm sản phẩm, thương hiệu và danh mục..." />
-            <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand" type="submit">Tìm kiếm</button>
-          </form>
-        </div>
-      </section>
-
       <HeroCarousel />
 
       {/* <div className="relative z-10 mx-auto -mt-px max-w-7xl px-4 sm:px-6 lg:-mt-10 lg:px-8">
@@ -130,7 +142,7 @@ export async function HomePage() {
       </div> */}
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 py-16 sm:px-6 lg:gap-28 lg:px-8 lg:py-24">
-        <section>{catalog?.categories.length ? <CategoryCarousel items={catalog.categories} /> : <CatalogUnavailable />}</section>
+        <section className="scroll-mt-28" id="categories">{catalog?.categories.length ? <CategoryCarousel items={catalog.categories} /> : <CatalogUnavailable />}</section>
 
         <section>
           <SectionTitle description="Tuyển chọn nổi bật do đội ngũ DynamicMart đề xuất cho mùa này." eyebrow="Đề xuất hôm nay" href="/products" title="Sản phẩm nổi bật" />
@@ -138,12 +150,12 @@ export async function HomePage() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
-          <Link className="group relative min-h-80 overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-white shadow-sm sm:p-10" href="/products?category=thoi-trang-nu">
-            <Image alt="Bộ sưu tập thời trang mới" className="object-cover opacity-65 transition duration-700 group-hover:scale-105" fill sizes="(max-width: 1024px) 100vw, 68vw" src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=1400&q=84" />
+          <Link className="group relative min-h-80 overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-white shadow-sm sm:p-10" href="/products?category=nha-cua-doi-song">
+            <Image alt="Không gian sống tiện nghi" className="object-cover opacity-65 transition duration-700 group-hover:scale-105" fill sizes="(max-width: 1024px) 100vw, 68vw" src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1400&q=84" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/65 to-transparent" />
             <div className="relative flex h-full max-w-md flex-col justify-end">
-              <p className="text-xs font-black tracking-[0.2em] text-emerald-300 uppercase">Women&apos;s edit</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Thanh lịch theo cách của riêng bạn.</h2>
+              <p className="text-xs font-black tracking-[0.2em] text-emerald-300 uppercase">Không gian sống</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Nhẹ nhàng nâng cấp góc sống mỗi ngày.</h2>
               <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold">Khám phá ngay <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
             </div>
           </Link>
@@ -155,8 +167,6 @@ export async function HomePage() {
             </div>
           </Link>
         </section>
-
-        <section className="rounded-[2rem] bg-[#f2e9d7] p-5 sm:p-8 lg:p-10"><BrandCarousel /></section>
 
         <section id="best-seller">
           <SectionTitle description="Những lựa chọn được cộng đồng DynamicMart yêu thích nhất trong tuần." eyebrow="Được săn đón" href="/products?sort=best-selling" title="Best seller tuần này" />
@@ -175,7 +185,7 @@ export async function HomePage() {
         </section>
 
         <section>
-          <SectionTitle description="Những thiết kế vừa cập bến — số lượng giới hạn cho mùa mới." eyebrow="Vừa lên kệ" href="/products?sort=newest" title="Sản phẩm mới về" />
+          <SectionTitle description="Những sản phẩm vừa được cập nhật trên DynamicMart." eyebrow="Vừa lên kệ" href="/products?sort=newest" title="Sản phẩm mới về" />
           {catalog?.newArrivals.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.newArrivals.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
         </section>
       </div>
