@@ -151,24 +151,29 @@ public class OrderCreationRevalidationService {
     private VoucherPreview loadVoucherPreview(CreationContext context) {
         UUID merchandiseVoucherId = null;
         UUID shippingVoucherId = null;
+        String merchandiseVoucherCode = null;
+        String shippingVoucherCode = null;
         for (VoucherSnapshot voucher : context.vouchers()) {
             if (SHIPPING_SCOPE.equals(voucher.scope())) {
                 if (shippingVoucherId != null) {
                     throw stale("CHECKOUT_VOUCHER_CHANGED", "Checkout có nhiều hơn một voucher giao hàng.");
                 }
                 shippingVoucherId = voucher.voucherId();
+                shippingVoucherCode = voucher.voucherCode();
             } else {
                 if (merchandiseVoucherId != null) {
                     throw stale("CHECKOUT_VOUCHER_CHANGED", "Checkout có nhiều hơn một voucher hàng hóa.");
                 }
                 merchandiseVoucherId = voucher.voucherId();
+                merchandiseVoucherCode = voucher.voucherCode();
             }
         }
         if (merchandiseVoucherId == null && shippingVoucherId == null) {
             return VoucherPreview.empty();
         }
         return voucherPricing.preview(new VoucherPreviewRequest(
-                context.customerId(), merchandiseVoucherId, shippingVoucherId, context.quote().feeVnd(),
+                context.customerId(), merchandiseVoucherId, merchandiseVoucherCode,
+                shippingVoucherId, shippingVoucherCode, context.quote().feeVnd(),
                 context.items().stream().map(item -> new VoucherItem(
                         item.productId(), item.variantId(), item.quantity(), item.unitPriceVnd())).toList()));
     }

@@ -56,8 +56,8 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [vouchers, setVouchers] = useState<VoucherWalletItem[]>([]);
   const [addressId, setAddressId] = useState("");
-  const [merchandiseVoucherId, setMerchandiseVoucherId] = useState("");
-  const [shippingVoucherId, setShippingVoucherId] = useState("");
+  const [merchandiseVoucherCode, setMerchandiseVoucherCode] = useState("");
+  const [shippingVoucherCode, setShippingVoucherCode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("COD");
   const [paymentTiming, setPaymentTiming] = useState<PaymentTiming>("POSTPAID");
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
@@ -113,7 +113,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
         setVouchers(nextVouchers);
         if (initialVoucherId) {
           const initialVoucher = nextVouchers.find((item) => item.id === initialVoucherId && item.scope !== "SHIPPING_DISCOUNT");
-          if (initialVoucher) setMerchandiseVoucherId(initialVoucher.id);
+          if (initialVoucher) setMerchandiseVoucherCode(initialVoucher.code);
         }
         setAddressId(nextSession.addressId ?? nextAddresses.find((item) => item.defaultAddress)?.id ?? nextAddresses[0]?.id ?? "");
         setPaymentMethod(nextSession.paymentMethod ?? "COD");
@@ -147,10 +147,22 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
     setWorking(true);
     setMessage("Đang kiểm tra lại giá, tồn kho, mã giảm giá và phí giao hàng…");
     try {
+      const merchandiseCode = merchandiseVoucherCode.trim().toUpperCase();
+      const shippingCode = shippingVoucherCode.trim().toUpperCase();
+      const merchandiseVoucher = merchandiseCode
+        ? merchandiseVouchers.find((item) => item.code.toUpperCase() === merchandiseCode)
+        : undefined;
+      const shippingVoucher = shippingCode
+        ? shippingVouchers.find((item) => item.code.toUpperCase() === shippingCode)
+        : undefined;
+      if (merchandiseCode && !merchandiseVoucher) throw new Error("Mã giảm hàng hóa không tồn tại hoặc không còn hoạt động.");
+      if (shippingCode && !shippingVoucher) throw new Error("Mã giảm phí giao hàng không tồn tại hoặc không còn hoạt động.");
       const updated = await checkoutApi.updateSession(session.id, { addressId, paymentMethod, paymentTiming });
       const nextPreview = await checkoutApi.preview(session.id, {
-        merchandiseVoucherId: merchandiseVoucherId || undefined,
-        shippingVoucherId: shippingVoucherId || undefined,
+        merchandiseVoucherId: merchandiseVoucher?.id,
+        merchandiseVoucherCode: merchandiseCode || undefined,
+        shippingVoucherId: shippingVoucher?.id,
+        shippingVoucherCode: shippingCode || undefined,
       });
       setSession({
         ...updated,
@@ -165,7 +177,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
       return true;
     } catch (cause) {
       setPreview(null);
-      setMessage(errorMessage(cause, "Không thể tính lại đơn hàng. Vui lòng kiểm tra thông tin và thử lại."));
+      setMessage(cause instanceof Error ? cause.message : errorMessage(cause, "Không thể tính lại đơn hàng. Vui lòng kiểm tra thông tin và thử lại."));
       return false;
     } finally {
       setWorking(false);
@@ -236,7 +248,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
       <div className="grid gap-6 lg:grid-cols-[1fr_330px]">
         <section className="rounded-xl border bg-white p-5 sm:p-7">
           {step === "address" ? <AddressStep addresses={addresses} addressId={addressId} disabled={working} select={(id) => { setAddressId(id); invalidateDraft(); }} showForm={showAddressForm} toggleForm={() => setShowAddressForm((value) => !value)} saved={async (address) => { const rows = await reloadAccountData(); setAddressId(rows.find((item) => item.id === address.id)?.id ?? address.id); setShowAddressForm(false); invalidateDraft(); }} next={() => void saveAndPreview("shipping")} /> : null}
-          {step === "shipping" ? <ShippingStep disabled={working} merchandise={merchandiseVouchers} merchandiseVoucherId={merchandiseVoucherId} shipping={shippingVouchers} shippingVoucherId={shippingVoucherId} preview={preview} back={() => setStep("address")} changeMerchandise={(value) => { setMerchandiseVoucherId(value); invalidateDraft(); }} changeShipping={(value) => { setShippingVoucherId(value); invalidateDraft(); }} next={() => void saveAndPreview("payment")} /> : null}
+          {step === "shipping" ? <ShippingStep disabled={working} merchandise={merchandiseVouchers} merchandiseVoucherCode={merchandiseVoucherCode} shipping={shippingVouchers} shippingVoucherCode={shippingVoucherCode} preview={preview} back={() => setStep("address")} changeMerchandise={(value) => { setMerchandiseVoucherCode(value); invalidateDraft(); }} changeShipping={(value) => { setShippingVoucherCode(value); invalidateDraft(); }} next={() => void saveAndPreview("payment")} /> : null}
           {step === "payment" ? <PaymentStep disabled={working} method={paymentMethod} timing={paymentTiming} back={() => setStep("shipping")} select={(choice) => { setPaymentMethod(choice.method); setPaymentTiming(choice.timing); invalidateDraft(); }} next={() => void saveAndPreview("confirm")} /> : null}
           {step === "confirm" ? <ConfirmStep disabled={working} order={order} paymentTiming={paymentTiming} back={() => setStep("payment")} create={() => void createOrder()} /> : null}
         </section>
@@ -261,8 +273,8 @@ function InlineAddressForm({ saved }: Readonly<{ saved: (address: Address) => Pr
   return <form className="grid gap-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } const data = new FormData(form); const wardId = Number(data.get("wardId")); const province = provinces.find((item) => item.id === provinceId); const ward = wards.find((item) => item.id === wardId); if (!province || !ward) { setError("Vui lòng chọn Tỉnh/Thành phố và Phường/Xã do GHN hỗ trợ."); return; } setSubmitting(true); setError(""); void addressApi.create({ recipientName: String(data.get("recipientName")).trim(), phone: String(data.get("phone")).trim(), addressLine: String(data.get("addressLine")).trim(), provinceId, wardId, defaultAddress: data.get("defaultAddress") === "on" }).then(saved).catch((cause) => setError(errorMessage(cause, "Không thể lưu địa chỉ."))).finally(() => setSubmitting(false)); }}><div className="sm:col-span-2"><h3 className="font-black">Địa chỉ mới</h3><p className="mt-1 text-xs text-stone-500">Tỉnh/Thành phố và Phường/Xã được máy chủ đối chiếu với danh mục GHN trước khi lưu.</p></div><Input autoComplete="name" name="recipientName" label="Người nhận" required minLength={2} maxLength={150} /><Input autoComplete="tel" inputMode="tel" name="phone" label="Số điện thoại" required pattern="^(?:0|\+84)(?:3|5|7|8|9)\d{8}$" title="Nhập số điện thoại Việt Nam hợp lệ, ví dụ 0374505367 hoặc +84374505367." /><Select label="Tỉnh/Thành phố" value={provinceId || ""} onChange={(event) => { setProvinceId(Number(event.target.value)); setWards([]); }} required><option value="">Chọn tỉnh/thành</option>{provinces.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Select name="wardId" label="Phường/Xã" required disabled={!provinceId}><option value="">Chọn phường/xã</option>{wards.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><div className="sm:col-span-2"><Input autoComplete="street-address" name="addressLine" label="Số nhà, tên đường" required minLength={3} maxLength={500} /></div><label className="flex items-center gap-2 text-sm font-bold"><input name="defaultAddress" type="checkbox" />Đặt làm mặc định</label>{error ? <p className="text-sm text-danger sm:col-span-2">{error}</p> : null}<div className="flex justify-end sm:col-span-2"><Button type="submit" disabled={submitting}>{submitting ? "Đang lưu…" : "Lưu địa chỉ"}</Button></div></form>;
 }
 
-function ShippingStep({ disabled, merchandise, merchandiseVoucherId, shipping, shippingVoucherId, preview, back, changeMerchandise, changeShipping, next }: Readonly<{ disabled: boolean; merchandise: VoucherWalletItem[]; merchandiseVoucherId: string; shipping: VoucherWalletItem[]; shippingVoucherId: string; preview: CheckoutPreview | null; back: () => void; changeMerchandise: (value: string) => void; changeShipping: (value: string) => void; next: () => void }>) {
-  return <div className="space-y-5"><h2 className="text-xl font-semibold">2. Giao hàng và mã giảm giá</h2><VoucherSelect label="Mã giảm hàng hóa" values={merchandise} value={merchandiseVoucherId} change={changeMerchandise} /><VoucherSelect label="Mã giảm phí giao hàng" values={shipping} value={shippingVoucherId} change={changeShipping} />{preview ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><strong>{preview.shipping.serviceName}</strong><p className="mt-1">Dự kiến giao: {preview.shipping.eta || "Theo lịch GHN"}</p></div> : null}<div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={next}>Kiểm tra lại và tiếp tục<ChevronRight /></Button></div></div>;
+function ShippingStep({ disabled, merchandise, merchandiseVoucherCode, shipping, shippingVoucherCode, preview, back, changeMerchandise, changeShipping, next }: Readonly<{ disabled: boolean; merchandise: VoucherWalletItem[]; merchandiseVoucherCode: string; shipping: VoucherWalletItem[]; shippingVoucherCode: string; preview: CheckoutPreview | null; back: () => void; changeMerchandise: (value: string) => void; changeShipping: (value: string) => void; next: () => void }>) {
+  return <div className="space-y-5"><div><h2 className="text-xl font-semibold">2. Giao hàng và mã giảm giá</h2><p className="mt-1 text-sm text-slate-500">Sao chép mã trong Kho voucher rồi nhập vào đây để áp dụng.</p></div><VoucherCodeInput label="Mã giảm hàng hóa" values={merchandise} value={merchandiseVoucherCode} change={changeMerchandise} /><VoucherCodeInput label="Mã giảm phí giao hàng" values={shipping} value={shippingVoucherCode} change={changeShipping} />{preview ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><strong>{preview.shipping.serviceName}</strong><p className="mt-1">Dự kiến giao: {preview.shipping.eta || "Theo lịch GHN"}</p></div> : null}<div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={next}>Kiểm tra lại và tiếp tục<ChevronRight /></Button></div></div>;
 }
 
 function PaymentStep({ disabled, method, timing, back, select, next }: Readonly<{ disabled: boolean; method: PaymentMethod; timing: PaymentTiming; back: () => void; select: (choice: PaymentChoice) => void; next: () => void }>) {
@@ -274,8 +286,8 @@ function ConfirmStep({ disabled, order, paymentTiming, back, create }: Readonly<
   return <div className="space-y-5"><h2 className="text-xl font-semibold">4. Xác nhận đơn hàng</h2><p className="text-sm text-slate-600">Máy chủ sẽ kiểm tra lại toàn bộ thông tin và bảo đảm mỗi lần xác nhận chỉ tạo một đơn.</p><div className="flex justify-between"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button disabled={disabled} onClick={create}>{disabled ? "Đang tạo đơn…" : paymentTiming === "PREPAID" ? "Tạo đơn và thanh toán" : "Xác nhận tạo đơn"}</Button></div></div>;
 }
 
-function VoucherSelect({ label, values, value, change }: Readonly<{ label: string; values: VoucherWalletItem[]; value: string; change: (value: string) => void }>) {
-  return <Select label={label} value={value} onChange={(event) => change(event.target.value)}><option value="">Không dùng mã</option>{values.map((item) => <option value={item.id} key={item.id}>{item.code} — {item.name}</option>)}</Select>;
+function VoucherCodeInput({ label, values, value, change }: Readonly<{ label: string; values: VoucherWalletItem[]; value: string; change: (value: string) => void }>) {
+  return <div><Input label={label} value={value} maxLength={80} placeholder="Nhập mã voucher" onChange={(event) => change(event.target.value.toUpperCase())} /><p className="mt-1 text-xs text-slate-500">Mã đang hoạt động: {values.length ? values.map((item) => item.code).join(", ") : "chưa có"}</p></div>;
 }
 
 function CheckoutSummary({ preview, session }: Readonly<{ preview: CheckoutPreview | null; session: CheckoutSession }>) {

@@ -45,16 +45,16 @@ public class OrderCheckoutIntegrationService {
         List<EnrichedLine> lines = enrich(request.items());
         long subtotal = lines.stream().mapToLong(EnrichedLine::lineTotal).sum();
         List<AppliedVoucher> applied = new ArrayList<>(); List<LineDiscount> discounts = new ArrayList<>();
-        if (request.merchandiseVoucherId() != null) {
-            var result = vouchers.previewForItems(request.customerId(), request.merchandiseVoucherId(), null,
+        if (request.merchandiseVoucherId() != null || !blank(request.merchandiseCode())) {
+            var result = vouchers.previewForItems(request.customerId(), request.merchandiseVoucherId(), request.merchandiseCode(),
                     subtotal, request.shippingFeeVnd(), discountable(lines));
             requireEligible(result.eligible(), result.ineligibleReason());
             long eligible = eligibleSubtotal(result.scope(), result.productIds(), result.categoryIds(), lines, subtotal);
             applied.add(applied(result, eligible));
             discounts.addAll(allocate(result.scope(), result.discountAmountVnd(), result.productIds(), result.categoryIds(), lines));
         }
-        if (request.shippingVoucherId() != null) {
-            var result = vouchers.previewForItems(request.customerId(), request.shippingVoucherId(), null,
+        if (request.shippingVoucherId() != null || !blank(request.shippingCode())) {
+            var result = vouchers.previewForItems(request.customerId(), request.shippingVoucherId(), request.shippingCode(),
                     subtotal, request.shippingFeeVnd(), discountable(lines));
             requireEligible(result.eligible(), result.ineligibleReason());
             if (!"SHIPPING_DISCOUNT".equals(result.scope())) throw invalid("VOUCHER_SLOT_INVALID", "Voucher không thuộc ô phí giao hàng.");
@@ -66,7 +66,7 @@ public class OrderCheckoutIntegrationService {
     @Transactional
     public VoucherGroupResponse reserveGroup(ReserveVoucherGroupRequest request) {
         VoucherPricingResponse current = preview(new VoucherPricingRequest(request.customerId(),
-                merchandise(request.vouchers()), shipping(request.vouchers()), request.shippingFeeVnd(),
+                merchandise(request.vouchers()), merchandiseCode(request.vouchers()), shipping(request.vouchers()), shippingCode(request.vouchers()), request.shippingFeeVnd(),
                 request.lines().stream().map(value -> new PricingItem(value.productId(), value.variantId(), value.quantity(), value.unitPriceVnd())).toList()));
         Map<UUID, AppliedVoucher> actual = current.vouchers().stream().collect(Collectors.toMap(AppliedVoucher::voucherId, value -> value));
         long subtotal = request.lines().stream().mapToLong(value -> Math.multiplyExact(value.unitPriceVnd(), value.quantity())).sum();
@@ -138,8 +138,11 @@ public class OrderCheckoutIntegrationService {
                 "SHIPPING_DISCOUNT".equals(value.scope()) ? value.discountAmountVnd() : 0);
     }
     private UUID merchandise(List<ReservationBenefit> values) { return values.stream().filter(value -> !"SHIPPING_DISCOUNT".equals(value.scope())).map(ReservationBenefit::voucherId).findFirst().orElse(null); }
+    private String merchandiseCode(List<ReservationBenefit> values) { return values.stream().filter(value -> !"SHIPPING_DISCOUNT".equals(value.scope())).map(ReservationBenefit::code).findFirst().orElse(null); }
     private UUID shipping(List<ReservationBenefit> values) { return values.stream().filter(value -> "SHIPPING_DISCOUNT".equals(value.scope())).map(ReservationBenefit::voucherId).findFirst().orElse(null); }
+    private String shippingCode(List<ReservationBenefit> values) { return values.stream().filter(value -> "SHIPPING_DISCOUNT".equals(value.scope())).map(ReservationBenefit::code).findFirst().orElse(null); }
     private void requireEligible(boolean eligible, String reason) { if (!eligible) throw invalid("VOUCHER_INELIGIBLE", reason == null ? "Voucher không còn hợp lệ." : reason); }
+    private boolean blank(String value) { return value == null || value.isBlank(); }
     private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, code, message); }
     private record EnrichedLine(UUID productId, UUID categoryId, UUID variantId, int quantity, long unitPrice, long lineTotal) { }
 }

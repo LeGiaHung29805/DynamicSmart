@@ -9,11 +9,18 @@ public interface VoucherPricingGateway {
     record VoucherPreviewRequest(
             UUID customerId,
             UUID merchandiseVoucherId,
+            String merchandiseVoucherCode,
             UUID shippingVoucherId,
+            String shippingVoucherCode,
             long shippingFeeVnd,
             List<VoucherItem> items) {
         public VoucherPreviewRequest {
             items = List.copyOf(items);
+        }
+
+        public VoucherPreviewRequest(UUID customerId, UUID merchandiseVoucherId, UUID shippingVoucherId,
+                                     long shippingFeeVnd, List<VoucherItem> items) {
+            this(customerId, merchandiseVoucherId, null, shippingVoucherId, null, shippingFeeVnd, items);
         }
     }
 
