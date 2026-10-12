@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { BadgePercent, Check, Minus, PackageCheck, Plus, ShieldCheck, ShoppingBag, Star, Zap } from "lucide-react";
+import { BadgePercent, Check, Minus, PackageCheck, PackageX, Plus, ShieldCheck, ShoppingBag, Star, Zap } from "lucide-react";
 import { formatVnd } from "@/components/common/Price";
 import { useToast } from "@/components/ui/Toast";
 import { isApiError } from "@/lib/api/error";
@@ -41,11 +41,17 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
   const pathname = usePathname();
   const { showToast } = useToast();
   const initialVariant = product.variants.find((variant) => variant.id === initialVariantId)
-    ?? (product.variants.length === 1 ? product.variants[0] : undefined);
+    ?? product.variants.find((variant) => variant.purchasable)
+    ?? product.variants[0];
+  const initialAvailableQuantity = initialVariant?.inventory.availableQuantity ?? 0;
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(initialVariant?.id);
   const [selections, setSelections] = useState<Record<string, string>>(() => Object.fromEntries(
     initialVariant?.attributes.map((attribute) => [attribute.attributeCode, scalar(attribute.value)]) ?? [],
   ));
-  const [quantity, setQuantity] = useState(Math.max(1, initialQuantity));
+  const [quantity, setQuantity] = useState(Math.min(
+    Math.max(1, initialQuantity),
+    Math.max(initialAvailableQuantity, 1),
+  ));
   const [pendingAction, setPendingAction] = useState<"cart" | "buy" | null>(null);
   const [error, setError] = useState<string>();
 
@@ -60,9 +66,9 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
     return [...groups.entries()].map(([code, group]) => ({ code, ...group }));
   }, [product.variants]);
 
-  const selectedVariant = product.variants.find((variant) => attributeGroups.every(
-    (group) => selections[group.code] && attributeValue(variant, group.code) === selections[group.code],
-  ));
+  const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId);
+  const purchasableVariants = product.variants.filter((variant) => variant.purchasable);
+  const allOutOfStock = purchasableVariants.length === 0;
   const images = selectedVariant?.images.length ? selectedVariant.images : product.images;
   const [selectedImageId, setSelectedImageId] = useState<string | undefined>(() => primaryImage(
     initialVariant?.images.length ? initialVariant.images : product.images,
@@ -73,17 +79,31 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
   const reviewCount = product.reviewCount ?? 0;
   const averageRating = product.averageRating ?? 0;
 
+  function chooseVariant(variant: ProductVariant) {
+    setSelectedVariantId(variant.id);
+    setSelections(Object.fromEntries(
+      variant.attributes.map((attribute) => [attribute.attributeCode, scalar(attribute.value)]),
+    ));
+    setQuantity(1);
+    setSelectedImageId(primaryImage(variant.images)?.id ?? primaryImage(product.images)?.id);
+    router.replace(`${pathname}?variant=${encodeURIComponent(variant.id)}&quantity=1`, { scroll: false });
+  }
+
+  function variantsForAttributeOption(code: string, value: string) {
+    return product.variants.filter((variant) => attributeValue(variant, code) === value);
+  }
+
   function selectAttribute(code: string, value: string) {
     const next = { ...selections, [code]: value };
-    setSelections(next);
-    const variant = product.variants.find((candidate) => attributeGroups.every(
+    const exactMatches = product.variants.filter((candidate) => attributeGroups.every(
       (group) => next[group.code] && attributeValue(candidate, group.code) === next[group.code],
     ));
-    if (variant) {
-      setQuantity(1);
-      setSelectedImageId(primaryImage(variant.images)?.id ?? primaryImage(product.images)?.id);
-      router.replace(`${pathname}?variant=${encodeURIComponent(variant.id)}&quantity=1`, { scroll: false });
-    }
+    const optionMatches = variantsForAttributeOption(code, value);
+    const variant = exactMatches.find((candidate) => candidate.purchasable)
+      ?? optionMatches.find((candidate) => candidate.purchasable)
+      ?? exactMatches[0]
+      ?? optionMatches[0];
+    if (variant) chooseVariant(variant);
   }
 
   async function addToCart() {
@@ -131,15 +151,76 @@ export function ProductDetailExperience({ product, initialVariantId, initialQuan
           {currentPrice ? <><span className="text-3xl font-black text-emerald-800">{formatVnd(currentPrice.salePriceVnd ?? currentPrice.listPriceVnd)}</span>{currentPrice.salePriceVnd !== null && currentPrice.salePriceVnd !== undefined ? <del className="pb-1 text-sm text-slate-400">{formatVnd(currentPrice.listPriceVnd)}</del> : null}</> : <span className="text-sm font-semibold text-slate-500">Chọn đủ thuộc tính để xem giá</span>}
         </div>
 
-        {attributeGroups.map((group) => <fieldset className="space-y-2" key={group.code}><legend className="text-sm font-bold text-slate-800">{group.name}{selections[group.code] ? <span className="ml-2 font-medium text-slate-500">· {selections[group.code]}</span> : null}</legend><div className="flex flex-wrap gap-2">{group.values.map((value) => <button aria-pressed={selections[group.code] === value} className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-bold transition ${selections[group.code] === value ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"}`} key={value} onClick={() => selectAttribute(group.code, value)} type="button">{selections[group.code] === value ? <Check className="size-3.5" /> : null}{value}</button>)}</div></fieldset>)}
+        {allOutOfStock ? (
+          <div className="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900" role="status">
+            <PackageX className="mt-0.5 size-5 shrink-0" />
+            <div><p className="font-black">Sản phẩm tạm hết hàng</p><p className="mt-1 text-sm leading-6 text-rose-800">Bạn vẫn có thể xem đầy đủ các phiên bản, giá và thông tin sản phẩm. Chức năng mua sẽ mở lại khi có tồn kho.</p></div>
+          </div>
+        ) : null}
+
+        {attributeGroups.map((group) => (
+          <fieldset className="space-y-2" key={group.code}>
+            <legend className="text-sm font-bold text-slate-800">{group.name}{selections[group.code] ? <span className="ml-2 font-medium text-slate-500">· {selections[group.code]}</span> : null}</legend>
+            <div className="flex flex-wrap gap-2">
+              {group.values.map((value) => {
+                const candidates = variantsForAttributeOption(group.code, value);
+                const available = candidates.some((variant) => variant.purchasable);
+                const selected = selections[group.code] === value;
+                return (
+                  <button
+                    aria-pressed={selected}
+                    className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-bold transition ${selected && available ? "border-emerald-700 bg-emerald-50 text-emerald-900" : selected ? "border-rose-200 bg-rose-50 text-rose-800" : available ? "border-slate-200 bg-white text-slate-700 hover:border-emerald-300" : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through"}`}
+                    disabled={!available}
+                    key={value}
+                    onClick={() => selectAttribute(group.code, value)}
+                    title={!available ? "Các biến thể có lựa chọn này đang hết hàng" : undefined}
+                    type="button"
+                  >
+                    {selected ? <Check className="size-3.5" /> : null}
+                    {value}
+                    {!available ? <span className="ml-1 text-[10px] font-black tracking-wide uppercase">Hết hàng</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        ))}
+
+        <section aria-labelledby="product-variants-title" className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div><p className="text-xs font-black tracking-[0.16em] text-brand uppercase">Phiên bản sản phẩm</p><h2 className="mt-1 text-lg font-black text-slate-950" id="product-variants-title">Tất cả {product.variants.length} biến thể</h2></div>
+            <p className="text-xs text-slate-500">Chọn một phiên bản còn hàng</p>
+          </div>
+          <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            {product.variants.map((variant) => {
+              const selected = selectedVariant?.id === variant.id;
+              const variantPrice = variant.price.salePriceVnd ?? variant.price.listPriceVnd;
+              const details = variant.attributes.map((attribute) => `${attribute.attributeName}: ${scalar(attribute.value)}`).join(" · ");
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={`rounded-2xl border p-3 text-left transition ${selected && variant.purchasable ? "border-emerald-700 bg-emerald-50 shadow-sm" : selected ? "border-rose-200 bg-rose-50" : variant.purchasable ? "border-slate-200 bg-white hover:border-emerald-300" : "cursor-not-allowed border-slate-200 bg-slate-50 opacity-70"}`}
+                  disabled={!variant.purchasable}
+                  key={variant.id}
+                  onClick={() => chooseVariant(variant)}
+                  type="button"
+                >
+                  <span className="flex items-start justify-between gap-3"><span className="min-w-0"><span className="block truncate text-sm font-black text-slate-950">{variant.name || variant.sku}</span><span className="mt-0.5 block font-mono text-[11px] text-slate-500">{variant.sku}</span></span><span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black uppercase ${variant.purchasable ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{variant.purchasable ? `Còn ${variant.inventory.availableQuantity}` : "Hết hàng"}</span></span>
+                  {details ? <span className="mt-2 block line-clamp-2 text-xs leading-5 text-slate-600">{details}</span> : <span className="mt-2 block text-xs text-slate-400">Phiên bản theo SKU</span>}
+                  <span className="mt-2 block text-sm font-black text-emerald-800">{formatVnd(variantPrice)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>{selectedVariant ? <><p className="text-sm font-bold text-slate-900">{selectedVariant.name ?? selectedVariant.sku}</p><p className="mt-1 text-xs text-slate-500">SKU: {selectedVariant.sku} · {maxQuantity > 0 ? `Còn ${maxQuantity} sản phẩm` : "Hết hàng"}</p><p className="mt-1 text-xs text-slate-500">Khối lượng: {selectedVariant.weightGrams.toLocaleString("vi-VN")} g{selectedVariant.lengthCm && selectedVariant.widthCm && selectedVariant.heightCm ? ` · Gói ${selectedVariant.lengthCm} × ${selectedVariant.widthCm} × ${selectedVariant.heightCm} cm` : ""}</p></> : <p className="text-sm font-semibold text-amber-700">Vui lòng chọn đủ thuộc tính bắt buộc.</p>}</div>
-            <div className="inline-flex items-center rounded-xl border border-slate-200"><button aria-label="Giảm số lượng" className="grid size-10 place-items-center disabled:opacity-40" disabled={quantity <= 1} onClick={() => setQuantity((current) => Math.max(1, current - 1))} type="button"><Minus className="size-4" /></button><input aria-label="Số lượng" className="h-10 w-12 border-x border-slate-200 text-center text-sm font-bold outline-none" max={Math.max(maxQuantity, 1)} min="1" onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} type="number" value={quantity} /><button aria-label="Tăng số lượng" className="grid size-10 place-items-center disabled:opacity-40" disabled={!selectedVariant || quantity >= maxQuantity} onClick={() => setQuantity((current) => Math.min(maxQuantity, current + 1))} type="button"><Plus className="size-4" /></button></div>
+            <div className="inline-flex items-center rounded-xl border border-slate-200"><button aria-label="Giảm số lượng" className="grid size-10 place-items-center disabled:opacity-40" disabled={!selectedVariant?.purchasable || quantity <= 1} onClick={() => setQuantity((current) => Math.max(1, current - 1))} type="button"><Minus className="size-4" /></button><input aria-label="Số lượng" className="h-10 w-12 border-x border-slate-200 text-center text-sm font-bold outline-none disabled:bg-slate-100 disabled:text-slate-400" disabled={!selectedVariant?.purchasable} max={Math.max(maxQuantity, 1)} min="1" onChange={(event) => setQuantity(Math.min(Math.max(1, Number(event.target.value) || 1), Math.max(maxQuantity, 1)))} type="number" value={quantity} /><button aria-label="Tăng số lượng" className="grid size-10 place-items-center disabled:opacity-40" disabled={!selectedVariant?.purchasable || quantity >= maxQuantity} onClick={() => setQuantity((current) => Math.min(maxQuantity, current + 1))} type="button"><Plus className="size-4" /></button></div>
           </div>
           {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
-          <div className="mt-5 grid gap-3 sm:grid-cols-2"><button className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-emerald-800 bg-white px-5 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canPurchase || pendingAction !== null} onClick={addToCart} type="button"><ShoppingBag className="size-4" />{pendingAction === "cart" ? "Đang thêm..." : "Thêm vào giỏ"}</button><button className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-950 px-5 text-sm font-black text-white transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50" disabled={!canPurchase || pendingAction !== null} onClick={buyNow} type="button"><Zap className="size-4" />{pendingAction === "buy" ? "Đang xử lý..." : "Mua ngay"}</button></div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2"><button className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-emerald-800 bg-white px-5 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canPurchase || pendingAction !== null} onClick={addToCart} type="button"><ShoppingBag className="size-4" />{pendingAction === "cart" ? "Đang thêm..." : selectedVariant && !selectedVariant.purchasable ? "Biến thể hết hàng" : "Thêm vào giỏ"}</button><button className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-950 px-5 text-sm font-black text-white transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50" disabled={!canPurchase || pendingAction !== null} onClick={buyNow} type="button"><Zap className="size-4" />{pendingAction === "buy" ? "Đang xử lý..." : selectedVariant && !selectedVariant.purchasable ? "Biến thể hết hàng" : "Mua ngay"}</button></div>
         </div>
         <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-2"><p className="flex items-center gap-2"><PackageCheck className="size-5 text-brand" /> Tồn kho được kiểm tra tại máy chủ</p><p className="flex items-center gap-2"><ShieldCheck className="size-5 text-brand" /> Giá được xác thực lại khi đặt hàng</p></div>
       </div>

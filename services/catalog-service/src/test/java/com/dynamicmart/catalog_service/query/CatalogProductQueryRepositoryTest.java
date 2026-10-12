@@ -1,6 +1,7 @@
 package com.dynamicmart.catalog_service.query;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -50,8 +51,12 @@ class CatalogProductQueryRepositoryTest {
         assertTrue(sql.getValue().contains("plainto_tsquery"));
         assertTrue(sql.getValue().contains("catalog_normalize_search_text(category.name)"));
         assertTrue(sql.getValue().contains("word_similarity"));
-        assertTrue(sql.getValue().contains("inventory.on_hand_qty - inventory.reserved_qty > 0"));
-        assertTrue(sql.getValue().contains("ORDER BY ("));
+        assertTrue(sql.getValue().contains(
+                "stock_inventory.on_hand_qty - stock_inventory.reserved_qty > 0"));
+        assertFalse(sql.getValue().substring(0, sql.getValue().indexOf("ORDER BY"))
+                .contains("on_hand_qty"));
+        assertTrue(sql.getValue().contains("THEN 0 ELSE 1 END"));
+        assertTrue(sql.getValue().contains("SELECT MIN(price_variant.price_vnd)"));
         assertInstanceOf(Timestamp.class, parameters.getValue().getValue("now"));
     }
 }

@@ -15,12 +15,15 @@ import com.dynamicmart.catalog_service.exception.CatalogException;
 import com.dynamicmart.catalog_service.query.CatalogProductQueryRepository;
 import com.dynamicmart.catalog_service.query.ProductSearchCriteria;
 import com.dynamicmart.catalog_service.query.ProductSort;
+import com.dynamicmart.catalog_service.repository.ProductRepository;
+import com.dynamicmart.catalog_service.service.CatalogResponseAssembler;
 import com.dynamicmart.catalog_service.service.InventoryAdjustmentService;
 import com.dynamicmart.catalog_service.service.InventoryExpirationScheduler;
 import com.dynamicmart.catalog_service.service.InventoryReservationService;
 import com.dynamicmart.catalog_service.service.ProductManagementService;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -75,6 +78,8 @@ class InventoryPostgresIntegrationTest {
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private CatalogProductQueryRepository productQueryRepository;
     @Autowired private ProductManagementService productManagementService;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private CatalogResponseAssembler responseAssembler;
 
     private ExecutorService executor;
 
@@ -261,6 +266,22 @@ class InventoryPostgresIntegrationTest {
 
         var suggestions = productQueryRepository.suggest("thoi trang", 6, 3);
         assertThat(suggestions.categories()).extracting("id").contains(PARENT_CATEGORY_ID);
+    }
+
+    @Test
+    void outOfStockProductRemainsSearchableAndIsMarkedOutOfStock() {
+        jdbcTemplate.update("UPDATE inventory_items SET on_hand_qty = 0 WHERE variant_id = ?", VARIANT_ID);
+
+        var result = productQueryRepository.search(new ProductSearchCriteria(
+                null, null, null, null, null, List.of(),
+                ProductSort.NEWEST, 0, 20));
+        var product = productRepository.findById(PRODUCT_ID).orElseThrow();
+        var summary = responseAssembler.productSummaries(
+                List.of(product), Set.of(), Set.of()).get(0);
+
+        assertThat(result.productIds()).containsExactly(PRODUCT_ID);
+        assertThat(summary.inStock()).isFalse();
+        assertThat(summary.representativeVariantId()).isEqualTo(VARIANT_ID);
     }
 
     private Attempt reserveWhenReleased(CountDownLatch ready, CountDownLatch start) {

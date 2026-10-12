@@ -195,10 +195,8 @@ public class CatalogProductQueryRepository {
                  AND EXISTS (
                     SELECT 1
                     FROM product_variants candidate
-                    JOIN inventory_items inventory ON inventory.variant_id = candidate.id
                     WHERE candidate.product_id = p.id
                       AND candidate.status = 'ACTIVE'
-                      AND inventory.on_hand_qty - inventory.reserved_qty > 0
                 """);
         if (criteria.minimumPriceVnd() != null) {
             parameters.addValue("minimumPrice", criteria.minimumPriceVnd());
@@ -352,7 +350,7 @@ public class CatalogProductQueryRepository {
                            SearchTerms searchTerms,
                            MapSqlParameterSource parameters) {
         ProductSort safeSort = sort == null ? ProductSort.NEWEST : sort;
-        return switch (safeSort) {
+        String ordering = switch (safeSort) {
             case RELEVANCE -> {
                 if (searchTerms.isEmpty()) yield newestOrder();
                 addRankingParameters(parameters, searchTerms, "searchRank");
@@ -362,24 +360,35 @@ public class CatalogProductQueryRepository {
                      ORDER BY (
                         SELECT MIN(price_variant.price_vnd)
                         FROM product_variants price_variant
-                        JOIN inventory_items price_inventory ON price_inventory.variant_id = price_variant.id
                         WHERE price_variant.product_id = p.id
                           AND price_variant.status = 'ACTIVE'
-                          AND price_inventory.on_hand_qty - price_inventory.reserved_qty > 0
                      ) ASC, p.id ASC
                     """;
             case PRICE_DESC -> """
                      ORDER BY (
                         SELECT MIN(price_variant.price_vnd)
                         FROM product_variants price_variant
-                        JOIN inventory_items price_inventory ON price_inventory.variant_id = price_variant.id
                         WHERE price_variant.product_id = p.id
                           AND price_variant.status = 'ACTIVE'
-                          AND price_inventory.on_hand_qty - price_inventory.reserved_qty > 0
                      ) DESC, p.id ASC
                     """;
             case NEWEST, BEST_SELLER -> newestOrder();
         };
+        return prioritizeAvailableProducts(ordering);
+    }
+
+    private String prioritizeAvailableProducts(String ordering) {
+        String availabilityRank = """
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM product_variants stock_variant
+                    JOIN inventory_items stock_inventory ON stock_inventory.variant_id = stock_variant.id
+                    WHERE stock_variant.product_id = p.id
+                      AND stock_variant.status = 'ACTIVE'
+                      AND stock_inventory.on_hand_qty - stock_inventory.reserved_qty > 0
+                ) THEN 0 ELSE 1 END
+                """.strip();
+        return ordering.replaceFirst("ORDER BY", "ORDER BY " + availabilityRank + ",");
     }
 
     private String relevanceOrder(String prefix) {

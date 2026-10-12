@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BadgePercent, PackageCheck, Star } from "lucide-react";
+import { ArrowUpRight, BadgePercent, PackageCheck, PackageX, Star } from "lucide-react";
 import { formatVnd } from "@/components/common/Price";
 import { WishlistButton } from "@/features/wishlist";
 import type { ProductSummary } from "../types";
@@ -10,12 +10,12 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
   const hasRange = product.minimumListPriceVnd !== product.maximumListPriceVnd;
   const reviewCount = product.reviewCount ?? 0;
   const averageRating = product.averageRating ?? 0;
-  const badge = price.salePriceVnd !== null && price.salePriceVnd !== undefined
+  const badge = !product.inStock ? "Hết hàng" : price.salePriceVnd !== null && price.salePriceVnd !== undefined
     ? `Giảm ${price.directSalePercent ?? 0}%`
     : product.bestSeller ? "Bán chạy" : product.featured ? "Nổi bật" : "Mới";
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white transition duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-2xl hover:shadow-emerald-950/10">
+    <article className={`group overflow-hidden rounded-3xl border bg-white transition duration-300 hover:-translate-y-1 hover:shadow-2xl ${product.inStock ? "border-slate-200/80 hover:border-emerald-200 hover:shadow-emerald-950/10" : "border-slate-200 opacity-80 hover:border-slate-300 hover:shadow-slate-950/5"}`}>
       <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
         <Link className="block size-full" href={`/products/${product.slug}`}>
         {product.primaryImage?.imageUrl ? (
@@ -23,7 +23,7 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
           // eslint-disable-next-line @next/next/no-img-element
           <img alt={product.primaryImage.altText ?? product.name} className="size-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" src={product.primaryImage.imageUrl} />
         ) : <span className="grid size-full place-items-center text-sm font-bold text-slate-400">DynamicMart</span>}
-        <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold tracking-wide text-slate-800 uppercase shadow-sm">{badge}</span>
+        <span className={`absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs font-bold tracking-wide uppercase shadow-sm ${product.inStock ? "bg-white/95 text-slate-800" : "bg-slate-950 text-white"}`}>{badge}</span>
         <span className="absolute right-3 bottom-3 grid size-10 translate-y-2 place-items-center rounded-full bg-slate-950 text-white opacity-0 shadow-lg transition group-hover:translate-y-0 group-hover:opacity-100"><ArrowUpRight className="size-4" /></span>
         </Link>
         <WishlistButton className="absolute top-3 right-3" productId={product.id} />
@@ -38,7 +38,9 @@ export function CatalogProductCard({ product }: Readonly<{ product: ProductSumma
           {price.salePriceVnd !== null && price.salePriceVnd !== undefined ? <del className="text-xs text-slate-500">{formatVnd(price.listPriceVnd)}</del> : null}
         </div>
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-600">
-          <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><PackageCheck className="size-3.5" /> Còn hàng</span>
+          {product.inStock
+            ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><PackageCheck className="size-3.5" /> Còn hàng</span>
+            : <span className="inline-flex items-center gap-1 font-semibold text-rose-700"><PackageX className="size-3.5" /> Hết hàng</span>}
           {reviewCount > 0 ? <span className="inline-flex items-center gap-1 font-semibold text-amber-700"><Star className="size-3.5 fill-current" /> {averageRating.toFixed(1)} <span className="text-slate-400">({reviewCount})</span></span> : product.voucherEligible ? <span className="inline-flex items-center gap-1 font-semibold text-amber-700"><BadgePercent className="size-3.5" /> Có voucher</span> : null}
         </div>
       </div>

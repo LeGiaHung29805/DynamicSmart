@@ -108,24 +108,28 @@ public class CatalogResponseAssembler {
         LoadedCatalog loaded = load(products);
         List<ProductSummaryResponse> summaries = new ArrayList<>();
         for (Product product : products) {
-            List<ProductVariant> purchasable = loaded.variantsByProduct()
+            List<ProductVariant> activeVariants = loaded.variantsByProduct()
                     .getOrDefault(product.getId(), List.of()).stream()
                     .filter(variant -> variant.getStatus() == VariantStatus.ACTIVE)
-                    .filter(variant -> available(variant.getId(), loaded) > 0)
                     .sorted(Comparator.comparingInt(ProductVariant::getSortOrder)
                             .thenComparing(ProductVariant::getId))
                     .toList();
-            if (purchasable.isEmpty()) continue;
-            ProductVariant representative = purchasable.get(0);
-            long minimum = purchasable.stream().mapToLong(ProductVariant::getPriceVnd).min().orElseThrow();
-            long maximum = purchasable.stream().mapToLong(ProductVariant::getPriceVnd).max().orElseThrow();
+            if (activeVariants.isEmpty()) continue;
+            List<ProductVariant> purchasable = activeVariants.stream()
+                    .filter(variant -> available(variant.getId(), loaded) > 0)
+                    .toList();
+            boolean inStock = !purchasable.isEmpty();
+            List<ProductVariant> priceCandidates = inStock ? purchasable : activeVariants;
+            ProductVariant representative = priceCandidates.get(0);
+            long minimum = priceCandidates.stream().mapToLong(ProductVariant::getPriceVnd).min().orElseThrow();
+            long maximum = priceCandidates.stream().mapToLong(ProductVariant::getPriceVnd).max().orElseThrow();
             ProductImage primaryImage = primaryImage(product.getId(), representative.getId(), loaded);
             summaries.add(new ProductSummaryResponse(product.getId(), product.getName(),
                     product.getSlug(), product.getShortDescription(),
                     categoryBrief(requireCategory(product, loaded)),
                     primaryImage == null ? null : imageResponse(primaryImage),
                     representative.getId(), loaded.prices().get(representative.getId()),
-                    minimum, maximum, true, product.isFeatured(),
+                    minimum, maximum, inStock, product.isFeatured(),
                     bestSellerProductIds.contains(product.getId()),
                     voucherEligibleProductIds.contains(product.getId()), 
                     product.getAverageRating(), product.getReviewCount(), product.getPublishedAt()));

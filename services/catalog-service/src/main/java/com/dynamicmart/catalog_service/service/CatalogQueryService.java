@@ -123,14 +123,26 @@ public class CatalogQueryService {
                 criteria.minimumPriceVnd(), criteria.maximumPriceVnd(), criteria.featured(),
                 criteria.attributes(), ProductSort.NEWEST, 0, 1000);
         Set<UUID> matchingIds = new HashSet<>(queryRepository.search(broadCriteria).productIds());
-        List<UUID> orderedIds = bestSellerIds.stream()
+        List<UUID> matchingBestSellerIds = bestSellerIds.stream()
                 .filter(matchingIds::contains)
                 .toList();
+        Map<UUID, Product> productsById = new HashMap<>();
+        productRepository.findAllById(matchingBestSellerIds)
+                .forEach(product -> productsById.put(product.getId(), product));
+        List<Product> matchingProducts = matchingBestSellerIds.stream()
+                .map(productsById::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        Set<UUID> inStockIds = new HashSet<>();
+        responseAssembler.productSummaries(matchingProducts, new HashSet<>(bestSellerIds), Set.of()).stream()
+                .filter(ProductSummaryResponse::inStock)
+                .forEach(summary -> inStockIds.add(summary.id()));
+        List<UUID> orderedIds = new ArrayList<>();
+        matchingBestSellerIds.stream().filter(inStockIds::contains).forEach(orderedIds::add);
+        matchingBestSellerIds.stream().filter(id -> !inStockIds.contains(id)).forEach(orderedIds::add);
         int fromIndex = Math.min(Math.multiplyExact(criteria.page(), criteria.size()), orderedIds.size());
         int toIndex = Math.min(fromIndex + criteria.size(), orderedIds.size());
         List<UUID> pageIds = orderedIds.subList(fromIndex, toIndex);
-        Map<UUID, Product> productsById = new HashMap<>();
-        productRepository.findAllById(pageIds).forEach(product -> productsById.put(product.getId(), product));
         List<Product> ordered = pageIds.stream()
                 .map(productsById::get)
                 .filter(java.util.Objects::nonNull)
