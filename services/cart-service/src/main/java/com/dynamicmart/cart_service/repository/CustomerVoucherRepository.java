@@ -10,4 +10,5 @@ public interface CustomerVoucherRepository extends JpaRepository<CustomerVoucher
     List<CustomerVoucher> findAllByCustomerIdOrderByAssignedAtDesc(UUID customerId);
     Optional<CustomerVoucher> findByCustomerIdAndVoucherId(UUID customerId, UUID voucherId);
     Optional<CustomerVoucher> findByIdAndCustomerIdAndVoucherId(UUID id, UUID customerId, UUID voucherId);
+    boolean existsByVoucherId(UUID voucherId);
 }

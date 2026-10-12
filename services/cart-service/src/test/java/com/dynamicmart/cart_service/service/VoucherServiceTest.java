@@ -122,6 +122,20 @@ class VoucherServiceTest {
         verify(reservations, never()).findAllByOrderByCreatedAtDesc();
     }
 
+    @Test
+    void walletShowsEveryActiveVoucherIncludingCodeOnlyVouchers() {
+        UUID customer = UUID.randomUUID();
+        Voucher codeOnly = voucher(UUID.randomUUID());
+        when(wallets.findAllByCustomerIdOrderByAssignedAtDesc(customer)).thenReturn(List.of());
+        when(vouchers.findAllActive(any(Instant.class))).thenReturn(List.of(codeOnly));
+
+        var result = service.wallet(customer);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).code()).isEqualTo("SAVE10");
+        assertThat(result.get(0).eligible()).isTrue();
+    }
+
     private Voucher voucher(UUID id) {
         Instant now = Instant.now();
         Voucher value = new Voucher("SAVE10", "Save", null, "ORDER_DISCOUNT", "FIXED_AMOUNT", 10_000L,
