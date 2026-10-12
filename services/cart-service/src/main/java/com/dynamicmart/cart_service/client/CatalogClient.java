@@ -39,14 +39,14 @@ public class CatalogClient {
     public VariantSnapshot requirePurchasable(UUID productId, UUID variantId, int quantity) {
         VariantSnapshot snapshot = validate(List.of(new VariantQuantity(variantId, quantity))).stream()
                 .filter(value -> variantId.equals(value.variantId())).findFirst()
-                .orElseThrow(() -> new CartException(HttpStatus.UNPROCESSABLE_ENTITY,
+                .orElseThrow(() -> new CartException(HttpStatus.UNPROCESSABLE_CONTENT,
                         "CART_VARIANT_NOT_FOUND", "Variant không tồn tại."));
-        if (!productId.equals(snapshot.productId())) throw new CartException(HttpStatus.UNPROCESSABLE_ENTITY,
+        if (!productId.equals(snapshot.productId())) throw new CartException(HttpStatus.UNPROCESSABLE_CONTENT,
                 "CART_PRODUCT_VARIANT_MISMATCH", "Variant không thuộc Product đã chọn.");
         if (!snapshot.purchasable() || snapshot.availableQuantity() < quantity) {
             String message = snapshot.unavailableReason() == null || snapshot.unavailableReason().isBlank()
                     ? "Variant đã ngừng bán hoặc không đủ tồn kho." : snapshot.unavailableReason();
-            throw new CartException(HttpStatus.UNPROCESSABLE_ENTITY, "CART_VARIANT_UNAVAILABLE", message);
+            throw new CartException(HttpStatus.UNPROCESSABLE_CONTENT, "CART_VARIANT_UNAVAILABLE", message);
         }
         return snapshot;
     }
@@ -58,7 +58,7 @@ public class CatalogClient {
             if (response == null || response.data() == null || !productId.equals(response.data().id())) throw unavailable();
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 404) {
-                throw new CartException(HttpStatus.UNPROCESSABLE_ENTITY, "WISHLIST_PRODUCT_NOT_AVAILABLE",
+                throw new CartException(HttpStatus.UNPROCESSABLE_CONTENT, "WISHLIST_PRODUCT_NOT_AVAILABLE",
                         "Sản phẩm không tồn tại hoặc đã ngừng bán.");
             }
             throw unavailable();

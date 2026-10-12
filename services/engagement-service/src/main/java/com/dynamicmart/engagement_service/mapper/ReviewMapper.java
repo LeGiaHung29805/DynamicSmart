@@ -15,7 +15,7 @@ public class ReviewMapper {
     public ReviewResponse toResponse(Review review, List<ReviewImage> images) {
         return new ReviewResponse(review.getId(), review.getOrderItemId(), review.getOrderId(),
                 review.getCustomerId(), review.getProductId(), review.getVariantId(), review.getRating(),
-                review.getContent() == null ? null : HtmlUtils.htmlEscape(review.getContent()),
+                review.getContent(),
                 review.getStatus(), review.getHiddenReason(),
                 images.stream().map(ReviewImage::getImageUrl).toList(),
                 review.getCreatedAt(), review.getUpdatedAt());

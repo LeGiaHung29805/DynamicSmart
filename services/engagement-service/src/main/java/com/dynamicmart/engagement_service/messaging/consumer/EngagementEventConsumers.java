@@ -6,11 +6,13 @@ import com.dynamicmart.engagement_service.dto.event.OrderCompletedPayload;
 import com.dynamicmart.engagement_service.dto.event.PaymentSucceededPayload;
 import com.dynamicmart.engagement_service.service.ReportingService;
 import java.util.function.Consumer;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+@Profile("legacy-engagement-analytics")
 @Configuration
 public class EngagementEventConsumers {
     @Bean

@@ -24,7 +24,7 @@ public class IdentityAddressClient {
             return result;
         } catch (RestClientException exception) { throw invalid(); }
     }
-    private CartException invalid() { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, "CHECKOUT_ADDRESS_INVALID", "Địa chỉ không tồn tại, đã ngừng dùng hoặc không thuộc khách hàng."); }
+    private CartException invalid() { return new CartException(HttpStatus.UNPROCESSABLE_CONTENT, "CHECKOUT_ADDRESS_INVALID", "Địa chỉ không tồn tại, đã ngừng dùng hoặc không thuộc khách hàng."); }
     public record AddressSnapshot(UUID id, String recipientName, String phone, String addressLine,
                                   int provinceId, int wardId, String provinceName, String wardName,
                                   boolean defaultAddress, String status, java.time.Instant updatedAt) { }

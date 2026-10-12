@@ -18,13 +18,13 @@ const adminLinks = [
 export function AdminNavigation() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Điều hướng quản trị" className="mt-8 flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible">
+    <nav aria-label="Điều hướng quản trị" className="mt-8 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-col md:overflow-visible">
       {adminLinks.map(({ label, href, icon: Icon }) => {
         const active = pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
         return (
           <Link
             aria-current={active ? "page" : undefined}
-            className={`inline-flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${active ? "bg-white text-emerald-950 shadow-sm" : "text-emerald-50/75 hover:bg-white/10 hover:text-white"}`}
+            className={`inline-flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${active ? "order-first bg-white text-emerald-950 shadow-sm md:order-none" : "text-emerald-50/75 hover:bg-white/10 hover:text-white"}`}
             href={href}
             key={href}
           >

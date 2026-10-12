@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class HttpInventoryReservationGateway implements InventoryReservationGateway {
@@ -28,7 +29,7 @@ public class HttpInventoryReservationGateway implements InventoryReservationGate
     @Override public void release(ReleaseInventoryRequest request) {
         ReservationData data = post("/api/v1/catalog/internal/inventory/reservations/{id}/release",
                 request.operationKey(), new ReleaseBody(request.reason()), request.reservationId());
-        requireStatus(data, request.reservationId(), "RELEASED");
+        requireReleased(data, request.reservationId());
     }
     private ReservationData post(String uri, UUID operationKey, Object body, Object... variables) {
         try {
@@ -42,6 +43,8 @@ public class HttpInventoryReservationGateway implements InventoryReservationGate
             return response.data();
         } catch (OrderException exception) {
             throw exception;
+        } catch (RestClientResponseException exception) {
+            throw translateCatalogRejection(exception);
         } catch (RestClientException exception) {
             throw unavailable();
         }
@@ -51,6 +54,27 @@ public class HttpInventoryReservationGateway implements InventoryReservationGate
             throw contractInvalid();
         }
     }
+    private void requireReleased(ReservationData data, UUID expectedReservationId) {
+        if (!expectedReservationId.equals(data.reservationId())
+                || !("RELEASED".equals(data.status()) || "EXPIRED".equals(data.status()))) {
+            throw contractInvalid();
+        }
+    }
+    private OrderException translateCatalogRejection(RestClientResponseException exception) {
+        HttpStatus status = HttpStatus.resolve(exception.getStatusCode().value());
+        CatalogError error = exception.getResponseBodyAs(CatalogError.class);
+        boolean hasErrorBody = error != null && error.code() != null && !error.code().isBlank()
+                && error.message() != null && !error.message().isBlank();
+        if (status != null && status.is4xxClientError() && status != HttpStatus.UNAUTHORIZED
+                && status != HttpStatus.FORBIDDEN && hasErrorBody) {
+            return new OrderException(status, error.code(), error.message());
+        }
+        if (status != null && (status == HttpStatus.BAD_GATEWAY || status == HttpStatus.SERVICE_UNAVAILABLE)
+                && hasErrorBody) {
+            return new OrderException(status, error.code(), error.message());
+        }
+        return unavailable();
+    }
     private OrderException unavailable() { return new OrderException(HttpStatus.SERVICE_UNAVAILABLE, "CATALOG_RESERVATION_UNAVAILABLE", "Không thể giữ hoặc trả tồn kho Catalog."); }
     private OrderException contractInvalid() { return new OrderException(HttpStatus.BAD_GATEWAY, "CATALOG_RESERVATION_CONTRACT_INVALID", "Catalog Service trả dữ liệu reservation không hợp lệ."); }
     private record CatalogReserve(UUID checkoutSessionId, java.time.Instant expiresAt, List<CatalogLine> items) { }
@@ -59,4 +83,5 @@ public class HttpInventoryReservationGateway implements InventoryReservationGate
     private record ReservationData(UUID reservationId, String status) { }
     private record CommitBody(UUID orderId) { }
     private record ReleaseBody(String reason) { }
+    private record CatalogError(String code, String message) { }
 }

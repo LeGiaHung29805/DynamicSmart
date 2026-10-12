@@ -16,6 +16,7 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, UU
     Optional<CustomerOrder> findByIdAndCustomerId(UUID id, UUID customerId);
     Optional<CustomerOrder> findByCheckoutSessionId(UUID checkoutSessionId);
     Page<CustomerOrder> findAllByCustomerId(UUID customerId, Pageable pageable);
+    java.util.List<CustomerOrder> findAllByCustomerIdAndStatus(UUID customerId, com.dynamicmart.order_service.entity.OrderStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select customerOrder from CustomerOrder customerOrder where customerOrder.id = :id")

@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient, refreshAuthenticatedSession } from "@/lib/api/client";
 import { isCatalogStandaloneDemo } from "@/lib/api/config";
 import { setAnonymousSession, setAuthenticatedSession, type SessionUser } from "@/lib/auth/session";
 
@@ -39,7 +39,7 @@ export function register(input: RegisterInput) {
 }
 
 export function refreshSession() {
-  return saveSession(apiClient.post<AuthResponse>(authPath("refresh")));
+  return refreshAuthenticatedSession();
 }
 
 export async function logout() {

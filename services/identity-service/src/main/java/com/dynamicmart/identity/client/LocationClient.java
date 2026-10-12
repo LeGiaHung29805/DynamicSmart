@@ -33,7 +33,7 @@ public class LocationClient {
             String wardName = findName(wards, wardId);
             return new ResolvedLocation(provinceName, wardName);
         } catch (RestClientException exception) {
-            throw new IdentityException(HttpStatus.UNPROCESSABLE_ENTITY, "ADDRESS_LOCATION_INVALID",
+            throw new IdentityException(HttpStatus.UNPROCESSABLE_CONTENT, "ADDRESS_LOCATION_INVALID",
                     "Tỉnh/Thành phố hoặc Phường/Xã không hợp lệ.");
         }
     }
@@ -43,7 +43,7 @@ public class LocationClient {
         return Arrays.stream(values).filter(value -> value.id() == id).map(Location::name).findFirst().orElseThrow(this::invalidLocation);
     }
     private IdentityException invalidLocation() {
-        return new IdentityException(HttpStatus.UNPROCESSABLE_ENTITY, "ADDRESS_LOCATION_INVALID", "Địa giới đã chọn không hợp lệ.");
+        return new IdentityException(HttpStatus.UNPROCESSABLE_CONTENT, "ADDRESS_LOCATION_INVALID", "Địa giới đã chọn không hợp lệ.");
     }
     private record Validation(boolean valid, int provinceId, int wardId) { }
     private record Location(int id, String name) { }

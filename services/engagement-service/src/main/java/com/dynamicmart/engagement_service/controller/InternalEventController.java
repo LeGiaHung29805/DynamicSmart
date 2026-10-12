@@ -7,12 +7,14 @@ import com.dynamicmart.engagement_service.dto.event.PaymentSucceededPayload;
 import com.dynamicmart.engagement_service.dto.response.ApiResponse;
 import com.dynamicmart.engagement_service.service.InternalApiGuard;
 import com.dynamicmart.engagement_service.service.ReportingService;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Profile("legacy-engagement-analytics")
 @RestController
 @RequestMapping("/api/v1/engagement/internal/events")
 public class InternalEventController {

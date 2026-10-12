@@ -43,7 +43,7 @@ public class VnPayGateway {
     }
 
     public boolean hasValidSignature(Map<String, String> request) {
-        if (!configured()) return false;
+        if (!isConfigured()) return false;
         String received = request.get("vnp_SecureHash");
         if (received == null || received.isBlank()) return false;
         Map<String, String> fields = new TreeMap<>(request);
@@ -67,8 +67,8 @@ public class VnPayGateway {
         }
     }
 
-    private boolean configured() { return properties.tmnCode() != null && !properties.tmnCode().isBlank() && properties.paymentUrl() != null && !properties.paymentUrl().isBlank() && properties.returnUrl() != null && !properties.returnUrl().isBlank() && properties.hashSecret() != null && !properties.hashSecret().isBlank(); }
-    private void requireConfigured() { if (!configured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "VNPAY_NOT_CONFIGURED", "VNPay chưa được cấu hình cho môi trường này."); }
+    public boolean isConfigured() { return properties.tmnCode() != null && !properties.tmnCode().isBlank() && properties.paymentUrl() != null && !properties.paymentUrl().isBlank() && properties.returnUrl() != null && !properties.returnUrl().isBlank() && properties.hashSecret() != null && !properties.hashSecret().isBlank(); }
+    private void requireConfigured() { if (!isConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "VNPAY_NOT_CONFIGURED", "VNPay chưa được cấu hình cho môi trường này."); }
     private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20"); }
     private boolean constantTimeEquals(String left, String right) { return java.security.MessageDigest.isEqual(left.getBytes(StandardCharsets.UTF_8), right.toLowerCase().getBytes(StandardCharsets.UTF_8)); }
 }

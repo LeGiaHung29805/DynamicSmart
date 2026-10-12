@@ -43,7 +43,7 @@ public class GhnClient {
         int width = items.stream().mapToInt(i -> i.widthCm()).max().orElseThrow();
         long totalHeight = items.stream().mapToLong(i -> (long) i.quantity() * i.heightCm()).sum();
         if (totalWeight > Integer.MAX_VALUE || totalHeight > Integer.MAX_VALUE) {
-            throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_PACKAGE_SIZE_INVALID", "Khối lượng hoặc kích thước kiện hàng vượt giới hạn hỗ trợ.");
+            throw new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "GHN_PACKAGE_SIZE_INVALID", "Khối lượng hoặc kích thước kiện hàng vượt giới hạn hỗ trợ.");
         }
         int weight = Math.toIntExact(totalWeight);
         int height = Math.toIntExact(totalHeight);
@@ -68,7 +68,7 @@ public class GhnClient {
                 throw unavailable("GHN trả về dữ liệu báo giá không hợp lệ.");
             }
             JsonNode result = data.path("data");
-            return new Rate(result.path("total").asLong(-1), result.path("service_id").asInt(2), result.path("service_name").asText("GHN tiêu chuẩn"), result.path("expected_delivery_time").asText("Theo lịch GHN"));
+            return new Rate(result.path("total").asLong(-1), result.path("service_id").asInt(2), result.path("service_name").asString("GHN tiêu chuẩn"), result.path("expected_delivery_time").asString("Theo lịch GHN"));
         } catch (RestClientResponseException exception) {
             log.warn("GHN fee request rejected with HTTP {}: {}", exception.getStatusCode().value(), safeBody(exception.getResponseBodyAsString()));
             throw unavailable("GHN từ chối báo giá (HTTP " + exception.getStatusCode().value() + ").");
@@ -81,6 +81,11 @@ public class GhnClient {
     public JsonNode provinces() { return get("/shiip/public-api/master-data/province", Map.of()); }
     public JsonNode districts(int provinceId) { return get("/shiip/public-api/master-data/district", Map.of("province_id", provinceId)); }
     public JsonNode wards(int districtId) { return get("/shiip/public-api/master-data/ward", Map.of("district_id", districtId)); }
+
+    public boolean isCatalogConfigured() {
+        return properties.baseUrl() != null && !properties.baseUrl().isBlank()
+                && properties.token() != null && !properties.token().isBlank();
+    }
 
     private JsonNode get(String path, Map<String, Object> query) {
         requireCatalogConfigured();
@@ -99,7 +104,7 @@ public class GhnClient {
             throw unavailable("Không thể kết nối tới danh mục địa giới GHN.");
         }
     }
-    private void requireCatalogConfigured() { if (properties.baseUrl() == null || properties.baseUrl().isBlank() || properties.token() == null || properties.token().isBlank()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "GHN chưa được cấu hình cho môi trường này."); }
+    private void requireCatalogConfigured() { if (!isCatalogConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "GHN chưa được cấu hình cho môi trường này."); }
     private void requireQuoteConfigured() { requireCatalogConfigured(); if (properties.shopId() == null || properties.shopId().isBlank() || properties.fromDistrictId() == null || properties.fromWardCode() == null || properties.fromWardCode().isBlank()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "GHN_NOT_CONFIGURED", "Kho gửi GHN chưa được cấu hình cho môi trường này."); }
     private PaymentException unavailable() { return unavailable("GHN không phản hồi báo giá. Vui lòng thử lại."); }
     private PaymentException unavailable(String message) { return new PaymentException(HttpStatus.BAD_GATEWAY, "GHN_UNAVAILABLE", message); }

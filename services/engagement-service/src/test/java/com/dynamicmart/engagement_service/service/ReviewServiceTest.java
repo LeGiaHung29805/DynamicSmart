@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.util.HtmlUtils;
 
 class ReviewServiceTest {
 
@@ -77,7 +76,7 @@ class ReviewServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.rating()).isEqualTo((short) 5);
-        assertThat(response.content()).isEqualTo(HtmlUtils.htmlEscape("Sản phẩm rất đẹp và chất lượng!"));
+        assertThat(response.content()).isEqualTo("Sản phẩm rất đẹp và chất lượng!");
         assertThat(response.status()).isEqualTo("VISIBLE");
         assertThat(response.orderItemId()).isEqualTo(orderItemId);
         assertThat(response.orderId()).isEqualTo(orderId);
@@ -127,7 +126,7 @@ class ReviewServiceTest {
 
         when(reviews.existsByOrderItemId(orderItemId)).thenReturn(false);
         when(eligibilityClient.requireEligible(customerId, orderItemId)).thenThrow(
-                new EngagementException(HttpStatus.UNPROCESSABLE_ENTITY, "REVIEW_NOT_ELIGIBLE",
+                new EngagementException(HttpStatus.UNPROCESSABLE_CONTENT, "REVIEW_NOT_ELIGIBLE",
                         "Đơn hàng chưa hoàn tất hoặc bạn không sở hữu đơn hàng này.")
         );
 
@@ -142,7 +141,7 @@ class ReviewServiceTest {
                 .isInstanceOf(EngagementException.class)
                 .satisfies(ex -> {
                     EngagementException ee = (EngagementException) ex;
-                    assertThat(ee.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(ee.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
                     assertThat(ee.getCode()).isEqualTo("REVIEW_NOT_ELIGIBLE");
                 });
 
@@ -178,7 +177,7 @@ class ReviewServiceTest {
 
         ReviewResponse response = service.create(customerId, request);
 
-        assertThat(response.content()).isEqualTo(HtmlUtils.htmlEscape("Nội dung có khoảng trắng thừa hai đầu"));
+        assertThat(response.content()).isEqualTo("Nội dung có khoảng trắng thừa hai đầu");
         assertThat(response.imageUrls()).hasSize(5);
         assertThat(response.imageUrls()).containsExactly(
                 "https://cdn.example.com/1.jpg",

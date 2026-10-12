@@ -27,7 +27,11 @@ public class SessionValidationFilter extends OncePerRequestFilter {
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.startsWith("/api/v1/auth/") || path.equals("/actuator/health") ||
-                path.equals("/api/v1/payments/vnpay/ipn") || path.startsWith("/api/v1/cart/promotions/prices/");
+                path.equals("/api/v1/payments/vnpay/ipn") ||
+                path.equals("/api/v1/payments/zalopay/callback") ||
+                path.equals("/api/v1/payments/payos/webhook") ||
+                path.equals("/api/v1/payments/sepay/webhook") ||
+                path.startsWith("/api/v1/cart/promotions/prices/");
     }
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {

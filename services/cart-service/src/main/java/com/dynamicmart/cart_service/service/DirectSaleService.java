@@ -141,5 +141,5 @@ public class DirectSaleService {
         return get(audit.getTargetId());
     }
     private DirectSaleResponse response(DirectPricePromotion p) { return new DirectSaleResponse(p.getId(), p.getName(), p.getDescription(), p.getStatus(), p.getDiscountMethod(), p.getFixedDiscountVnd(), p.getDiscountRateBps(), p.getMaxDiscountVnd(), p.getStartsAt(), p.getEndsAt(), Set.copyOf(p.getVariantIds()), p.getUpdatedAt()); }
-    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, code, message); }
+    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_CONTENT, code, message); }
 }

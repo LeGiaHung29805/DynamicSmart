@@ -40,18 +40,18 @@ public class ZaloPayGateway {
         form.add("mac", HmacSigner.sha256(properties.key1(), data));
         try {
             JsonNode response = restClient.post().uri(properties.createUrl()).contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve().body(JsonNode.class);
-            String url = response == null ? "" : response.path("order_url").asText("");
+            String url = response == null ? "" : response.path("order_url").asString("");
             if (url.isBlank()) throw unavailable();
             return new PaymentGatewayRouter.CreatedPayment(reference, url);
         } catch (RestClientException exception) { throw unavailable(); }
     }
 
     public boolean validCallback(String data, String mac) {
-        return configured() && HmacSigner.equalsHex(HmacSigner.sha256(properties.key2(), data), mac);
+        return isConfigured() && HmacSigner.equalsHex(HmacSigner.sha256(properties.key2(), data), mac);
     }
 
-    private boolean configured() { return present(properties.appId()) && present(properties.key1()) && present(properties.key2()) && present(properties.createUrl()) && present(properties.callbackUrl()) && present(properties.returnUrl()); }
-    private void requireConfigured() { if (!configured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "ZALOPAY_NOT_CONFIGURED", "ZaloPay chưa được cấu hình."); }
+    public boolean isConfigured() { return present(properties.appId()) && present(properties.key1()) && present(properties.key2()) && present(properties.createUrl()) && present(properties.callbackUrl()) && present(properties.returnUrl()); }
+    private void requireConfigured() { if (!isConfigured()) throw new PaymentException(HttpStatus.SERVICE_UNAVAILABLE, "ZALOPAY_NOT_CONFIGURED", "ZaloPay chưa được cấu hình."); }
     private boolean present(String value) { return value != null && !value.isBlank(); }
     private PaymentException unavailable() { return new PaymentException(HttpStatus.BAD_GATEWAY, "ZALOPAY_UNAVAILABLE", "ZaloPay không phản hồi. Vui lòng thử lại."); }
 }

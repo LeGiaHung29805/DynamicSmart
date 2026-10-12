@@ -14,6 +14,9 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
+import type { ProductDetail } from "@/features/catalog/types";
+import { apiClient } from "@/lib/api/client";
+import { useAuthSession } from "@/lib/auth/session";
 import { engagementApi } from "../api/engagement.api";
 import type { BestSellerItem, DailySalesMetric } from "../types/engagement.types";
 import { money } from "./EngagementShared";
@@ -29,6 +32,7 @@ function getInitialDates() {
 }
 
 export function AdminReportDashboard() {
+  const session = useAuthSession();
   const initialDates = getInitialDates();
   const [fromDate, setFromDate] = useState(initialDates.from);
   const [toDate, setToDate] = useState(initialDates.to);
@@ -38,9 +42,13 @@ export function AdminReportDashboard() {
 
   const [salesMetrics, setSalesMetrics] = useState<DailySalesMetric[]>([]);
   const [bestSellers, setBestSellers] = useState<BestSellerItem[]>([]);
+  const [productNames, setProductNames] = useState<Record<string, string>>({});
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
+    if (session.status !== "authenticated" || session.user.role !== "ADMIN") {
+      return;
+    }
     let ignore = false;
     async function load() {
       try {
@@ -51,15 +59,31 @@ export function AdminReportDashboard() {
         ]);
 
         if (!ignore) {
-          if (salesData && salesData.length > 0) {
-            setSalesMetrics(salesData);
-            setBestSellers(bestSellersData || []);
-            setIsLive(true);
-          } else {
-            setSalesMetrics([]);
-            setBestSellers(bestSellersData || []);
-            setIsLive(true);
-          }
+          setSalesMetrics(salesData || []);
+          const rawBestSellers = bestSellersData || [];
+          setBestSellers(rawBestSellers);
+          setIsLive(true);
+
+          // Tải tên sản phẩm thật từ Catalog Service
+          const uniqueIds = Array.from(new Set(rawBestSellers.map((b) => b.productId)));
+          Promise.all(
+            uniqueIds.map(async (pId) => {
+              try {
+                const prod = await apiClient.get<ProductDetail>(`/api/v1/catalog/products/id/${pId}`);
+                return { id: pId, name: prod?.name };
+              } catch {
+                return { id: pId, name: undefined };
+              }
+            })
+          ).then((results) => {
+            if (!ignore) {
+              const nameMap: Record<string, string> = {};
+              results.forEach((r) => {
+                if (r.name) nameMap[r.id] = r.name;
+              });
+              setProductNames(nameMap);
+            }
+          });
         }
       } catch {
         if (!ignore) {
@@ -79,7 +103,7 @@ export function AdminReportDashboard() {
     return () => {
       ignore = true;
     };
-  }, [fromDate, toDate, refreshTrigger]);
+  }, [session.status, session.user?.role, fromDate, toDate, refreshTrigger]);
 
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,17 +113,17 @@ export function AdminReportDashboard() {
 
   // Tính toán số liệu thống kê
   const displaySales = salesMetrics.map((item) => ({
-        date: item.metricDate,
-        revenue: item.netRevenueVnd,
-        orders: item.completedOrderCount,
-      }));
+    date: item.metricDate,
+    revenue: item.netRevenueVnd,
+    orders: item.completedOrderCount,
+  }));
 
   const displayBestSellers = bestSellers.map((item) => ({
-        product: `Sản phẩm #${item.productId.slice(0, 8)}`,
-        variant: item.variantId ? `Biến thể #${item.variantId.slice(0, 6)}` : "Mặc định",
-        quantity: item.quantitySold,
-        revenue: item.netItemSalesVnd || item.grossSalesVnd,
-      }));
+    product: productNames[item.productId] || `Sản phẩm #${item.productId.slice(0, 8)}`,
+    variant: item.variantId ? `Biến thể #${item.variantId.slice(0, 6)}` : "Mặc định",
+    quantity: item.quantitySold,
+    revenue: item.netItemSalesVnd || item.grossSalesVnd,
+  }));
 
   const totalRevenue = displaySales.reduce((sum, item) => sum + item.revenue, 0);
   const totalOrders = displaySales.reduce((sum, item) => sum + item.orders, 0);

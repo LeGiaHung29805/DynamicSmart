@@ -27,7 +27,7 @@ class CartApplicationServiceTest {
         when(carts.findByCustomerIdAndStatus(customer, "ACTIVE")).thenReturn(Optional.of(cart));
         when(items.findByCartIdAndVariantId(cart.getId(), variant)).thenReturn(Optional.empty());
         when(catalog.requirePurchasable(product, variant, 2)).thenThrow(new CartException(
-                org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "CART_VARIANT_UNAVAILABLE", "Hết hàng"));
+                org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT, "CART_VARIANT_UNAVAILABLE", "Hết hàng"));
 
         assertThatThrownBy(() -> service.add(customer, new AddCartItemRequest(product, variant, 2)))
                 .isInstanceOf(CartException.class).hasMessageContaining("Hết hàng");

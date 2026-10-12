@@ -44,7 +44,7 @@ public class InventoryOperationIdempotency {
             JsonNode envelope = log.getResultPayload();
             JsonNode savedHash = envelope.get("requestHash");
             JsonNode response = envelope.get("response");
-            if (savedHash == null || response == null || !requestHash.equals(savedHash.asText())) {
+            if (savedHash == null || response == null || !requestHash.equals(savedHash.asString())) {
                 throw new CatalogException(HttpStatus.CONFLICT, "IDEMPOTENCY_PAYLOAD_MISMATCH",
                         "Idempotency-Key đã được dùng với nội dung yêu cầu khác.");
             }

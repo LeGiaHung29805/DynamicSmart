@@ -6,6 +6,8 @@ import com.dynamicmart.payment_service.client.VnPayGateway;
 import com.dynamicmart.payment_service.client.ZaloPayGateway;
 import com.dynamicmart.payment_service.exception.PaymentException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -33,5 +35,25 @@ public class PaymentGatewayRouter {
             case "BANK_QR" -> sePay.create(paymentId, amountVnd, attemptNo);
             default -> throw new PaymentException(HttpStatus.CONFLICT, "PAYMENT_METHOD_NOT_ONLINE", "Phương thức không hỗ trợ tạo phiên thanh toán online.");
         };
+    }
+
+    public boolean isAvailable(String method) {
+        return switch (method) {
+            case "COD" -> true;
+            case "VNPAY" -> vnPay.isConfigured();
+            case "ZALOPAY" -> zaloPay.isConfigured();
+            case "PAYOS" -> payOs.isConfigured();
+            case "BANK_QR" -> sePay.isConfigured();
+            default -> false;
+        };
+    }
+
+    public List<String> availableMethods() {
+        List<String> methods = new ArrayList<>();
+        methods.add("COD");
+        for (String method : List.of("VNPAY", "ZALOPAY", "PAYOS", "BANK_QR")) {
+            if (isAvailable(method)) methods.add(method);
+        }
+        return List.copyOf(methods);
     }
 }

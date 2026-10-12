@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/components/ui/Toast";
 import { adjustInventory, listInventory, listInventoryAdjustments } from "../../api/admin-catalog.api";
 import type { AdminInventoryItem, InventoryAdjustment } from "../../types";
+import { catalogStatusLabel } from "../../utils/catalog-format";
 import { errorMessage, fieldClass, Label, textAreaClass } from "./form-utils";
 
 type StockFilter = "ALL" | "LOW" | "OUT";
@@ -285,7 +286,7 @@ export function AdminInventoryPanel() {
                     <td className="px-4 py-3 text-right font-black tabular-nums text-emerald-800">{item.availableQuantity}</td>
                     <td className="px-4 py-3"><StatusBadge label={stockState.label} tone={stockState.tone} /></td>
                     <td className="px-4 py-3">
-                      <StatusBadge label={item.variantStatus} tone={item.variantStatus === "ACTIVE" ? "success" : "neutral"} />
+                      <StatusBadge label={catalogStatusLabel(item.variantStatus)} tone={item.variantStatus === "ACTIVE" ? "success" : "neutral"} />
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button

@@ -43,6 +43,12 @@ export function getProducts(query: ProductQuery = {}) {
   return serverApiRequest<PageResponse<ProductSummary>>(`/api/v1/catalog/products?${params.toString()}`);
 }
 
-export function getProductDetail(slug: string) {
-  return serverApiRequest<ProductDetail>(`/api/v1/catalog/products/${encodeURIComponent(slug)}`);
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function getProductDetail(identifier: string) {
+  const isUuid = UUID_REGEX.test(identifier.trim());
+  const endpoint = isUuid
+    ? `/api/v1/catalog/products/id/${encodeURIComponent(identifier.trim())}`
+    : `/api/v1/catalog/products/${encodeURIComponent(identifier.trim())}`;
+  return serverApiRequest<ProductDetail>(endpoint);
 }

@@ -37,8 +37,8 @@ public class ProviderCallbackService {
     @Transactional
     public Map<String, Object> zaloPay(Map<String, Object> body) {
         String data = text(body.get("data")); String mac = text(body.get("mac"));
-        JsonNode payload = parse(data); String reference = payload.path("app_trans_id").asText("");
-        long amount = payload.path("amount").asLong(-1); String transaction = payload.path("zp_trans_id").asText("");
+        JsonNode payload = parse(data); String reference = payload.path("app_trans_id").asString("");
+        long amount = payload.path("amount").asLong(-1); String transaction = payload.path("zp_trans_id").asString("");
         Optional<PaymentAttempt> attempt = providerAttempt(reference, "ZALOPAY");
         boolean signatureValid = zaloPay.validCallback(data, mac); boolean amountValid = validAmount(attempt, amount);
         String result = applySuccess(reference, transaction, amount, signatureValid, amountValid);
@@ -49,11 +49,11 @@ public class ProviderCallbackService {
 
     @Transactional
     public Map<String, Object> payOs(JsonNode body) {
-        JsonNode data = body == null ? null : body.path("data"); String signature = body == null ? "" : body.path("signature").asText("");
-        String reference = data == null ? "" : data.path("orderCode").asText(""); long amount = data == null ? -1 : data.path("amount").asLong(-1);
-        String transaction = data == null ? "" : data.path("reference").asText(""); Optional<PaymentAttempt> attempt = providerAttempt(reference, "PAYOS");
+        JsonNode data = body == null ? null : body.path("data"); String signature = body == null ? "" : body.path("signature").asString("");
+        String reference = data == null ? "" : data.path("orderCode").asString(""); long amount = data == null ? -1 : data.path("amount").asLong(-1);
+        String transaction = data == null ? "" : data.path("reference").asString(""); Optional<PaymentAttempt> attempt = providerAttempt(reference, "PAYOS");
         boolean signatureValid = payOs.validWebhook(data, signature); boolean amountValid = validAmount(attempt, amount);
-        boolean success = body != null && body.path("success").asBoolean(false) && "00".equals(data.path("code").asText(""));
+        boolean success = body != null && body.path("success").asBoolean(false) && "00".equals(data.path("code").asString(""));
         String result = success ? applySuccess(reference, transaction, amount, signatureValid, amountValid) : "REJECTED";
         audit("PAYOS", attempt, transaction, signatureValid, amountValid, result, Map.of("orderCode", reference, "amount", amount, "reference", transaction));
         return Map.of("success", "APPLIED".equals(result) || "DUPLICATE".equals(result));
@@ -61,10 +61,10 @@ public class ProviderCallbackService {
 
     @Transactional
     public Map<String, Object> sePay(String rawBody, String timestamp, String signature) {
-        JsonNode data = parse(rawBody); String reference = data.path("code").asText(""); long amount = data.path("transferAmount").asLong(-1);
-        String transaction = data.path("id").asText(data.path("referenceCode").asText("")); Optional<PaymentAttempt> attempt = providerAttempt(reference, "BANK_QR");
+        JsonNode data = parse(rawBody); String reference = data.path("code").asString(""); long amount = data.path("transferAmount").asLong(-1);
+        String transaction = data.path("id").asString(data.path("referenceCode").asString("")); Optional<PaymentAttempt> attempt = providerAttempt(reference, "BANK_QR");
         boolean signatureValid = sePay.validWebhook(rawBody, timestamp, signature); boolean amountValid = validAmount(attempt, amount);
-        boolean incoming = "in".equalsIgnoreCase(data.path("transferType").asText(""));
+        boolean incoming = "in".equalsIgnoreCase(data.path("transferType").asString(""));
         String result = incoming ? applySuccess(reference, transaction, amount, signatureValid, amountValid) : "REJECTED";
         audit("SEPAY", attempt, transaction, signatureValid, amountValid, result, Map.of("code", reference, "amount", amount, "transactionId", transaction));
         return Map.of("success", "APPLIED".equals(result) || "DUPLICATE".equals(result));

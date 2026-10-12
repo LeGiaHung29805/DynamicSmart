@@ -9,7 +9,6 @@ import com.dynamicmart.engagement_service.dto.response.DailySalesMetricResponse;
 import com.dynamicmart.engagement_service.entity.DailyProductMetric;
 import com.dynamicmart.engagement_service.entity.DailyProductMetricId;
 import com.dynamicmart.engagement_service.entity.DailySalesMetric;
-import com.dynamicmart.engagement_service.entity.ProcessedEvent;
 import com.dynamicmart.engagement_service.exception.EngagementException;
 import com.dynamicmart.engagement_service.mapper.ReportMapper;
 import com.dynamicmart.engagement_service.repository.DailyProductMetricRepository;
@@ -20,7 +19,6 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -118,26 +116,21 @@ public class ReportingService {
 
     @Transactional(readOnly = true)
     public List<DailySalesMetricResponse> sales(LocalDate from, LocalDate to) {
+        validateRange(from, to);
         return dailySales.findAllByMetricDateBetweenOrderByMetricDateAsc(from, to)
                 .stream().map(mapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<BestSellerResponse> bestSellers(LocalDate from, LocalDate to, int limit) {
+        validateRange(from, to);
         return dailyProducts.bestSellers(from, to, PageRequest.of(0, limit));
     }
 
     private boolean markProcessed(EventEnvelope<?> event) {
-        if (processedEvents.existsById(event.eventId())) {
-            return false;
-        }
-        try {
-            processedEvents.saveAndFlush(new ProcessedEvent(event.eventId(), event.eventType(),
-                    event.producer(), event.correlationId(), Instant.now()));
-            return true;
-        } catch (DataIntegrityViolationException exception) {
-            return false;
-        }
+        return processedEvents.insertIfAbsent(
+                event.eventId(), event.eventType(), event.producer(),
+                Instant.now(), event.correlationId()) == 1;
     }
 
     private void requireEvent(EventEnvelope<?> event, String type) {
@@ -148,6 +141,13 @@ public class ReportingService {
         if (!type.equals(event.eventType())) {
             throw new EngagementException(HttpStatus.BAD_REQUEST, "EVENT_TYPE_INVALID",
                     "Event type không đúng endpoint xử lý.");
+        }
+    }
+
+    private void validateRange(LocalDate from, LocalDate to) {
+        if (from.isAfter(to)) {
+            throw new EngagementException(HttpStatus.BAD_REQUEST, "REPORT_DATE_RANGE_INVALID",
+                    "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
         }
     }
 

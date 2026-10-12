@@ -39,7 +39,7 @@ public class ShippingQuoteService {
         var existing = quotes.findByRequestFingerprintAndCustomerIdAndExpiresAtAfterAndUsedAtIsNull(fingerprint, request.customerId(), now);
         if (existing.isPresent()) return response(existing.get());
         GhnClient.Rate rate = ghn.quote(location.districtId(), location.wardCode(), request.items());
-        if (rate.feeVnd() < 0 || request.shippingDiscountVnd() > rate.feeVnd()) throw new PaymentException(HttpStatus.UNPROCESSABLE_ENTITY, "GHN_RATE_INVALID", "GHN trả về phí giao hàng không hợp lệ.");
+        if (rate.feeVnd() < 0 || request.shippingDiscountVnd() > rate.feeVnd()) throw new PaymentException(HttpStatus.UNPROCESSABLE_CONTENT, "GHN_RATE_INVALID", "GHN trả về phí giao hàng không hợp lệ.");
         ShippingQuote quote = new ShippingQuote(); quote.setId(UUID.randomUUID()); quote.setCustomerId(request.customerId()); quote.setProvinceId(request.provinceId()); quote.setDistrictId(location.districtId()); quote.setWardId(request.wardId()); quote.setItemsFingerprint(itemsFingerprint(request)); quote.setRequestFingerprint(fingerprint); quote.setFeeVnd(rate.feeVnd()); quote.setShippingDiscountVnd(request.shippingDiscountVnd()); quote.setServiceId(rate.serviceId()); quote.setServiceName(rate.serviceName()); quote.setEtaText(rate.eta()); quote.setExpiresAt(now.plus(Duration.ofMinutes(properties.quoteTtlMinutes() == null ? 15 : properties.quoteTtlMinutes()))); quote.setCreatedAt(now); quotes.save(quote); return response(quote);
     }
 

@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -41,6 +42,7 @@ class PaymentServiceTest {
         attempts = mock(PaymentAttemptRepository.class);
         outbox = mock(OutboxEventRepository.class);
         gateways = mock(PaymentGatewayRouter.class);
+        when(gateways.isAvailable(anyString())).thenReturn(true);
         service = new PaymentService(payments, attempts, outbox, gateways, new ObjectMapper());
     }
 
@@ -52,6 +54,19 @@ class PaymentServiceTest {
         PaymentException error = assertThrows(PaymentException.class, () -> service.createForOrder(request));
 
         assertEquals("PREPAID_COD_FORBIDDEN", error.getCode());
+        verify(payments, never()).save(any());
+    }
+
+    @Test
+    void rejectsOnlineMethodThatIsNotConfigured() {
+        var request = new OrderPaymentContextRequest(UUID.randomUUID(), UUID.randomUUID(), 100_000L,
+                OrderPaymentContextRequest.PaymentTiming.PREPAID,
+                OrderPaymentContextRequest.PaymentMethod.PAYOS, UUID.randomUUID());
+        when(gateways.isAvailable("PAYOS")).thenReturn(false);
+
+        PaymentException error = assertThrows(PaymentException.class, () -> service.createForOrder(request));
+
+        assertEquals("PAYMENT_METHOD_NOT_CONFIGURED", error.getCode());
         verify(payments, never()).save(any());
     }
 

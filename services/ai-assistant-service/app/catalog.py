@@ -29,9 +29,21 @@ class DynamicMartCatalogClient:
     _PRODUCT_TERMS = (
         "sản phẩm", "điện thoại", "laptop", "máy tính", "tablet", "tai nghe",
         "đồng hồ", "tivi", "phone", "còn hàng", "giảm giá", "khuyến mãi", "giá bao nhiêu",
+        "đồ văn phòng", "hàng văn phòng", "hàng về", "hàng cho", "hàng dùng cho",
     )
-    _PRODUCT_ACTIONS = ("tìm", "cho tôi xem", "gợi ý", "có mẫu", "có loại", "có bán")
+    _PRODUCT_ACTIONS = (
+        "tìm", "cho tôi xem", "gợi ý", "có mẫu", "có loại", "có bán",
+        "các hàng", "những hàng", "các mặt hàng", "những mặt hàng",
+        "các đồ", "những đồ",
+    )
     _STOP_PHRASES = (
+        "các mặt hàng dùng cho", "những mặt hàng dùng cho",
+        "các mặt hàng về", "những mặt hàng về",
+        "các mặt hàng cho", "những mặt hàng cho",
+        "các hàng dùng cho", "những hàng dùng cho",
+        "các hàng về", "những hàng về", "các hàng cho", "những hàng cho",
+        "các đồ dùng cho", "những đồ dùng cho",
+        "các đồ về", "những đồ về", "các đồ cho", "những đồ cho",
         "cho tôi xem", "cho tôi", "hãy", "tìm kiếm", "tìm", "gợi ý", "sản phẩm",
         "mặt hàng", "đang bán", "đang có", "còn hàng", "giảm giá", "khuyến mãi",
         "giá bao nhiêu", "giá", "bao nhiêu", "có mẫu", "có loại", "có bán",
@@ -50,6 +62,10 @@ class DynamicMartCatalogClient:
 
         search = self.parse_search(question)
         products = await self._search(search)
+        if not products and search.keyword:
+            category_id = await self._category_id_for_keyword(search.keyword)
+            if category_id:
+                products = await self._search(search, category_id=category_id)
         if not products and search.keyword:
             products = await self._search(search, brand=search.keyword)
         return [self._to_product(item) for item in products[:6]]
@@ -104,10 +120,17 @@ class DynamicMartCatalogClient:
                 minimum = value
         return minimum, maximum
 
-    async def _search(self, search: CatalogSearch, brand: str | None = None) -> list[dict[str, Any]]:
+    async def _search(
+        self,
+        search: CatalogSearch,
+        brand: str | None = None,
+        category_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         params: list[tuple[str, str | int]] = [("page", 0), ("size", 6), ("sort", search.sort)]
-        if search.keyword and brand is None:
+        if search.keyword and brand is None and category_id is None:
             params.append(("keyword", search.keyword))
+        if category_id:
+            params.append(("categoryId", category_id))
         if search.minimum_price_vnd is not None:
             params.append(("minimumPriceVnd", search.minimum_price_vnd))
         if search.maximum_price_vnd is not None:
@@ -120,6 +143,47 @@ class DynamicMartCatalogClient:
         payload = response.json()
         content = payload.get("data", {}).get("content", []) if isinstance(payload, dict) else []
         return [item for item in content if isinstance(item, dict)]
+
+    async def _category_id_for_keyword(self, keyword: str) -> str | None:
+        response = await self.client.get(f"{self.base_url}/categories")
+        response.raise_for_status()
+        payload = response.json()
+        categories = payload.get("data", []) if isinstance(payload, dict) else []
+        return self._matching_category_id(categories, keyword)
+
+    @classmethod
+    def _matching_category_id(cls, categories: Any, keyword: str) -> str | None:
+        query = cls._searchable_text(keyword)
+        query_tokens = set(query.split())
+        if not query_tokens or not isinstance(categories, list):
+            return None
+
+        for category in cls._flatten_categories(categories):
+            searchable = cls._searchable_text(" ".join(
+                str(category.get(field) or "")
+                for field in ("name", "slug", "description")
+            ))
+            if query in searchable or query_tokens.issubset(set(searchable.split())):
+                category_id = category.get("id")
+                if category_id:
+                    return str(category_id)
+        return None
+
+    @classmethod
+    def _flatten_categories(cls, categories: list[Any]) -> list[dict[str, Any]]:
+        flattened: list[dict[str, Any]] = []
+        for category in categories:
+            if not isinstance(category, dict):
+                continue
+            flattened.append(category)
+            children = category.get("children")
+            if isinstance(children, list):
+                flattened.extend(cls._flatten_categories(children))
+        return flattened
+
+    @staticmethod
+    def _searchable_text(value: str) -> str:
+        return " ".join(re.sub(r"[^\w]+", " ", value.casefold(), flags=re.UNICODE).split())
 
     def _to_product(self, item: dict[str, Any]) -> ProductInput:
         price = item.get("representativePrice") or {}

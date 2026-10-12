@@ -3,6 +3,7 @@ export { AdminHideReviewModal } from "./components/AdminHideReviewModal";
 export { AdminReportDashboard } from "./components/AdminReportDashboard";
 export { CreateReviewModal } from "./components/CreateReviewModal";
 export { CustomerNotificationsPage } from "./components/CustomerNotificationsPage";
+export { CustomerReviewsPage } from "./components/CustomerReviewsPage";
 export { CustomerSupportPage } from "./components/CustomerSupportPage";
 export { CustomerWishlistPage } from "./components/CustomerWishlistPage";
 export { ProductEngagementPanel } from "./components/ProductEngagementPanel";

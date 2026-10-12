@@ -84,6 +84,9 @@ class ChatResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     embedding_provider: str
+    embedding_model: str
+    chat_model: str
+    llm_synthesis: bool
     vector_store: str
     vector_store_mode: str
     tenants: dict[str, int]

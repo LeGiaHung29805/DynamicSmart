@@ -89,5 +89,5 @@ public class CartApplicationService {
                     listPrice, salePrice, value.getUpdatedAt());
         }).toList(), cart.getUpdatedAt());
     }
-    private CartException invalidQuantity() { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, "CART_QUANTITY_INVALID", "Số lượng phải từ 1 đến 99."); }
+    private CartException invalidQuantity() { return new CartException(HttpStatus.UNPROCESSABLE_CONTENT, "CART_QUANTITY_INVALID", "Số lượng phải từ 1 đến 99."); }
 }

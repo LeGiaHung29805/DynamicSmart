@@ -38,5 +38,5 @@ public class LocationController {
 
     /** Operations-only endpoint; protect with service/admin authentication at the Gateway. */
     @PostMapping("/sync")
-    public LocationSyncResponse sync(@RequestHeader("X-Internal-Api-Key") String apiKey) { internalApi.require(apiKey); return syncService.sync(); }
+    public LocationSyncResponse sync() { return syncService.sync(); }
 }

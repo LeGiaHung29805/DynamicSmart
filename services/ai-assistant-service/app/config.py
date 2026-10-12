@@ -26,6 +26,7 @@ class Settings:
     ollama_embedding_model: str
     ollama_timeout_seconds: float
     ollama_keep_alive: str
+    ollama_embedding_keep_alive: str
     ollama_num_ctx: int
     ollama_num_predict: int
     enable_llm_synthesis: bool
@@ -65,13 +66,14 @@ class Settings:
             ).rstrip("/"),
             catalog_timeout_seconds=max(1.0, float(os.getenv("CATALOG_TIMEOUT_SECONDS", "5"))),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/"),
-            ollama_chat_model=os.getenv("OLLAMA_CHAT_MODEL", "qwen2.5:0.5b"),
+            ollama_chat_model=os.getenv("OLLAMA_CHAT_MODEL", "qwen3:1.7b"),
             ollama_embedding_model=os.getenv("OLLAMA_EMBEDDING_MODEL", "qwen3-embedding:0.6b"),
             ollama_timeout_seconds=max(1.0, float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "90"))),
-            ollama_keep_alive=os.getenv("OLLAMA_KEEP_ALIVE", "30m"),
+            ollama_keep_alive=os.getenv("OLLAMA_KEEP_ALIVE", "0"),
+            ollama_embedding_keep_alive=os.getenv("OLLAMA_EMBEDDING_KEEP_ALIVE", "30m"),
             ollama_num_ctx=max(512, int(os.getenv("OLLAMA_NUM_CTX", "2048"))),
             ollama_num_predict=max(32, int(os.getenv("OLLAMA_NUM_PREDICT", "160"))),
-            enable_llm_synthesis=_as_bool(os.getenv("RAG_ENABLE_LLM_SYNTHESIS"), False),
+            enable_llm_synthesis=_as_bool(os.getenv("RAG_ENABLE_LLM_SYNTHESIS"), True),
             top_k=max(1, min(10, int(os.getenv("AI_ASSISTANT_TOP_K", "5")))),
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,

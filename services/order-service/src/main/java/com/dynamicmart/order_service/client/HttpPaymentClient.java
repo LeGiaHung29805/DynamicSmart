@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class HttpPaymentClient implements PaymentClient {
@@ -36,24 +37,7 @@ public class HttpPaymentClient implements PaymentClient {
 
     @Override
     public PaymentResponse getPayment(UUID paymentId) {
-        try {
-            PaymentResponse result = restClient.get().uri("/api/v1/payments/{paymentId}", paymentId)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (ignoredRequest, ignoredResponse) -> {
-                        throw new OrderException(HttpStatus.UNPROCESSABLE_CONTENT, "PAYMENT_REQUEST_REJECTED",
-                                "Payment Service từ chối dữ liệu do Order Service gửi.");
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (ignoredRequest, ignoredResponse) -> {
-                        throw unavailable();
-                    })
-                    .body(PaymentResponse.class);
-            if (result == null) throw unavailable();
-            return result;
-        } catch (OrderException exception) {
-            throw exception;
-        } catch (RestClientException exception) {
-            throw unavailable();
-        }
+        return get("/api/v1/payments/{paymentId}", PaymentResponse.class, paymentId);
     }
 
     @Override
@@ -69,27 +53,47 @@ public class HttpPaymentClient implements PaymentClient {
     private <T> T post(String uri, Object body, Class<T> responseType, Object... uriVariables) {
         try {
             var request = restClient.post().uri(uri, uriVariables);
-            var response = body == null ? request.retrieve() : request.body(body).retrieve();
-            T result = response
-                    .onStatus(HttpStatusCode::is4xxClientError, (ignoredRequest, ignoredResponse) -> {
-                        throw new OrderException(
-                                HttpStatus.UNPROCESSABLE_CONTENT,
-                                "PAYMENT_REQUEST_REJECTED",
-                                "Payment Service từ chối dữ liệu do Order Service gửi.");
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (ignoredRequest, ignoredResponse) -> {
-                        throw unavailable();
-                    })
-                    .body(responseType);
-            if (result == null) {
-                throw unavailable();
-            }
+            T result = (body == null ? request.retrieve() : request.body(body).retrieve()).body(responseType);
+            if (result == null) throw unavailable();
             return result;
         } catch (OrderException exception) {
             throw exception;
+        } catch (RestClientResponseException exception) {
+            throw translatePaymentRejection(exception);
         } catch (RestClientException exception) {
             throw unavailable();
         }
+    }
+
+    private <T> T get(String uri, Class<T> responseType, Object... uriVariables) {
+        try {
+            T result = restClient.get().uri(uri, uriVariables).retrieve().body(responseType);
+            if (result == null) throw unavailable();
+            return result;
+        } catch (OrderException exception) {
+            throw exception;
+        } catch (RestClientResponseException exception) {
+            throw translatePaymentRejection(exception);
+        } catch (RestClientException exception) {
+            throw unavailable();
+        }
+    }
+
+    private OrderException translatePaymentRejection(RestClientResponseException exception) {
+        HttpStatus status = HttpStatus.resolve(exception.getStatusCode().value());
+        PaymentError error = exception.getResponseBodyAs(PaymentError.class);
+        boolean hasErrorBody = error != null && error.code() != null && !error.code().isBlank()
+                && error.message() != null && !error.message().isBlank();
+        if (status != null && status.is4xxClientError()) {
+            return hasErrorBody
+                    ? new OrderException(status, error.code(), error.message())
+                    : new OrderException(HttpStatus.UNPROCESSABLE_CONTENT, "PAYMENT_REQUEST_REJECTED",
+                            "Payment Service từ chối dữ liệu do Order Service gửi.");
+        }
+        if (status != null && (status == HttpStatus.BAD_GATEWAY || status == HttpStatus.SERVICE_UNAVAILABLE) && hasErrorBody) {
+            return new OrderException(status, error.code(), error.message());
+        }
+        return unavailable();
     }
 
     private OrderException unavailable() {
@@ -98,4 +102,5 @@ public class HttpPaymentClient implements PaymentClient {
                 "PAYMENT_SERVICE_UNAVAILABLE",
                 "Không thể kết nối Payment Service. Vui lòng thử lại sau.");
     }
+    private record PaymentError(String code, String message) { }
 }

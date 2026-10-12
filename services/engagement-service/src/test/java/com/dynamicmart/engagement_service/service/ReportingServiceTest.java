@@ -26,7 +26,11 @@ class ReportingServiceTest {
     @Test
     void duplicateOrderCompletedEventDoesNotUpdateReportsAgain() {
         UUID eventId = UUID.randomUUID();
-        when(processedEvents.existsById(eventId)).thenReturn(true);
+        when(processedEvents.insertIfAbsent(org.mockito.ArgumentMatchers.eq(eventId),
+                org.mockito.ArgumentMatchers.eq("OrderCompleted"),
+                org.mockito.ArgumentMatchers.eq("order-service"),
+                org.mockito.ArgumentMatchers.any(Instant.class),
+                org.mockito.ArgumentMatchers.any(UUID.class))).thenReturn(0);
         var event = new EventEnvelope<>(eventId, "OrderCompleted", 1, "order-service", UUID.randomUUID(),
                 Instant.now(), UUID.randomUUID(),
                 new OrderCompletedPayload(UUID.randomUUID(), UUID.randomUUID(), 100_000L, 100_000L, 0L, 0L, List.of()));
@@ -43,7 +47,11 @@ class ReportingServiceTest {
         UUID eventId = UUID.randomUUID();
         UUID customerId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
-        when(processedEvents.existsById(eventId)).thenReturn(false);
+        when(processedEvents.insertIfAbsent(org.mockito.ArgumentMatchers.eq(eventId),
+                org.mockito.ArgumentMatchers.eq("OrderCancelled"),
+                org.mockito.ArgumentMatchers.eq("order-service"),
+                org.mockito.ArgumentMatchers.any(Instant.class),
+                org.mockito.ArgumentMatchers.any(UUID.class))).thenReturn(1);
 
         var event = new EventEnvelope<>(eventId, "OrderCancelled", 1, "order-service", orderId,
                 Instant.now(), UUID.randomUUID(),

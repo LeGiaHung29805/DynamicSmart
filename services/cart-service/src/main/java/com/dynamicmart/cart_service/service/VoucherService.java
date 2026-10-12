@@ -278,7 +278,7 @@ public class VoucherService {
     private static String normalize(String code) { return code.trim().toUpperCase(Locale.ROOT); }
     private static Set<UUID> safe(Set<UUID> values) { return values == null ? Set.of() : Set.copyOf(values); }
     private static boolean disjoint(Set<UUID> configured, Set<UUID> actual) { return configured.isEmpty() || java.util.Collections.disjoint(configured, actual); }
-    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_ENTITY, code, message); }
+    private CartException invalid(String code, String message) { return new CartException(HttpStatus.UNPROCESSABLE_CONTENT, code, message); }
     private CartException conflict(String code, String message) { return new CartException(HttpStatus.CONFLICT, code, message); }
     private CartException notFound(String code, String message) { return new CartException(HttpStatus.NOT_FOUND, code, message); }
     private record Evaluation(boolean eligible, String reason, long discount, UUID customerVoucherId) { static Evaluation no(String reason) { return new Evaluation(false, reason, 0, null); } }
