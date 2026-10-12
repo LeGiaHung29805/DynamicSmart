@@ -33,8 +33,8 @@ public final class InternalCartDtos {
     public record CheckoutSelectionResponse(UUID cartId, List<CheckoutSelectionItem> items) { }
     public record PricingItem(@NotNull UUID productId, @NotNull UUID variantId, @Positive int quantity,
                               @PositiveOrZero long unitPriceVnd) { }
-    public record VoucherPricingRequest(@NotNull UUID customerId, UUID merchandiseVoucherId,
-                                        UUID shippingVoucherId, @PositiveOrZero long shippingFeeVnd,
+    public record VoucherPricingRequest(@NotNull UUID customerId, UUID merchandiseVoucherId, String merchandiseCode,
+                                        UUID shippingVoucherId, String shippingCode, @PositiveOrZero long shippingFeeVnd,
                                         @NotEmpty List<@Valid PricingItem> items) { }
     public record AppliedVoucher(UUID voucherId, String voucherCode, String scope, String discountMethod,
                                  Long discountValue, long eligibleSubtotalVnd, long discountAmountVnd,
