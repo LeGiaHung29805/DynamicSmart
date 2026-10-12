@@ -37,7 +37,7 @@ class ShippingQuoteServiceTest {
         locations = mock(LocationService.class);
         ghn = mock(GhnClient.class);
         service = new ShippingQuoteService(locations, ghn, quotes,
-                new GhnProperties("https://example.test", "token", "shop", 1, "ward", 15), new ObjectMapper());
+                new GhnProperties("https://example.test", "token", "shop", 1, "ward", 15, false), new ObjectMapper());
     }
 
     @Test
@@ -88,6 +88,24 @@ class ShippingQuoteServiceTest {
                 new QuoteValidationRequest(customerId, quote.getRequestFingerprint())));
 
         assertEquals("SHIPPING_QUOTE_INVALID", error.getCode());
+    }
+
+    @Test
+    void localFallbackAcceptsAdministrativeWardWithoutGhnMapping() {
+        service = new ShippingQuoteService(locations, ghn, quotes,
+                new GhnProperties("", "", "", null, null, 15, true), new ObjectMapper());
+        UUID customerId = UUID.randomUUID();
+        var request = quoteRequest(customerId, UUID.randomUUID(), UUID.randomUUID());
+        when(quotes.findByRequestFingerprintAndCustomerIdAndExpiresAtAfterAndUsedAtIsNull(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(customerId),
+                org.mockito.ArgumentMatchers.any(Instant.class))).thenReturn(Optional.empty());
+
+        var response = service.quote(request);
+
+        assertEquals(30_000, response.feeVnd());
+        verify(locations).validate(201, 11007);
+        verify(ghn, org.mockito.Mockito.never()).quote(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyList());
     }
 
     private ShippingQuote quote(UUID customerId) {

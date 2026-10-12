@@ -72,3 +72,4 @@ app:
     from-district-id: ${GHN_FROM_DISTRICT_ID:}
     from-ward-code: ${GHN_FROM_WARD_CODE:}
     quote-ttl-minutes: ${GHN_QUOTE_TTL_MINUTES:15}
+    local-fallback-enabled: false
