@@ -8,6 +8,7 @@ import httpx
 
 from app.config import Settings
 from app.rag.service import RagService
+from app.rag.types import Chunk, SearchResult
 from app.schemas import ChatRequest, ChatTurn, ProductInput
 
 
@@ -36,6 +37,38 @@ class RagServiceTest(unittest.IsolatedAsyncioTestCase):
             chunk_overlap=50,
             allow_hash_fallback=True,
         )
+
+    def test_fallback_keeps_faq_answer_in_best_source_when_it_is_sufficient(self) -> None:
+        results = [
+            SearchResult(
+                Chunk(
+                    "dynamicmart",
+                    "assistant",
+                    "assistant.md",
+                    "Bạn có thể làm gì?",
+                    (
+                        "Trợ lý giúp bạn tìm sản phẩm theo nhu cầu. "
+                        "Bạn có thể hỏi trợ lý về checkout và giao hàng."
+                    ),
+                ),
+                0.8,
+            ),
+            SearchResult(
+                Chunk(
+                    "dynamicmart",
+                    "support",
+                    "support.md",
+                    "Hỗ trợ",
+                    "Nhân viên hỗ trợ có thể xử lý giao dịch cá nhân.",
+                ),
+                0.7,
+            ),
+        ]
+
+        reply = RagService._retrieval_fallback("Bạn giúp được gì?", results)
+
+        self.assertIn("tìm sản phẩm", reply)
+        self.assertNotIn("Nhân viên hỗ trợ", reply)
 
     async def test_ingest_falls_back_and_answers_with_citation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

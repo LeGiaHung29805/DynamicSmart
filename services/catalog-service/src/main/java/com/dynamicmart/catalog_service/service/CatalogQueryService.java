@@ -69,9 +69,12 @@ public class CatalogQueryService {
         validateCriteria(criteria);
         java.time.LocalDate today = java.time.LocalDate.now();
         List<UUID> bestSellerIds = reportClient.getBestSellers(today.minusDays(30), today, 100);
-        if (criteria.sort() == ProductSort.BEST_SELLER
-                && !bestSellerIds.isEmpty()) {
+        if (criteria.sort() == ProductSort.BEST_SELLER) {
+            // Never silently substitute newest products for a best-seller request.
             return bestSellerSearch(criteria, bestSellerIds);
+        }
+        if (criteria.sort() == ProductSort.PROMOTION) {
+            return promotionSearch(criteria, bestSellerIds);
         }
         ProductIdPage result = queryRepository.search(criteria);
         Map<UUID, Product> productsById = new HashMap<>();
@@ -140,6 +143,38 @@ public class CatalogQueryService {
         int totalPages = orderedIds.isEmpty() ? 0
                 : (int) Math.ceil((double) orderedIds.size() / criteria.size());
         return new PageResponse<>(content, criteria.page(), criteria.size(), orderedIds.size(),
+                totalPages, criteria.page() == 0, criteria.page() + 1 >= totalPages);
+    }
+
+    private PageResponse<ProductSummaryResponse> promotionSearch(ProductSearchCriteria criteria,
+                                                                  List<UUID> bestSellerIds) {
+        ProductSearchCriteria broadCriteria = new ProductSearchCriteria(criteria.keyword(), criteria.categoryId(),
+                criteria.minimumPriceVnd(), criteria.maximumPriceVnd(), criteria.featured(),
+                criteria.attributes(), ProductSort.NEWEST, 0, 1000);
+        List<UUID> matchingIds = queryRepository.search(broadCriteria).productIds();
+        Map<UUID, Product> productsById = new HashMap<>();
+        productRepository.findAllById(matchingIds).forEach(product -> productsById.put(product.getId(), product));
+        List<Product> ordered = matchingIds.stream()
+                .map(productsById::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        List<ProductSummaryResponse> promotions = responseAssembler.productSummaries(
+                        ordered, new HashSet<>(bestSellerIds), Set.of())
+                .stream()
+                .filter(product -> product.representativePrice() != null
+                        && product.representativePrice().directSaleDiscountVnd() > 0)
+                .sorted(java.util.Comparator
+                        .comparingLong((ProductSummaryResponse product) -> product.representativePrice().directSaleDiscountVnd())
+                        .reversed()
+                        .thenComparing(ProductSummaryResponse::publishedAt, java.util.Comparator.reverseOrder())
+                        .thenComparing(ProductSummaryResponse::id))
+                .toList();
+        int fromIndex = Math.min(Math.multiplyExact(criteria.page(), criteria.size()), promotions.size());
+        int toIndex = Math.min(fromIndex + criteria.size(), promotions.size());
+        List<ProductSummaryResponse> content = promotions.subList(fromIndex, toIndex);
+        int totalPages = promotions.isEmpty() ? 0
+                : (int) Math.ceil((double) promotions.size() / criteria.size());
+        return new PageResponse<>(content, criteria.page(), criteria.size(), promotions.size(),
                 totalPages, criteria.page() == 0, criteria.page() + 1 >= totalPages);
     }
 

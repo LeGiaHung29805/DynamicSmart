@@ -8,7 +8,7 @@ export function catalogStatusLabel(value: string) {
     IN_STOCK: "Còn hàng",
     LOW_STOCK: "Sắp hết hàng",
   };
-  return labels[value] ?? value;
+  return labels[value] ?? "Chưa xác định";
 }
 
 export function attributeDataTypeLabel(value: string) {

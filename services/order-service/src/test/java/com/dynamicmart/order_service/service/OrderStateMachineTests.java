@@ -36,16 +36,17 @@ class OrderStateMachineTests {
     }
 
     @Test
-    void adminCannotSkipPackingOrHandoverPrepaidOrder() {
+    void adminCannotSkipPackingAndMovesEveryOrderToCustomerConfirmation() {
         assertInvalid(() -> stateMachine.adminShip(OrderStatus.CONFIRMED));
-        assertInvalid(() -> stateMachine.adminHandover(OrderStatus.SHIPPING, PaymentTiming.PREPAID));
+        assertEquals(OrderStatus.HANDOVER_PENDING,
+                stateMachine.adminHandover(OrderStatus.SHIPPING, PaymentTiming.PREPAID));
     }
 
     @Test
     void prepaidCustomerReceiptRecordsDeliveredThenCompleted() {
         assertIterableEquals(
                 List.of(OrderStatus.DELIVERED, OrderStatus.COMPLETED),
-                stateMachine.customerConfirmReceived(OrderStatus.SHIPPING, PaymentTiming.PREPAID, true));
+                stateMachine.customerConfirmReceived(OrderStatus.HANDOVER_PENDING, PaymentTiming.PREPAID, true));
     }
 
     @Test

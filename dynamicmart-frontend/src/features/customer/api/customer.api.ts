@@ -7,7 +7,7 @@ export const customerApi = {
   vouchers: () => apiClient.get<VoucherWalletItem[]>("/api/v1/cart/vouchers/wallet"),
   previewVoucher: (body: { voucherId?: string; code?: string; orderSubtotalVnd: number; eligibleSubtotalVnd: number; shippingFeeVnd: number; productIds: string[]; categoryIds: string[] }) => apiClient.post<VoucherWalletItem>("/api/v1/cart/vouchers/preview", body),
   voucherHistory: () => apiClient.get<VoucherUsageHistory[]>("/api/v1/cart/vouchers/history"),
-  users: (query = "", status = "", role = "") => apiClient.get<PageResult<AdminUser>>(`/api/v1/admin/users?query=${encodeURIComponent(query)}${status ? `&status=${encodeURIComponent(status)}` : ""}${role ? `&role=${encodeURIComponent(role)}` : ""}&page=0&size=100`),
+  users: (query = "", status = "", role = "", page = 0, size = 20) => apiClient.get<PageResult<AdminUser>>(`/api/v1/admin/users?query=${encodeURIComponent(query)}${status ? `&status=${encodeURIComponent(status)}` : ""}${role ? `&role=${encodeURIComponent(role)}` : ""}&page=${page}&size=${size}`),
   user: (id: string) => apiClient.get<AdminUser>(`/api/v1/admin/users/${id}`),
   manageUser: (id: string, body: { role?: string; status?: string; reason: string }) => apiClient.patch<AdminUser>(`/api/v1/admin/users/${id}`, body, { headers: { "Idempotency-Key": crypto.randomUUID() } }),
 };

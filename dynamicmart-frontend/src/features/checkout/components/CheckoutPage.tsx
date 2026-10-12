@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- Catalog image URLs may come from arbitrary configured hosts. */
 
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, MapPin, Plus, ShieldCheck, TimerReset, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, MapPin, Plus, ShieldCheck, TicketPercent, TimerReset, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ErrorState, LoadingState } from "@/components/common/PageState";
@@ -17,6 +17,7 @@ import type { Address, LocationOption, VoucherWalletItem } from "@/features/cust
 import { locationApi } from "@/features/shipping";
 import type { PaymentMethod, PaymentTiming } from "@/features/order/types/order.types";
 import { orderStatusLabel } from "@/features/order/utils/order-format";
+import { BankQrPaymentCard } from "@/features/payment";
 import { paymentMethodsApi, type AvailablePaymentMethod } from "@/features/payment/api/payment-methods.api";
 import { isApiError } from "@/lib/api/error";
 import { useAuthSession } from "@/lib/auth/session";
@@ -40,7 +41,11 @@ const paymentChoices: PaymentChoice[] = [
 ];
 
 function errorMessage(cause: unknown, fallback: string) {
-  return isApiError(cause) ? cause.message : fallback;
+  if (!isApiError(cause)) return fallback;
+  if (cause.message !== "Yêu cầu không thành công.") return cause.message;
+  return cause.status >= 500
+    ? "Chưa thể áp dụng voucher lúc này. Vui lòng thử lại sau ít phút."
+    : fallback;
 }
 
 function timingFor(method: PaymentMethod): PaymentTiming {
@@ -68,6 +73,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
   const [showAddressForm, setShowAddressForm] = useState(false);
   const cartBootstrap = useRef<Promise<CheckoutSession> | null>(null);
   const idempotencyKey = useRef<string | null>(null);
+  const previewRequest = useRef(0);
 
   const current = steps.findIndex((item) => item.id === step);
   const merchandiseVouchers = useMemo(
@@ -139,8 +145,9 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
     return () => { ignored = true; };
   }, [auth.status, initialSessionId, initialVoucherId, router]);
 
-  function invalidateDraft() {
-    setPreview(null);
+  function invalidateDraft(keepPreview = false) {
+    previewRequest.current += 1;
+    if (!keepPreview) setPreview(null);
     setOrder(null);
     idempotencyKey.current = null;
   }
@@ -152,21 +159,28 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
     return nextAddresses;
   }
 
-  async function saveAndPreview(nextStep?: Step) {
-    if (!session || !addressId || working) return false;
+  async function previewCheckout(
+    nextAddressId: string,
+    nextMerchandiseVoucherId: string,
+    nextShippingVoucherId: string,
+    nextStep?: Step,
+  ) {
+    if (!session || !nextAddressId) return false;
+    const requestId = ++previewRequest.current;
     setWorking(true);
     setMessage("Đang kiểm tra lại giá, tồn kho, mã giảm giá và phí giao hàng…");
     try {
-      const updated = await checkoutApi.updateSession(session.id, { addressId, paymentMethod, paymentTiming });
+      const updated = await checkoutApi.updateSession(session.id, {
+        addressId: nextAddressId,
+        paymentMethod,
+        paymentTiming,
+      });
       const nextPreview = await checkoutApi.preview(session.id, {
-        merchandiseVoucherId: merchandiseVoucherId || undefined,
-        shippingVoucherId: shippingVoucherId || undefined,
+        merchandiseVoucherId: nextMerchandiseVoucherId || undefined,
+        shippingVoucherId: nextShippingVoucherId || undefined,
       });
-      setSession({
-        ...updated,
-        paymentMethod: nextPreview.paymentMethod,
-        paymentTiming: nextPreview.paymentTiming,
-      });
+      if (requestId !== previewRequest.current) return false;
+      setSession({ ...updated, paymentMethod: nextPreview.paymentMethod, paymentTiming: nextPreview.paymentTiming });
       setPaymentMethod(nextPreview.paymentMethod);
       setPaymentTiming(nextPreview.paymentTiming);
       setPreview(nextPreview);
@@ -174,14 +188,28 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
       if (nextStep) setStep(nextStep);
       return true;
     } catch (cause) {
-      setPreview(null);
-      setMessage(errorMessage(cause, "Không thể tính lại đơn hàng. Vui lòng kiểm tra thông tin và thử lại."));
+      if (requestId === previewRequest.current) {
+        setMessage(errorMessage(cause, "Không thể tính lại đơn hàng. Vui lòng kiểm tra thông tin và thử lại."));
+      }
       return false;
     } finally {
-      setWorking(false);
+      if (requestId === previewRequest.current) setWorking(false);
     }
   }
 
+  async function refreshVoucherPreview(nextMerchandiseVoucherId: string, nextShippingVoucherId: string) {
+    return previewCheckout(addressId, nextMerchandiseVoucherId, nextShippingVoucherId);
+  }
+
+  async function saveAndPreview(nextStep?: Step) {
+    return previewCheckout(addressId, merchandiseVoucherId, shippingVoucherId, nextStep);
+  }
+
+  function selectAddress(nextAddressId: string) {
+    setAddressId(nextAddressId);
+    invalidateDraft();
+    void previewCheckout(nextAddressId, merchandiseVoucherId, shippingVoucherId);
+  }
   async function createOrder() {
     if (!session || working) return;
     setWorking(true);
@@ -192,7 +220,7 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
       setOrder(result);
       setSession((value) => value ? { ...value, status: "COMPLETED" } : value);
       setMessage("");
-      if (result.redirectUrl) window.location.assign(result.redirectUrl);
+      if (result.redirectUrl && paymentMethod !== "BANK_QR") window.location.assign(result.redirectUrl);
     } catch (cause) {
       setMessage(errorMessage(cause, "Không thể tạo đơn. Hãy kiểm tra lại thông tin đặt hàng và thử lại."));
     } finally {
@@ -258,17 +286,37 @@ export function CheckoutPage({ initialSessionId, initialVoucherId }: Readonly<{ 
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-7">
-          {step === "delivery" ? <DeliveryStep addresses={addresses} addressId={addressId} disabled={working} merchandise={merchandiseVouchers} merchandiseVoucherId={merchandiseVoucherId} shipping={shippingVouchers} shippingVoucherId={shippingVoucherId} selectAddress={(id) => { setAddressId(id); invalidateDraft(); }} showForm={showAddressForm} toggleForm={() => setShowAddressForm((value) => !value)} saved={async (address) => { const rows = await reloadAccountData(); setAddressId(rows.find((item) => item.id === address.id)?.id ?? address.id); setShowAddressForm(false); invalidateDraft(); }} changeMerchandise={(value) => { setMerchandiseVoucherId(value); invalidateDraft(); }} changeShipping={(value) => { setShippingVoucherId(value); invalidateDraft(); }} next={() => void saveAndPreview("review")} /> : null}
+          {step === "delivery" ? <DeliveryStep addresses={addresses} addressId={addressId} disabled={working} items={session.items} merchandise={merchandiseVouchers} merchandiseVoucherId={merchandiseVoucherId} preview={preview} shipping={shippingVouchers} shippingVoucherId={shippingVoucherId} selectAddress={selectAddress} showForm={showAddressForm} toggleForm={() => setShowAddressForm((value) => !value)} saved={async (address) => { const rows = await reloadAccountData(); const nextAddressId = rows.find((item) => item.id === address.id)?.id ?? address.id; setAddressId(nextAddressId); setShowAddressForm(false); invalidateDraft(); void previewCheckout(nextAddressId, merchandiseVoucherId, shippingVoucherId); }} changeMerchandise={async (value) => { const previous = merchandiseVoucherId; setMerchandiseVoucherId(value); invalidateDraft(true); const applied = await refreshVoucherPreview(value, shippingVoucherId); if (!applied) setMerchandiseVoucherId(previous); }} changeShipping={async (value) => { const previous = shippingVoucherId; setShippingVoucherId(value); invalidateDraft(true); const applied = await refreshVoucherPreview(merchandiseVoucherId, value); if (!applied) setShippingVoucherId(previous); }} next={() => void saveAndPreview("review")} /> : null}
           {step === "review" ? <ReviewStep choices={availablePaymentChoices} disabled={working} method={paymentMethod} preview={preview} order={order} back={() => setStep("delivery")} select={(choice) => { setPaymentMethod(choice.method); setPaymentTiming(choice.timing); setOrder(null); idempotencyKey.current = null; }} create={() => void confirmAndCreate()} /> : null}
         </section>
-        <CheckoutSummary preview={preview} session={session} />
+        <CheckoutSummary preview={preview} session={session} updating={working} />
       </div>
     </main>
   );
 }
 
-function DeliveryStep({ addresses, addressId, disabled, merchandise, merchandiseVoucherId, shipping, shippingVoucherId, selectAddress, showForm, toggleForm, saved, changeMerchandise, changeShipping, next }: Readonly<{ addresses: Address[]; addressId: string; disabled: boolean; merchandise: VoucherWalletItem[]; merchandiseVoucherId: string; shipping: VoucherWalletItem[]; shippingVoucherId: string; selectAddress: (id: string) => void; showForm: boolean; toggleForm: () => void; saved: (address: Address) => Promise<void>; changeMerchandise: (value: string) => void; changeShipping: (value: string) => void; next: () => void }>) {
-  return <div className="space-y-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black text-stone-950">1. Thông tin giao hàng</h2><p className="mt-1 text-sm text-stone-500">Chọn nơi nhận, mã giảm giá và lấy báo giá GHN trong một bước.</p></div><Button variant="outline" disabled={disabled} onClick={toggleForm}><Plus />{showForm ? "Đóng biểu mẫu" : "Thêm địa chỉ"}</Button></div>{showForm ? <InlineAddressForm saved={saved} /> : null}{addresses.length === 0 ? <div className="rounded-2xl border border-dashed border-stone-300 p-7 text-center"><MapPin className="mx-auto size-9 text-stone-300" /><p className="mt-3 font-bold text-stone-800">Bạn chưa có địa chỉ nhận hàng</p></div> : <div className="grid gap-3 sm:grid-cols-2">{addresses.map((address) => <label className={`relative block cursor-pointer rounded-2xl border p-4 transition ${addressId === address.id ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-stone-200 hover:border-rose-200"}`} key={address.id}><div className="flex items-start gap-3"><input className="mt-1 size-4 accent-rose-600" type="radio" checked={addressId === address.id} disabled={disabled} onChange={() => selectAddress(address.id)} /><div><div className="flex flex-wrap items-center gap-2"><strong>{address.recipientName}</strong>{address.defaultAddress ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Mặc định</span> : null}</div><p className="mt-1 text-sm font-semibold text-stone-600">{address.phone}</p><p className="mt-2 text-sm leading-6 text-stone-600">{address.addressLine}, {address.wardName}, {address.provinceName}</p></div></div></label>)}</div>}<div className="grid gap-4 border-t border-stone-200 pt-5 sm:grid-cols-2"><VoucherSelect label="Mã giảm hàng hóa" values={merchandise} value={merchandiseVoucherId} change={changeMerchandise} /><VoucherSelect label="Mã giảm phí giao hàng" values={shipping} value={shippingVoucherId} change={changeShipping} /></div><div className="flex justify-end border-t border-stone-200 pt-5"><Button size="lg" disabled={!addressId || disabled} onClick={next}>Lấy báo giá GHN & tiếp tục<ChevronRight /></Button></div></div>;
+function DeliveryStep({ addresses, addressId, disabled, items, merchandise, merchandiseVoucherId, preview, shipping, shippingVoucherId, selectAddress, showForm, toggleForm, saved, changeMerchandise, changeShipping, next }: Readonly<{ addresses: Address[]; addressId: string; disabled: boolean; items: CheckoutSession["items"]; merchandise: VoucherWalletItem[]; merchandiseVoucherId: string; preview: CheckoutPreview | null; shipping: VoucherWalletItem[]; shippingVoucherId: string; selectAddress: (id: string) => void; showForm: boolean; toggleForm: () => void; saved: (address: Address) => Promise<void>; changeMerchandise: (value: string) => void; changeShipping: (value: string) => void; next: () => void }>) {
+  return (
+    <div className="space-y-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-xl font-black text-stone-950">1. Thông tin giao hàng</h2><p className="mt-1 text-sm text-stone-500">Chọn nơi nhận, ưu đãi phù hợp và lấy báo giá GHN trong một bước.</p></div>
+        <Button variant="outline" disabled={disabled} onClick={toggleForm}><Plus />{showForm ? "Đóng biểu mẫu" : "Thêm địa chỉ"}</Button>
+      </div>
+      {showForm ? <InlineAddressForm saved={saved} /> : null}
+      {addresses.length === 0 ? <div className="rounded-2xl border border-dashed border-stone-300 p-7 text-center"><MapPin className="mx-auto size-9 text-stone-300" /><p className="mt-3 font-bold text-stone-800">Bạn chưa có địa chỉ nhận hàng</p></div> : <div className="grid gap-3 sm:grid-cols-2">{addresses.map((address) => <label className={`relative block cursor-pointer rounded-2xl border p-4 transition ${addressId === address.id ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-stone-200 hover:border-rose-200"}`} key={address.id}><div className="flex items-start gap-3"><input className="mt-1 size-4 accent-rose-600" type="radio" checked={addressId === address.id} disabled={disabled} onChange={() => selectAddress(address.id)} /><div><div className="flex flex-wrap items-center gap-2"><strong>{address.recipientName}</strong>{address.defaultAddress ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Mặc định</span> : null}</div><p className="mt-1 text-sm font-semibold text-stone-600">{address.phone}</p><p className="mt-2 text-sm leading-6 text-stone-600">{address.addressLine}, {address.wardName}, {address.provinceName}</p></div></div></label>)}</div>}
+      <section className="rounded-3xl border border-stone-200/80 bg-stone-50/70 p-4 sm:p-5">
+        <p className="text-xs font-black tracking-[0.16em] text-rose-600 uppercase">Ưu đãi</p>
+        <h3 className="mt-1 text-lg font-black text-stone-950">Chọn voucher</h3>
+        <p className="mt-1 text-sm text-stone-500">Mỗi thẻ ghi rõ phạm vi áp dụng. Mã chưa đạt điều kiện sẽ được làm mờ và không thể chọn.</p>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <VoucherChoiceGroup disabled={disabled} items={items} label="Mã giảm tiền hàng" onChange={changeMerchandise} preview={preview} scope="MERCHANDISE" selectedId={merchandiseVoucherId} values={merchandise} />
+          <VoucherChoiceGroup disabled={disabled} items={items} label="Mã giảm phí giao hàng" onChange={changeShipping} preview={preview} scope="SHIPPING" selectedId={shippingVoucherId} values={shipping} />
+        </div>
+      </section>
+      {preview ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><div className="flex flex-wrap items-center justify-between gap-2"><strong>Đã tính lại tổng tiền</strong><strong className="text-base">{money(preview.money.finalTotalVnd)}</strong></div><p className="mt-1">GHN · {preview.shipping.serviceName} · phí cần trả {money(preview.shipping.payableFeeVnd)}</p></div> : <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Chưa có báo giá GHN. Hệ thống sẽ tính ngay khi bạn chọn địa chỉ hoặc đổi voucher; bạn cũng có thể bấm nút bên dưới để thử lại.</p>}
+      <div className="flex justify-end border-t border-stone-200 pt-5"><Button size="lg" disabled={!addressId || disabled} onClick={next}>{preview ? "Tiếp tục xác nhận đơn" : "Lấy báo giá GHN & tiếp tục"}<ChevronRight /></Button></div>
+    </div>
+  );
 }
 
 function InlineAddressForm({ saved }: Readonly<{ saved: (address: Address) => Promise<void> }>) {
@@ -283,16 +331,53 @@ function InlineAddressForm({ saved }: Readonly<{ saved: (address: Address) => Pr
 }
 
 function ReviewStep({ choices, disabled, method, preview, order, back, select, create }: Readonly<{ choices: PaymentChoice[]; disabled: boolean; method: PaymentMethod; preview: CheckoutPreview | null; order: CreateOrderResult | null; back: () => void; select: (choice: PaymentChoice) => void; create: () => void }>) {
+  if (method === "BANK_QR" && order?.redirectUrl) {
+    return <BankQrPaymentCard expiresAt={order.paymentDueAt} orderId={order.orderId} orderNumber={order.orderNumber} qrUrl={order.redirectUrl} />;
+  }
   if (order) return <div className="py-8 text-center"><Check className="mx-auto size-12 text-emerald-600" /><h2 className="mt-4 text-xl font-bold">Đã tạo đơn {order.orderNumber}</h2><p className="mt-2 text-slate-500">Trạng thái: {orderStatusLabel(order.status)}</p>{order.paymentId ? <p className="mt-1 text-xs text-slate-400">Mã thanh toán: {order.paymentId}</p> : null}<Link className="mt-6 inline-flex rounded-xl bg-emerald-950 px-5 py-3 text-sm font-black text-white" href={`/customer/account/orders/${order.orderId}`}>Xem chi tiết đơn hàng</Link></div>;
   return <div className="space-y-6"><div><h2 className="text-xl font-black text-stone-950">2. Thanh toán và xác nhận</h2><p className="mt-1 text-sm text-stone-500">Kiểm tra báo giá GHN, chọn một phương thức thanh toán rồi đặt đơn.</p></div>{preview ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><strong>GHN · {preview.shipping.serviceName}</strong><p className="mt-1">Dự kiến giao: {preview.shipping.eta || "Theo lịch GHN"}</p><p className="mt-1 text-xs">Báo giá có hiệu lực đến {new Date(preview.shipping.expiresAt).toLocaleString("vi-VN")}</p></div> : <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Chưa có báo giá GHN. Hãy quay lại bước giao hàng.</div>}<div className="grid gap-3 sm:grid-cols-2">{choices.map((choice) => { const selected = method === choice.method; return <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${selected ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : "border-slate-200 hover:border-rose-200"}`} key={choice.method}><input className="mt-1 accent-rose-600" type="radio" checked={selected} disabled={disabled} onChange={() => select(choice)} /><span><strong className="block text-sm">{choice.label}</strong><span className="mt-1 block text-xs leading-5 text-slate-500">{choice.description}</span></span></label>; })}</div><p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">Khi xác nhận, hệ thống sẽ kiểm tra lại giá, tồn kho, ưu đãi và phí giao hàng để bảo đảm đơn chính xác.</p><div className="flex justify-between gap-3 border-t border-stone-200 pt-5"><Button variant="outline" disabled={disabled} onClick={back}><ChevronLeft />Quay lại</Button><Button size="lg" disabled={disabled || !preview || choices.length === 0} onClick={create}>{disabled ? "Đang xử lý…" : "Xác nhận đặt hàng"}<ChevronRight /></Button></div></div>;
 }
 
-function VoucherSelect({ label, values, value, change }: Readonly<{ label: string; values: VoucherWalletItem[]; value: string; change: (value: string) => void }>) {
-  return <Select label={label} value={value} onChange={(event) => change(event.target.value)}><option value="">Không dùng mã</option>{values.map((item) => <option value={item.id} key={item.id}>{item.code} — {item.name}</option>)}</Select>;
+function voucherUnavailableReason(voucher: VoucherWalletItem, items: CheckoutSession["items"], preview: CheckoutPreview | null, shipping: boolean): string | null {
+  if (!voucher.eligible) return voucher.ineligibleReason || "Voucher không còn hiệu lực.";
+  const merchandiseTotal = items.reduce((sum, item) => sum + item.unitPriceVnd * item.quantity, 0);
+  if (voucher.minimumOrderVnd && merchandiseTotal < voucher.minimumOrderVnd) return `Cần đơn từ ${money(voucher.minimumOrderVnd)}.`;
+  if (voucher.minimumEligibleSubtotalVnd && merchandiseTotal < voucher.minimumEligibleSubtotalVnd) return `Cần hàng đủ điều kiện từ ${money(voucher.minimumEligibleSubtotalVnd)}.`;
+  if (voucher.productIds?.length && !items.some((item) => voucher.productIds?.includes(item.productId))) return "Không có sản phẩm phù hợp voucher.";
+  if (shipping && !preview) return "Chọn địa chỉ và lấy báo giá GHN trước.";
+  if (shipping && (preview?.money.shippingFeeVnd ?? 0) <= 0) return "Đơn hàng hiện không phát sinh phí giao hàng.";
+  return null;
 }
 
-function CheckoutSummary({ preview, session }: Readonly<{ preview: CheckoutPreview | null; session: CheckoutSession }>) {
-  return <aside className="h-fit rounded-3xl border bg-white p-5 shadow-sm"><h2 className="font-black">Tóm tắt đơn hàng</h2><div className="mt-4 space-y-3 text-sm">{session.items.map((item) => <div className="flex items-center justify-between gap-3" key={item.id}><div className="flex min-w-0 items-center gap-3">{item.imageUrl ? <img alt={item.productName} className="size-11 shrink-0 rounded-lg object-cover" src={item.imageUrl} /> : <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400">Ảnh</div>}<span className="min-w-0"><strong className="block truncate">{item.productName}</strong><span className="text-xs text-slate-500">{item.variantName || item.sku} × {item.quantity}</span></span></div><strong className="shrink-0">{money(item.unitPriceVnd * item.quantity)}</strong></div>)}{preview ? <><div className="border-t pt-3" /><Row label="Giá niêm yết" value={money(preview.money.itemsListSubtotalVnd)} /><Row label="Giảm giá trực tiếp" value={`−${money(preview.money.directSaleDiscountVnd)}`} /><Row label="Mã giảm sản phẩm/đơn" value={`−${money(preview.money.productDiscountVnd + preview.money.orderDiscountVnd)}`} /><Row label={`GHN · ${preview.shipping.serviceName}`} value={money(preview.money.shippingFeeVnd)} /><Row label="Mã giảm phí giao hàng" value={`−${money(preview.money.shippingDiscountVnd)}`} /><div className="flex justify-between border-t pt-3 text-base font-bold"><span>Tổng cộng</span><span className="text-brand">{money(preview.money.finalTotalVnd)}</span></div><p className="text-xs text-slate-500">Báo giá hết hạn {new Date(preview.shipping.expiresAt).toLocaleString("vi-VN")}</p></> : <p className="border-t pt-3 text-xs text-slate-500">Tiền và phí giao hàng sẽ được máy chủ tính sau khi chọn địa chỉ.</p>}</div></aside>;
+function VoucherChoiceGroup({ disabled, items, label, onChange, preview, scope, selectedId, values }: Readonly<{ disabled: boolean; items: CheckoutSession["items"]; label: string; onChange: (value: string) => void; preview: CheckoutPreview | null; scope: "MERCHANDISE" | "SHIPPING"; selectedId: string; values: VoucherWalletItem[] }>) {
+  const shipping = scope === "SHIPPING";
+  return (
+    <section className="rounded-2xl border border-stone-200 bg-white p-4" aria-label={label}>
+      <div className="flex items-start justify-between gap-3"><div><p className="font-black text-stone-950">{label}</p><p className="mt-1 text-xs leading-5 text-stone-500">{shipping ? "Áp dụng vào phí GHN sau khi đã có báo giá." : "Áp dụng cho tiền hàng; hệ thống tính lại ngay khi chọn."}</p></div><TicketPercent className="size-5 shrink-0 text-rose-600" /></div>
+      <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+        <button className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${!selectedId ? "border-rose-300 bg-rose-50 text-rose-800" : "border-stone-200 text-stone-600 hover:border-rose-200"}`} disabled={disabled} onClick={() => onChange("")} type="button"><span>Không dùng mã</span>{!selectedId ? <Check className="size-4" /> : null}</button>
+        {values.map((voucher) => {
+          const unavailable = voucherUnavailableReason(voucher, items, preview, shipping);
+          const selected = selectedId === voucher.id;
+          const applied = preview?.vouchers.find((item) => item.voucherId === voucher.id);
+          const discount = shipping ? applied?.shippingDiscountVnd : applied?.discountAmountVnd;
+          const blocked = Boolean(unavailable) && !selected;
+          const benefit = discount && discount > 0
+            ? `Đang giảm ${money(discount)}`
+            : voucher.discountMethod === "PERCENTAGE"
+              ? `Giảm ${(voucher.discountRateBps ?? 0) / 100}%${voucher.maxDiscountVnd ? ` · tối đa ${money(voucher.maxDiscountVnd)}` : ""}`
+              : `Giảm ${money(voucher.fixedDiscountVnd ?? 0)}`;
+          return <button className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selected ? "border-rose-400 bg-rose-50 ring-1 ring-rose-100" : blocked ? "cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400 opacity-70" : "border-stone-200 bg-white hover:border-rose-300 hover:shadow-sm"}`} disabled={disabled || blocked} key={voucher.id} onClick={() => onChange(selected ? "" : voucher.id)} type="button"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate font-black tracking-wide text-rose-700">{voucher.code}</p><span className={`shrink-0 text-xs font-bold ${blocked ? "text-stone-400" : "text-emerald-700"}`}>{benefit}</span></div><p className="mt-0.5 truncate text-xs font-semibold text-stone-700">{voucher.name}</p></div>{selected ? <span className="grid size-5 shrink-0 place-items-center rounded-full bg-rose-600 text-white"><Check className="size-3.5" /></span> : null}</div><p className={`mt-1 line-clamp-1 text-xs leading-5 ${blocked ? "text-stone-400" : "text-stone-500"}`}>{unavailable || voucher.description || (shipping ? "Giảm trực tiếp phí GHN." : "Giảm trực tiếp trên tiền hàng.")}</p></button>;
+        })}
+        {values.length === 0 ? <p className="rounded-xl bg-stone-50 px-3 py-4 text-xs leading-5 text-stone-500">Chưa có voucher phù hợp trong ví của bạn.</p> : null}
+      </div>
+    </section>
+  );
+}
+
+function CheckoutSummary({ preview, session, updating }: Readonly<{ preview: CheckoutPreview | null; session: CheckoutSession; updating: boolean }>) {
+  const merchandiseTotal = session.items.reduce((sum, item) => sum + item.unitPriceVnd * item.quantity, 0);
+  return <aside className="h-fit self-start rounded-3xl border bg-white p-5 shadow-sm lg:sticky lg:top-6"><div className="flex items-center justify-between gap-3"><h2 className="font-black">Tóm tắt đơn hàng</h2>{updating ? <span className="animate-pulse rounded-full bg-rose-50 px-2 py-1 text-[10px] font-black text-rose-700">Đang cập nhật</span> : null}</div><div className="mt-4 space-y-3 text-sm">{session.items.map((item) => <div className="flex items-center justify-between gap-3" key={item.id}><div className="flex min-w-0 items-center gap-3">{item.imageUrl ? <img alt={item.productName} className="size-11 shrink-0 rounded-lg object-cover" src={item.imageUrl} /> : <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400">Ảnh</div>}<span className="min-w-0"><strong className="block truncate">{item.productName}</strong><span className="text-xs text-slate-500">{item.variantName || item.sku} × {item.quantity}</span></span></div><strong className="shrink-0">{money(item.unitPriceVnd * item.quantity)}</strong></div>)}{preview ? <><div className="border-t pt-3" /><Row label="Giá niêm yết" value={money(preview.money.itemsListSubtotalVnd)} /><Row label="Giảm giá trực tiếp" value={`−${money(preview.money.directSaleDiscountVnd)}`} /><Row label="Mã giảm sản phẩm/đơn" value={`−${money(preview.money.productDiscountVnd + preview.money.orderDiscountVnd)}`} /><Row label={`GHN · ${preview.shipping.serviceName}`} value={money(preview.money.shippingFeeVnd)} /><Row label="Mã giảm phí giao hàng" value={`−${money(preview.money.shippingDiscountVnd)}`} /><div className="flex justify-between border-t pt-3 text-base font-bold"><span>Tổng cộng</span><span className="text-brand">{money(preview.money.finalTotalVnd)}</span></div><p className="text-xs text-slate-500">Báo giá hết hạn {new Date(preview.shipping.expiresAt).toLocaleString("vi-VN")}</p></> : <><div className="border-t pt-3" /><Row label="Tạm tính tiền hàng" value={money(merchandiseTotal)} /><p className="text-xs leading-5 text-slate-500">Chọn địa chỉ để hệ thống tính phí GHN và tổng thanh toán chính xác.</p></>}</div></aside>;
 }
 
 function Row({ label, value }: Readonly<{ label: string; value: string }>) {

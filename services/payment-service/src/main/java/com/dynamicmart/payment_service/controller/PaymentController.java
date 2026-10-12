@@ -94,6 +94,15 @@ public class PaymentController {
         return paymentService.list(PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
+    /**
+     * Browser-facing admin read API. The generic /{paymentId} endpoint is reserved for
+     * service-to-service calls and therefore requires the internal API key.
+     */
+    @GetMapping("/admin/{paymentId}")
+    public PaymentResponse getForAdmin(@PathVariable UUID paymentId) {
+        return paymentService.get(paymentId, null);
+    }
+
     @PostMapping("/{paymentId}/vnpay-attempt")
     public PaymentResponse newVnPayAttempt(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID paymentId) { internalApi.require(apiKey); return paymentService.createVnPayAttempt(paymentId); }
 

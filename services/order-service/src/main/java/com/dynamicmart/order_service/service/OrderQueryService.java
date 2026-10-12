@@ -305,7 +305,7 @@ public class OrderQueryService {
             if (order.getStatus() == OrderStatus.PACKING) {
                 return List.of("SHIP");
             }
-            if (order.getStatus() == OrderStatus.SHIPPING && order.getPaymentTiming() == PaymentTiming.POSTPAID) {
+            if (order.getStatus() == OrderStatus.SHIPPING) {
                 return List.of("HANDOVER");
             }
             return List.of();

@@ -85,7 +85,7 @@ export function PromotionAdminPage() {
       <div className="flex gap-2 md:col-span-2"><Button type="submit">Lưu bản nháp</Button><Button type="button" variant="outline" onClick={() => setShowForm(false)}>Hủy</Button></div>
     </form></SurfacePanel> : null}
     <SurfacePanel className="overflow-hidden p-0"><div className="flex items-center gap-3 border-b border-stone-200 bg-stone-50/80 px-5 py-4"><span className="grid h-10 w-10 place-items-center rounded-xl bg-rose-100 text-rose-700"><TicketPercent className="h-5 w-5" /></span><div><h2 className="text-lg font-black text-stone-900">Chương trình hiện có</h2><p className="text-sm text-stone-500">Giảm giá trực tiếp và voucher được quản lý chung tại một nơi.</p></div></div>{rows.length === 0 && !message ? <p className="px-5 py-14 text-center text-sm text-stone-500">Chưa có chương trình.</p> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-white text-xs uppercase tracking-wide text-stone-500"><tr><th className="px-5 py-4">Chương trình</th><th className="px-5 py-4">Loại</th><th className="px-5 py-4">Giá trị</th><th className="px-5 py-4">Phạm vi</th><th className="px-5 py-4">Thời gian</th><th className="px-5 py-4">Trạng thái</th><th className="px-5 py-4" /></tr></thead><tbody>{rows.map((row) => <tr className="border-t border-stone-100 transition hover:bg-rose-50/30" key={`${row.kind}-${row.id}`}><td className="px-5 py-4"><strong className="block text-stone-900">{row.name}</strong>{row.code ? <code className="mt-1 inline-block rounded bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">{row.code}</code> : null}</td><td className="px-5 py-4 font-semibold text-stone-700">{row.kind === "DIRECT_SALE" ? "Giảm giá trực tiếp" : "Voucher"}</td><td className="px-5 py-4 font-black text-rose-600">{row.value}</td><td className="px-5 py-4 text-stone-600">{row.scope}</td><td className="px-5 py-4 text-stone-500">{new Date(row.startsAt).toLocaleDateString("vi-VN")} – {new Date(row.endsAt).toLocaleDateString("vi-VN")}</td><td className="px-5 py-4"><StatusBadge label={promotionStatusLabel(row.status)} tone={row.status === "ACTIVE" ? "success" : "neutral"} /></td><td className="px-5 py-4"><div className="flex min-w-72 flex-wrap gap-2"><Button variant="outline" onClick={() => void toggle(row)}>{row.status === "ACTIVE" ? "Tạm dừng" : "Kích hoạt"}</Button><Button variant="outline" onClick={() => void edit(row)}>Sửa</Button>{row.kind === "VOUCHER" ? <Button variant="outline" onClick={() => void assign(row)}>Cấp voucher</Button> : null}<Button variant="ghost" onClick={() => void showAudits(row)}>Lịch sử</Button></div></td></tr>)}</tbody></table></div>}</SurfacePanel>
-    {audits.length > 0 ? <SurfacePanel className="border-rose-200"><div className="flex items-center gap-2 border-b border-stone-100 pb-3"><History className="h-5 w-5 text-rose-600" /><h2 className="font-black">Lịch sử thay đổi đã chọn</h2></div><div className="mt-4 space-y-3">{audits.map((audit) => <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm" key={audit.id}><div className="flex flex-wrap justify-between gap-2"><strong>{audit.action}</strong><span className="text-stone-500">{new Date(audit.createdAt).toLocaleString("vi-VN")}</span></div><p className="mt-2 text-stone-700">{audit.reason}</p></div>)}</div></SurfacePanel> : null}
+    {audits.length > 0 ? <SurfacePanel className="border-rose-200"><div className="flex items-center gap-2 border-b border-stone-100 pb-3"><History className="h-5 w-5 text-rose-600" /><h2 className="font-black">Lịch sử thay đổi đã chọn</h2></div><div className="mt-4 space-y-3">{audits.map((audit) => <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm" key={audit.id}><div className="flex flex-wrap justify-between gap-2"><strong>{promotionAuditActionLabel(audit.action)}</strong><span className="text-stone-500">{new Date(audit.createdAt).toLocaleString("vi-VN")}</span></div><p className="mt-2 text-stone-700">{audit.reason}</p></div>)}</div></SurfacePanel> : null}
     <SurfacePanel className="overflow-hidden p-0"><div className="flex items-center gap-2 border-b border-stone-200 bg-stone-50/80 px-5 py-4"><CalendarClock className="h-5 w-5 text-rose-600" /><h2 className="font-black">Lịch sử giữ, dùng và trả voucher</h2></div>{reservations.length === 0 ? <p className="px-5 py-10 text-center text-sm text-stone-500">Chưa có giao dịch voucher.</p> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-stone-500"><tr><th className="px-5 py-4">Voucher</th><th className="px-5 py-4">Khách hàng</th><th className="px-5 py-4">Trạng thái</th><th className="px-5 py-4">Giảm hàng</th><th className="px-5 py-4">Giảm vận chuyển</th><th className="px-5 py-4">Giữ đến</th></tr></thead><tbody>{reservations.map((item) => <tr className="border-t border-stone-100" key={item.id}><td className="px-5 py-4"><code className="text-xs">{item.voucherId}</code></td><td className="px-5 py-4"><code className="text-xs">{item.customerId}</code></td><td className="px-5 py-4"><StatusBadge label={promotionStatusLabel(item.status)} tone={item.status === "CONSUMED" ? "success" : item.status === "RESERVED" ? "warning" : "neutral"} /></td><td className="px-5 py-4 font-semibold">{item.discountAmountVnd.toLocaleString("vi-VN")}đ</td><td className="px-5 py-4 font-semibold">{item.shippingDiscountVnd.toLocaleString("vi-VN")}đ</td><td className="px-5 py-4 text-stone-500">{new Date(item.reservedUntil).toLocaleString("vi-VN")}</td></tr>)}</tbody></table></div>}</SurfacePanel>
   </div>;
 }
@@ -95,4 +95,31 @@ function toVoucherRow(value: VoucherDto): Row { return { id: value.id, kind: "VO
 
 function PromotionSummary({ icon: Icon, label, value }: { icon: typeof TicketPercent; label: string; value: number }) { return <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-stone-500">{label}</p><p className="mt-1 text-3xl font-black text-stone-900">{value}</p></div><span className="grid h-11 w-11 place-items-center rounded-2xl bg-rose-50 text-rose-600"><Icon className="h-5 w-5" /></span></div></div>; }
 
-function promotionStatusLabel(status: string) { if (status === "ACTIVE") return "Đang hoạt động"; if (status === "DRAFT") return "Bản nháp"; if (status === "PAUSED") return "Tạm dừng"; if (status === "DISABLED") return "Đã tắt"; if (status === "RESERVED") return "Đang giữ"; if (status === "CONSUMED") return "Đã sử dụng"; if (status === "RELEASED") return "Đã hoàn"; return status; }
+function promotionAuditActionLabel(action: string) {
+  const map: Record<string, string> = {
+    CREATE: "Tạo chương trình",
+    UPDATE: "Cập nhật chương trình",
+    ACTIVATE: "Kích hoạt chương trình",
+    PAUSE: "Tạm dừng chương trình",
+    DISABLE: "Vô hiệu hóa chương trình",
+    ASSIGN: "Cấp voucher cho khách hàng",
+    RESERVE: "Tạm giữ voucher",
+    CONSUME: "Sử dụng voucher",
+    RELEASE: "Hoàn lại voucher",
+  };
+  return map[action] ?? "Cập nhật chương trình";
+}
+
+function promotionStatusLabel(status: string) {
+  if (status === "ACTIVE") return "Đang hoạt động";
+  if (status === "DRAFT") return "Bản nháp";
+  if (status === "PAUSED") return "Tạm dừng";
+  if (status === "DISABLED") return "Đã tắt";
+  if (status === "INACTIVE") return "Ngừng hoạt động";
+  if (status === "EXPIRED") return "Đã hết hạn";
+  if (status === "RESERVED") return "Đang giữ";
+  if (status === "CONSUMED") return "Đã sử dụng";
+  if (status === "RELEASED") return "Đã hoàn";
+  if (status === "CANCELLED") return "Đã hủy";
+  return "Trạng thái chưa xác định";
+}

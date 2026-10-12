@@ -327,8 +327,12 @@ export function CustomerReviewsPage() {
 
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                       <span>Đánh giá ngày {date(review.createdAt)}</span>
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">
-                        {review.status === "VISIBLE" ? "Đã duyệt & Hiển thị" : "Đang kiểm duyệt"}
+                      <span className={`rounded-full px-2 py-0.5 font-bold ${
+                        review.status === "VISIBLE" ? "bg-emerald-50 text-emerald-700" :
+                        review.status === "HIDDEN" ? "bg-rose-50 text-rose-700" :
+                        "bg-amber-50 text-amber-700"
+                      }`}>
+                        {review.status === "VISIBLE" ? "Đã duyệt & Hiển thị" : review.status === "HIDDEN" ? "Đã ẩn" : "Đang kiểm duyệt"}
                       </span>
                     </div>
                   </div>

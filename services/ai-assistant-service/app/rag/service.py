@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import re
+import time
 import unicodedata
 from collections import OrderedDict, defaultdict
 from collections.abc import AsyncIterator
@@ -11,6 +14,7 @@ import httpx
 
 from app.catalog import DynamicMartCatalogClient
 from app.config import Settings
+from app.product_store import ProductDocument, ProductVectorStore
 from app.rag.embeddings import HashEmbeddingProvider, OllamaEmbeddingProvider
 from app.rag.loader import DirectoryDocumentLoader
 from app.rag.ollama import OllamaChatClient
@@ -25,6 +29,11 @@ class RagService:
         self.settings = settings
         self.store = QdrantVectorStore(
             collection_name=settings.qdrant_collection,
+            url=settings.qdrant_url,
+            api_key=settings.qdrant_api_key,
+        )
+        self.product_store = ProductVectorStore(
+            collection_name=f"{settings.qdrant_collection}_products",
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
         )
@@ -50,10 +59,13 @@ class RagService:
             settings.catalog_timeout_seconds,
         )
         self._ingest_lock = asyncio.Lock()
+        self._product_sync_lock = asyncio.Lock()
+        self._product_sync_checked_at = 0.0
         self._embedding_cache: OrderedDict[tuple[str, str], list[float]] = OrderedDict()
 
     async def close(self) -> None:
         self.store.close()
+        self.product_store.close()
         await self.ollama_embeddings.close()
         await self.chat_client.close()
         await self.catalog_client.close()
@@ -82,7 +94,55 @@ class RagService:
                 self.store.replace_tenant(tenant, tenant_chunks, embedded[tenant], provider.name)
             self.embedding_provider = provider
             self._embedding_cache.clear()
+            try:
+                await self.sync_product_index(force=True)
+            except (httpx.HTTPError, ValueError, TypeError, RuntimeError):
+                # Knowledge RAG must still start when Catalog Service is temporarily unavailable.
+                pass
             return self.store.counts_by_tenant()
+
+    async def sync_product_index(self, force: bool = False) -> int:
+        async with self._product_sync_lock:
+            now = time.monotonic()
+            if not force and now - self._product_sync_checked_at < 300:
+                return self.product_store.count()
+            products = await self.catalog_client.products_for_index()
+            self._product_sync_checked_at = now
+            if not products:
+                return self.product_store.count()
+
+            products = sorted(products, key=lambda product: str(product.get("id") or ""))
+            fingerprint_payload = [
+                {
+                    "id": product.get("id"),
+                    "name": product.get("name"),
+                    "slug": product.get("slug"),
+                    "shortDescription": product.get("shortDescription"),
+                    "category": product.get("category"),
+                    "categoryDescription": product.get("categoryDescription"),
+                }
+                for product in products
+            ]
+            fingerprint = hashlib.sha256(
+                json.dumps(fingerprint_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+            ).hexdigest()
+            if self.product_store.fingerprint() == fingerprint:
+                return self.product_store.count()
+
+            documents = [
+                ProductDocument(
+                    product_id=str(product["id"]),
+                    text=self.catalog_client.product_document_text(product),
+                    fingerprint=fingerprint,
+                )
+                for product in products
+            ]
+            embeddings: list[list[float]] = []
+            for index in range(0, len(documents), 32):
+                batch = documents[index:index + 32]
+                embeddings.extend(await self.embedding_provider.embed([document.text for document in batch]))
+            self.product_store.replace(documents, embeddings)
+            return self.product_store.count()
 
     async def _embed_groups(self, grouped: dict[str, list[Chunk]], provider: Any) -> dict[str, list[list[float]]]:
         result: dict[str, list[list[float]]] = {}
@@ -163,7 +223,21 @@ class RagService:
         if request.tenant != "dynamicmart":
             return None
         catalog_query = self._catalog_query(request, contextual_query)
-        if not DynamicMartCatalogClient.is_product_question(catalog_query):
+        explicit_product_question = DynamicMartCatalogClient.is_product_question(catalog_query)
+        if not DynamicMartCatalogClient.is_policy_question(catalog_query):
+            try:
+                semantic_products = await self._semantic_products(
+                    catalog_query,
+                    require_strong_match=not explicit_product_question,
+                )
+                if semantic_products:
+                    return self._product_response(
+                        request.model_copy(update={"products": semantic_products})
+                    )
+            except (httpx.HTTPError, ValueError, TypeError, AttributeError, RuntimeError):
+                pass
+
+        if not explicit_product_question:
             return None
         try:
             catalog_products = await self.catalog_client.products_for_question(catalog_query)
@@ -172,6 +246,57 @@ class RagService:
         if catalog_products is None:
             catalog_products = []
         return self._product_response(request.model_copy(update={"products": catalog_products}))
+
+    async def _semantic_products(
+        self,
+        query: str,
+        *,
+        require_strong_match: bool,
+    ) -> list[Any]:
+        await self.sync_product_index()
+        if self.product_store.count() == 0:
+            return []
+
+        embed_query = getattr(self.embedding_provider, "embed_query", None)
+        query_embedding = (
+            await embed_query(query)
+            if callable(embed_query)
+            else (await self.embedding_provider.embed([query]))[0]
+        )
+        hits = self.product_store.search(query_embedding, query, limit=18)
+        if not hits:
+            return []
+
+        minimum_score = 0.40 if require_strong_match else 0.36
+        best_score = hits[0].score
+        if best_score < minimum_score:
+            return []
+        selected_hits = [
+            hit for hit in hits
+            if hit.score >= minimum_score and hit.score >= best_score - 0.12
+        ][:12]
+        products = await self.catalog_client.products_by_ids(
+            [hit.product_id for hit in selected_hits]
+        )
+        search = self.catalog_client.parse_search(query)
+        filtered = []
+        for product in products:
+            if not product.in_stock:
+                continue
+            if search.minimum_price_vnd is not None and (
+                product.price is None or product.price < search.minimum_price_vnd
+            ):
+                continue
+            if search.maximum_price_vnd is not None and (
+                product.price is None or product.price > search.maximum_price_vnd
+            ):
+                continue
+            filtered.append(product)
+        if search.sort == "PRICE_ASC":
+            filtered.sort(key=lambda product: product.price if product.price is not None else 2**63 - 1)
+        elif search.sort == "PRICE_DESC":
+            filtered.sort(key=lambda product: product.price if product.price is not None else -1, reverse=True)
+        return filtered[:6]
 
     async def _retrieve(self, request: ChatRequest, contextual_query: str) -> list[SearchResult]:
         cache_key = (request.tenant, contextual_query.casefold())
@@ -392,6 +517,13 @@ class RagService:
             return excerpt
 
         candidates.sort(key=lambda item: item[0], reverse=True)
+        best_source = candidates[0][2].chunk.source
+        focused_candidates = [
+            candidate for candidate in candidates
+            if candidate[2].chunk.source == best_source and candidate[1] >= 0.25
+        ]
+        if len(focused_candidates) >= 2:
+            candidates = focused_candidates
         best_score = candidates[0][0]
         selected: list[tuple[SearchResult, str]] = []
         seen: set[str] = set()
@@ -402,7 +534,7 @@ class RagService:
             if (
                 normalized in seen
                 or cls._is_redundant_candidate(normalized, seen)
-                or source_counts[result.chunk.source] >= 2
+                or source_counts[result.chunk.source] >= 3
             ):
                 continue
             if selected and lexical < 0.25:

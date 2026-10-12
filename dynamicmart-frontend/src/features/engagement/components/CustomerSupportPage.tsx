@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuthSession } from "@/lib/auth/session";
 import { customerOrdersApi } from "@/features/order/api/customer-orders.api";
+import { orderStatusLabel } from "@/features/order/utils/order-format";
 import { engagementApi } from "../api/engagement.api";
 import type { ChatConversationItem } from "../types/engagement.types";
 import { Status, decodeHtml } from "./EngagementShared";
@@ -301,7 +302,7 @@ export function CustomerSupportPage() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
+      <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         {errorMsg ? (
           <p className="lg:col-span-2 rounded-xl bg-rose-50 p-3.5 text-sm text-rose-700 flex items-center gap-2">
             <AlertCircle className="size-4 shrink-0 text-rose-600" />
@@ -310,7 +311,7 @@ export function CustomerSupportPage() {
         ) : null}
 
         {/* Cột trái: Danh sách các cuộc hội thoại */}
-        <SurfacePanel className="p-4 sm:p-4 h-fit">
+        <SurfacePanel className="h-fit p-4 lg:sticky lg:top-24">
           <Button
             className="mb-4 w-full gap-2 bg-emerald-900 hover:bg-emerald-800 text-white font-bold"
             onClick={() => setIsCreateModalOpen(true)}
@@ -319,7 +320,7 @@ export function CustomerSupportPage() {
             Tạo yêu cầu hỗ trợ mới
           </Button>
 
-          <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+          <div className="support-scroll max-h-[34rem] space-y-2 overflow-y-auto pr-3">
             {conversations.length === 0 ? (
               <div className="text-center text-xs text-slate-500 py-10 px-4">
                 <HelpCircle className="mx-auto size-8 text-slate-300 stroke-1" />
@@ -372,15 +373,15 @@ export function CustomerSupportPage() {
 
         {/* Cột phải: Khung chat chi tiết */}
         {selected ? (
-          <SurfacePanel className="flex flex-col h-[620px] p-0 sm:p-0 overflow-hidden">
+          <SurfacePanel className="flex h-[min(42rem,calc(100dvh-10rem))] min-h-[34rem] flex-col overflow-hidden p-0 sm:p-0">
             {/* Header khung chat */}
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 p-4 sm:px-6">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="grid size-10 place-items-center rounded-full bg-emerald-700 text-white font-bold shadow-xs">
                   <Headphones className="size-5" />
                 </div>
-                <div>
-                  <h2 className="font-black text-slate-950 text-sm sm:text-base">
+                <div className="min-w-0">
+                  <h2 className="truncate font-black text-sm text-slate-950 sm:text-base">
                     {decodeHtml(getConversationTitle(selected))}
                   </h2>
                   <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
@@ -393,7 +394,7 @@ export function CustomerSupportPage() {
             </div>
 
             {/* Danh sách tin nhắn */}
-            <div className="flex-1 p-4 sm:p-6 space-y-4 overflow-y-auto">
+            <div className="support-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pr-5 sm:p-6 sm:pr-7">
               {!selected.messages || selected.messages.length === 0 ? (
                 <div className="text-center py-16 text-slate-400 text-sm">
                   Chưa có tin nhắn trong cuộc trò chuyện này. Hãy gửi tin nhắn đầu tiên!
@@ -443,7 +444,7 @@ export function CustomerSupportPage() {
 
             {/* Gợi ý câu hỏi nhanh */}
             {selected.status === "OPEN" ? (
-              <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-2.5 overflow-x-auto flex gap-2">
+              <div className="support-scroll-x flex gap-2 overflow-x-auto border-t border-slate-100 bg-slate-50/50 px-4 py-2.5">
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 shrink-0">
                   <Sparkles className="size-3 text-amber-500" /> Gợi ý:
                 </span>
@@ -560,7 +561,7 @@ export function CustomerSupportPage() {
                     <option value="">-- Không gắn đơn hàng cụ thể --</option>
                     {recentOrders.map((o) => (
                       <option key={o.orderId} value={o.orderNumber}>
-                        Đơn #{o.orderNumber} ({o.status}) · {new Date(o.createdAt).toLocaleDateString("vi-VN")}
+                        Đơn #{o.orderNumber} ({orderStatusLabel(o.status)}) · {new Date(o.createdAt).toLocaleDateString("vi-VN")}
                       </option>
                     ))}
                   </select>
