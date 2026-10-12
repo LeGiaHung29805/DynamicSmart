@@ -65,6 +65,7 @@ Product/Variant chỉ nhận giá trị của Attribute đã ánh xạ đúng `P
 
 - `/api/v1/catalog/admin/products`: list phân trang, create và get.
 - `/api/v1/catalog/admin/products/{productId}`: update.
+- `/api/v1/catalog/admin/products/{productId}/publish-readiness`: trả checklist điều kiện trước khi công khai.
 - `/api/v1/catalog/admin/products/{productId}/status`: chuyển `DRAFT`, `ACTIVE`, `INACTIVE`, `ARCHIVED`.
 - `/api/v1/catalog/admin/products/{productId}/variants`: tạo Variant.
 - `/api/v1/catalog/admin/products/{productId}/variants/{variantId}`: sửa Variant.
@@ -72,7 +73,9 @@ Product/Variant chỉ nhận giá trị của Attribute đã ánh xạ đúng `P
 - `/api/v1/catalog/admin/products/{productId}/images`: thêm ảnh.
 - `/api/v1/catalog/admin/products/{productId}/images/{imageId}`: sửa hoặc xóa ảnh.
 
-Ảnh hỗ trợ JPEG, PNG, WEBP, AVIF và tối đa 5 MB. Ảnh Variant phải thuộc đúng Product; mỗi Product hoặc Variant chỉ có một ảnh chính. Product/Variant không có endpoint xóa cứng.
+Ở chế độ URL hiện tại, client chỉ cần gửi `imageUrl`, `altText`, `sortOrder`, `primary` và `variantId` nếu là ảnh riêng của Variant. `contentType` và `sizeBytes` là metadata tùy chọn; khi được gửi, Catalog kiểm tra JPEG/PNG/WEBP/AVIF và giới hạn 5 MB. Ảnh đầu tiên trong mỗi phạm vi tự trở thành ảnh chính; khi xóa ảnh chính, ảnh kế tiếp được chọn thay thế. Ảnh Variant phải thuộc đúng Product; mỗi Product hoặc Variant chỉ có một ảnh chính. Product/Variant không có endpoint xóa cứng.
+
+Luồng quản trị chuẩn gồm bốn bước: lưu Product `DRAFT`; tạo/kích hoạt Variant và tồn đầu kỳ; thêm ảnh chính cấp Product; kiểm tra readiness rồi công khai. Product chỉ được gắn vào danh mục lá (danh mục không có con) và chỉ chuyển sang `ACTIVE` khi danh mục và thuộc tính hợp lệ, có Variant `ACTIVE` đủ thông tin vận chuyển, có tồn khả dụng và có ảnh chính cấp Product. Danh mục không được đổi sau khi Product đã có Variant để tránh bộ thuộc tính Product/Variant rơi vào trạng thái không nhất quán.
 
 ### Điều chỉnh tồn kho
 
