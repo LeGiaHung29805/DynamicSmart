@@ -1,6 +1,7 @@
 package com.dynamicmart.catalog_service.controller;
 
 import com.dynamicmart.catalog_service.dto.request.CreateProductRequest;
+import com.dynamicmart.catalog_service.dto.request.CreateVariantBatchRequest;
 import com.dynamicmart.catalog_service.dto.request.CreateVariantRequest;
 import com.dynamicmart.catalog_service.dto.request.ProductStatusRequest;
 import com.dynamicmart.catalog_service.dto.request.UpdateProductRequest;
@@ -19,6 +20,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -93,6 +95,14 @@ public class AdminProductController {
         return ResponseEntity.created(URI.create("/api/v1/catalog/admin/products/" + productId
                         + "/variants/" + created.id()))
                 .body(ApiResponse.of(created));
+    }
+
+    @PostMapping("/{productId}/variants/batch")
+    public ResponseEntity<ApiResponse<List<ProductVariantResponse>>> createVariants(
+            @PathVariable UUID productId,
+            @Valid @RequestBody CreateVariantBatchRequest request) {
+        return ResponseEntity.status(201)
+                .body(ApiResponse.of(productService.createVariants(productId, request.variants())));
     }
 
     @PutMapping("/{productId}/variants/{variantId}")

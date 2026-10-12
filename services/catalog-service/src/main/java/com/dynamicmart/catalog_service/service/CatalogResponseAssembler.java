@@ -20,6 +20,7 @@ import com.dynamicmart.catalog_service.entity.VariantAttributeValue;
 import com.dynamicmart.catalog_service.entity.VariantStatus;
 import com.dynamicmart.catalog_service.exception.CatalogException;
 import com.dynamicmart.catalog_service.repository.AttributeDefinitionRepository;
+import com.dynamicmart.catalog_service.repository.AttributeOptionRepository;
 import com.dynamicmart.catalog_service.repository.CategoryRepository;
 import com.dynamicmart.catalog_service.repository.InventoryItemRepository;
 import com.dynamicmart.catalog_service.repository.ProductAttributeValueRepository;
@@ -47,6 +48,7 @@ public class CatalogResponseAssembler {
     private final ProductAttributeValueRepository productValueRepository;
     private final VariantAttributeValueRepository variantValueRepository;
     private final AttributeDefinitionRepository attributeRepository;
+    private final AttributeOptionRepository optionRepository;
     private final InventoryItemRepository inventoryRepository;
     private final PromotionPriceService promotionPriceService;
 
@@ -56,6 +58,7 @@ public class CatalogResponseAssembler {
                                     ProductAttributeValueRepository productValueRepository,
                                     VariantAttributeValueRepository variantValueRepository,
                                     AttributeDefinitionRepository attributeRepository,
+                                    AttributeOptionRepository optionRepository,
                                     InventoryItemRepository inventoryRepository,
                                     PromotionPriceService promotionPriceService) {
         this.categoryRepository = categoryRepository;
@@ -64,6 +67,7 @@ public class CatalogResponseAssembler {
         this.productValueRepository = productValueRepository;
         this.variantValueRepository = variantValueRepository;
         this.attributeRepository = attributeRepository;
+        this.optionRepository = optionRepository;
         this.inventoryRepository = inventoryRepository;
         this.promotionPriceService = promotionPriceService;
     }
@@ -190,6 +194,14 @@ public class CatalogResponseAssembler {
         variantValues.forEach(value -> attributeIds.add(value.getAttributeId()));
         Map<UUID, AttributeDefinition> attributes = byId(attributeRepository.findAllById(attributeIds),
                 AttributeDefinition::getId);
+        Map<UUID, Map<String, String>> optionLabels = new HashMap<>();
+        if (!attributeIds.isEmpty()) {
+            optionRepository.findAllByAttributeIdInOrderByAttributeIdAscSortOrderAscLabelAsc(
+                            List.copyOf(attributeIds))
+                    .forEach(option -> optionLabels.computeIfAbsent(option.getAttributeId(),
+                                    ignored -> new HashMap<>())
+                            .put(option.getCode().toUpperCase(java.util.Locale.ROOT), option.getLabel()));
+        }
         Map<UUID, InventoryItem> inventory = variantIds.isEmpty()
                 ? Map.of() : byId(inventoryRepository.findAllByVariantIdIn(variantIds),
                 InventoryItem::getVariantId);
@@ -197,7 +209,7 @@ public class CatalogResponseAssembler {
         return new LoadedCatalog(categories, groupBy(variants, ProductVariant::getProductId),
                 groupBy(images, ProductImage::getProductId),
                 groupBy(productValues, ProductAttributeValue::getProductId),
-                groupBy(variantValues, VariantAttributeValue::getVariantId), attributes, inventory,
+                groupBy(variantValues, VariantAttributeValue::getVariantId), attributes, optionLabels, inventory,
                 promotionPriceService.resolve(variants));
     }
 
@@ -222,7 +234,32 @@ public class CatalogResponseAssembler {
                     "Giá trị đang tham chiếu thuộc tính không tồn tại.");
         }
         return new AttributeValueResponse(valueId, attributeId, attribute.getCode(),
-                attribute.getName(), attribute.getDataType(), value);
+                attribute.getName(), attribute.getDataType(), value,
+                displayAttributeValue(attribute, value, loaded));
+    }
+
+    private String displayAttributeValue(AttributeDefinition attribute,
+                                         tools.jackson.databind.JsonNode value,
+                                         LoadedCatalog loaded) {
+        Map<String, String> labels = loaded.optionLabelsByAttribute()
+                .getOrDefault(attribute.getId(), Map.of());
+        if (attribute.getDataType() == com.dynamicmart.catalog_service.entity.AttributeDataType.SELECT
+                && value.isTextual()) {
+            return labels.getOrDefault(value.asString().toUpperCase(java.util.Locale.ROOT),
+                    value.asString());
+        }
+        if (attribute.getDataType() == com.dynamicmart.catalog_service.entity.AttributeDataType.MULTI_SELECT
+                && value.isArray()) {
+            List<String> values = new ArrayList<>();
+            value.forEach(item -> values.add(item.isTextual()
+                    ? labels.getOrDefault(item.asString().toUpperCase(java.util.Locale.ROOT),
+                            item.asString())
+                    : item.toString()));
+            return String.join(", ", values);
+        }
+        if (value.isTextual()) return value.asString();
+        if (value.isBoolean()) return value.asBoolean() ? "Có" : "Không";
+        return value.toString();
     }
 
     private List<ProductImageResponse> productImages(UUID productId, LoadedCatalog loaded) {
@@ -295,6 +332,7 @@ public class CatalogResponseAssembler {
             Map<UUID, List<ProductAttributeValue>> productValuesByProduct,
             Map<UUID, List<VariantAttributeValue>> variantValuesByVariant,
             Map<UUID, AttributeDefinition> attributes,
+            Map<UUID, Map<String, String>> optionLabelsByAttribute,
             Map<UUID, InventoryItem> inventoryByVariant,
             Map<UUID, VariantPriceResponse> prices
     ) {

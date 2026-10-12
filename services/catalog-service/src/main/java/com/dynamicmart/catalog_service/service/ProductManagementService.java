@@ -13,6 +13,7 @@ import com.dynamicmart.catalog_service.dto.response.ProductImageResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductPublishCheckResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductPublishReadinessResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductVariantResponse;
+import com.dynamicmart.catalog_service.entity.AttributeAppliesTo;
 import com.dynamicmart.catalog_service.entity.CatalogStatus;
 import com.dynamicmart.catalog_service.entity.Category;
 import com.dynamicmart.catalog_service.entity.InventoryItem;
@@ -32,10 +33,16 @@ import com.dynamicmart.catalog_service.repository.ProductVariantRepository;
 import com.dynamicmart.catalog_service.repository.VariantAttributeValueRepository;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import tools.jackson.databind.JsonNode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -95,7 +102,7 @@ public class ProductManagementService {
                 request.defaultHeightCm());
         product.markFeatured(request.featured());
         productRepository.save(product);
-        attributeValueService.replaceProductValues(product.getId(), product.getCategoryId(),
+        attributeValueService.replaceDraftProductValues(product.getId(), product.getCategoryId(),
                 request.attributes());
         return responseAssembler.adminProduct(product);
     }
@@ -116,7 +123,11 @@ public class ProductManagementService {
                 request.defaultWeightGrams(), request.defaultLengthCm(), request.defaultWidthCm(),
                 request.defaultHeightCm());
         product.markFeatured(request.featured());
-        attributeValueService.replaceProductValues(productId, request.categoryId(), request.attributes());
+        if (product.getStatus() == ProductStatus.ACTIVE) {
+            attributeValueService.replaceProductValues(productId, request.categoryId(), request.attributes());
+        } else {
+            attributeValueService.replaceDraftProductValues(productId, request.categoryId(), request.attributes());
+        }
         if (product.getStatus() == ProductStatus.ACTIVE) validateActiveConfiguration(product);
         return responseAssembler.adminProduct(product);
     }
@@ -177,10 +188,29 @@ public class ProductManagementService {
 
     @Transactional
     public ProductVariantResponse createVariant(UUID productId, CreateVariantRequest request) {
-        Product product = requireProduct(productId);
+        Product product = requireProductForUpdate(productId);
+        return createVariant(product, request);
+    }
+
+    @Transactional
+    public List<ProductVariantResponse> createVariants(UUID productId,
+                                                       List<CreateVariantRequest> requests) {
+        Product product = requireProductForUpdate(productId);
+        validateBatchUniqueness(requests);
+        List<ProductVariantResponse> created = new ArrayList<>();
+        for (CreateVariantRequest request : requests) {
+            created.add(createVariant(product, request));
+        }
+        return List.copyOf(created);
+    }
+
+    private ProductVariantResponse createVariant(Product product, CreateVariantRequest request) {
         String sku = normalizeSku(request.sku());
         requireUniqueSku(sku, null);
-        ProductVariant variant = new ProductVariant(UUID.randomUUID(), productId, sku,
+        attributeValueService.validate(product.getCategoryId(), AttributeAppliesTo.VARIANT,
+                request.attributes());
+        requireUniqueVariantCombination(product.getId(), request.attributes(), null);
+        ProductVariant variant = new ProductVariant(UUID.randomUUID(), product.getId(), sku,
                 trimToNull(request.name()), request.priceVnd(), request.weightGrams(), request.lengthCm(),
                 request.widthCm(), request.heightCm(), request.sortOrder());
         variantRepository.save(variant);
@@ -193,10 +223,13 @@ public class ProductManagementService {
     @Transactional
     public ProductVariantResponse updateVariant(UUID productId, UUID variantId,
                                                 UpdateVariantRequest request) {
-        Product product = requireProduct(productId);
+        Product product = requireProductForUpdate(productId);
         ProductVariant variant = requireVariant(productId, variantId);
         String sku = normalizeSku(request.sku());
         requireUniqueSku(sku, variantId);
+        attributeValueService.validate(product.getCategoryId(), AttributeAppliesTo.VARIANT,
+                request.attributes());
+        requireUniqueVariantCombination(productId, request.attributes(), variantId);
         variant.update(sku, trimToNull(request.name()), request.priceVnd(), request.weightGrams(),
                 request.lengthCm(), request.widthCm(), request.heightCm(), request.sortOrder());
         attributeValueService.replaceVariantValues(variantId, product.getCategoryId(), request.attributes());
@@ -207,12 +240,18 @@ public class ProductManagementService {
     @Transactional
     public ProductVariantResponse setVariantStatus(UUID productId, UUID variantId,
                                                    VariantStatus status) {
-        Product product = requireProduct(productId);
+        Product product = requireProductForUpdate(productId);
         ProductVariant variant = requireVariant(productId, variantId);
         switch (status) {
             case ACTIVE -> {
                 requireShippingDimensions(product, variant);
                 validateCurrentVariantAttributes(product, variant);
+                requireUniqueVariantCombination(productId,
+                        variantValueRepository.findAllByVariantId(variantId).stream()
+                                .map(value -> new AttributeValueRequest(
+                                        value.getAttributeId(), value.getValue()))
+                                .toList(),
+                        variantId);
                 variant.activate();
             }
             case INACTIVE -> variant.deactivate();
@@ -317,6 +356,7 @@ public class ProductManagementService {
             requireShippingDimensions(product, variant);
             validateCurrentVariantAttributes(product, variant);
         });
+        validateUniqueVariantCombinations(activeVariants);
     }
 
     private ProductPublishReadinessResponse publishReadiness(Product product) {
@@ -365,6 +405,19 @@ public class ProductManagementService {
         }
         checks.add(check("VARIANT_CONFIGURATION_INVALID", "Biến thể đủ thông tin",
                 variantsValid, variantMessage));
+
+        boolean combinationsUnique = hasActiveVariant;
+        String combinationMessage = "Mỗi tổ hợp thuộc tính chỉ thuộc một biến thể đang hoạt động.";
+        if (hasActiveVariant) {
+            try {
+                validateUniqueVariantCombinations(activeVariants);
+            } catch (CatalogException exception) {
+                combinationsUnique = false;
+                combinationMessage = exception.getMessage();
+            }
+        }
+        checks.add(check("VARIANT_COMBINATION_DUPLICATED", "Không trùng tổ hợp biến thể",
+                combinationsUnique, combinationMessage));
 
         List<UUID> activeVariantIds = activeVariants.stream().map(ProductVariant::getId).toList();
         boolean hasAvailableInventory = !activeVariantIds.isEmpty()
@@ -493,8 +546,104 @@ public class ProductManagementService {
                 "Mã hàng đã tồn tại.");
     }
 
+    private void validateBatchUniqueness(List<CreateVariantRequest> requests) {
+        Set<String> skus = new HashSet<>();
+        Set<String> combinations = new HashSet<>();
+        for (CreateVariantRequest request : requests) {
+            if (!skus.add(normalizeSku(request.sku()))) {
+                throw new CatalogException(HttpStatus.CONFLICT, "VARIANT_SKU_EXISTS",
+                        "Danh sách tạo nhanh chứa mã hàng bị trùng.");
+            }
+            if (!combinations.add(variantCombinationKey(request.attributes()))) {
+                throw new CatalogException(HttpStatus.CONFLICT, "VARIANT_COMBINATION_EXISTS",
+                        "Danh sách tạo nhanh chứa tổ hợp thuộc tính bị trùng.");
+            }
+        }
+    }
+
+    private void requireUniqueVariantCombination(UUID productId,
+                                                  List<AttributeValueRequest> requestedValues,
+                                                  UUID excludedVariantId) {
+        String requestedKey = variantCombinationKey(requestedValues);
+        List<ProductVariant> variants = variantRepository.findAllByProductIdOrderBySortOrderAsc(productId)
+                .stream()
+                .filter(variant -> !variant.getId().equals(excludedVariantId))
+                .toList();
+        Map<UUID, List<VariantAttributeValue>> valuesByVariant = variantValuesByVariant(variants);
+        boolean duplicate = variants.stream().anyMatch(variant -> requestedKey.equals(
+                variantCombinationKey(valuesByVariant.getOrDefault(variant.getId(), List.of()))));
+        if (duplicate) {
+            throw new CatalogException(HttpStatus.CONFLICT, "VARIANT_COMBINATION_EXISTS",
+                    "Tổ hợp thuộc tính này đã thuộc một biến thể khác của sản phẩm.");
+        }
+    }
+
+    private void validateUniqueVariantCombinations(List<ProductVariant> variants) {
+        Map<UUID, List<VariantAttributeValue>> valuesByVariant = variantValuesByVariant(variants);
+        Set<String> combinations = new HashSet<>();
+        for (ProductVariant variant : variants) {
+            String key = variantCombinationKey(
+                    valuesByVariant.getOrDefault(variant.getId(), List.of()));
+            if (!combinations.add(key)) {
+                throw new CatalogException(HttpStatus.CONFLICT, "VARIANT_COMBINATION_EXISTS",
+                        "Có nhiều biến thể đang dùng cùng một tổ hợp thuộc tính.");
+            }
+        }
+    }
+
+    private Map<UUID, List<VariantAttributeValue>> variantValuesByVariant(
+            List<ProductVariant> variants) {
+        if (variants.isEmpty()) return Map.of();
+        Map<UUID, List<VariantAttributeValue>> result = new HashMap<>();
+        variantValueRepository.findAllByVariantIdIn(
+                        variants.stream().map(ProductVariant::getId).toList())
+                .forEach(value -> result.computeIfAbsent(value.getVariantId(),
+                        ignored -> new ArrayList<>()).add(value));
+        return result;
+    }
+
+    private String variantCombinationKey(List<AttributeValueRequest> values) {
+        if (values.isEmpty()) return "__DEFAULT__";
+        return values.stream()
+                .map(value -> combinationEntry(value.attributeId(), value.value()))
+                .sorted()
+                .collect(Collectors.joining("|"));
+    }
+
+    private String variantCombinationKey(java.util.Collection<VariantAttributeValue> values) {
+        if (values.isEmpty()) return "__DEFAULT__";
+        return values.stream()
+                .map(value -> combinationEntry(value.getAttributeId(), value.getValue()))
+                .sorted()
+                .collect(Collectors.joining("|"));
+    }
+
+    private String combinationEntry(UUID attributeId, JsonNode value) {
+        return attributeId + "=" + canonicalAttributeValue(value);
+    }
+
+    private String canonicalAttributeValue(JsonNode value) {
+        if (value == null || value.isNull()) return "null";
+        if (value.isTextual()) return value.asString().trim().toUpperCase(Locale.ROOT);
+        if (value.isNumber()) return value.decimalValue().stripTrailingZeros().toPlainString();
+        if (value.isBoolean()) return Boolean.toString(value.asBoolean());
+        if (value.isArray()) {
+            List<String> items = new ArrayList<>();
+            value.forEach(item -> items.add(canonicalAttributeValue(item)));
+            items.sort(String::compareTo);
+            return "[" + String.join(",", items) + "]";
+        }
+        return value.toString();
+    }
+
     private Product requireProduct(UUID productId) {
         return productRepository.findById(productId)
+                .orElseThrow(() -> new CatalogException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND",
+                        "Không tìm thấy sản phẩm."));
+    }
+
+    private Product requireProductForUpdate(UUID productId) {
+        return productRepository.findByIdForUpdate(productId)
                 .orElseThrow(() -> new CatalogException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND",
                         "Không tìm thấy sản phẩm."));
     }

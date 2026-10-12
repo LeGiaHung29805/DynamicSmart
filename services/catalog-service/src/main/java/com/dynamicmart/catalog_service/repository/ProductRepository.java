@@ -22,6 +22,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     Page<Product> findAllByStatus(ProductStatus status, Pageable pageable);
     Page<Product> findAllByCategoryId(UUID categoryId, Pageable pageable);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select product from Product product where product.id = :id")
+    Optional<Product> findByIdForUpdate(@Param("id") UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select product from Product product where product.id in :ids order by product.id")
     List<Product> findAllByIdInForShare(@Param("ids") Collection<UUID> ids);

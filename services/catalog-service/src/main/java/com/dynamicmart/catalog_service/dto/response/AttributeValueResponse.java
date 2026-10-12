@@ -10,6 +10,7 @@ public record AttributeValueResponse(
         String attributeCode,
         String attributeName,
         AttributeDataType dataType,
-        JsonNode value
+        JsonNode value,
+        String displayValue
 ) {
 }

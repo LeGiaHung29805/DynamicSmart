@@ -4,11 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.dynamicmart.catalog_service.dto.request.CreateProductRequest;
+import com.dynamicmart.catalog_service.dto.request.CreateVariantRequest;
 import com.dynamicmart.catalog_service.dto.request.ProductStatusRequest;
 import com.dynamicmart.catalog_service.dto.request.UpdateProductRequest;
 import com.dynamicmart.catalog_service.dto.request.UpsertProductImageRequest;
@@ -17,6 +20,7 @@ import com.dynamicmart.catalog_service.dto.response.ProductPublishReadinessRespo
 import com.dynamicmart.catalog_service.entity.Category;
 import com.dynamicmart.catalog_service.entity.Product;
 import com.dynamicmart.catalog_service.entity.ProductStatus;
+import com.dynamicmart.catalog_service.entity.ProductVariant;
 import com.dynamicmart.catalog_service.exception.CatalogException;
 import com.dynamicmart.catalog_service.repository.CategoryRepository;
 import com.dynamicmart.catalog_service.repository.InventoryItemRepository;
@@ -84,6 +88,16 @@ class ProductManagementServiceTest {
         ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(productCaptor.capture());
         assertEquals("ao-thun-nam-3", productCaptor.getValue().getSlug());
+    }
+
+    @Test
+    void createsIncompleteProductAsDraftBeforeAttributeStep() {
+        when(productRepository.existsBySlugIgnoreCase("san-pham-nhap")).thenReturn(false);
+
+        productService.createProduct(request("Sản phẩm nháp", null));
+
+        verify(attributeValueService).replaceDraftProductValues(
+                any(UUID.class), eq(CATEGORY_ID), eq(List.of()));
     }
 
     @Test
@@ -155,9 +169,44 @@ class ProductManagementServiceTest {
         assertTrue(image.primary());
     }
 
+    @Test
+    void rejectsVariantWhenAttributeCombinationAlreadyExists() {
+        Product product = product(CATEGORY_ID);
+        ProductVariant existing = new ProductVariant(UUID.randomUUID(), PRODUCT_ID,
+                "EXISTING-SKU", "Phiên bản mặc định", 100_000, 200,
+                null, null, null, 10);
+        when(productRepository.findByIdForUpdate(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(variantRepository.findAllByProductIdOrderBySortOrderAsc(PRODUCT_ID))
+                .thenReturn(List.of(existing));
+        when(variantValueRepository.findAllByVariantIdIn(List.of(existing.getId())))
+                .thenReturn(List.of());
+
+        CatalogException exception = assertThrows(CatalogException.class,
+                () -> productService.createVariant(PRODUCT_ID, variantRequest("NEW-SKU")));
+
+        assertEquals("VARIANT_COMBINATION_EXISTS", exception.getCode());
+    }
+
+    @Test
+    void rejectsDuplicateCombinationsInsideVariantBatch() {
+        when(productRepository.findByIdForUpdate(PRODUCT_ID))
+                .thenReturn(Optional.of(product(CATEGORY_ID)));
+
+        CatalogException exception = assertThrows(CatalogException.class,
+                () -> productService.createVariants(PRODUCT_ID,
+                        List.of(variantRequest("BATCH-1"), variantRequest("BATCH-2"))));
+
+        assertEquals("VARIANT_COMBINATION_EXISTS", exception.getCode());
+    }
+
     private CreateProductRequest request(String name, String slug) {
         return new CreateProductRequest(CATEGORY_ID, name, slug, null, null,
                 null, null, null, null, false, List.of());
+    }
+
+    private CreateVariantRequest variantRequest(String sku) {
+        return new CreateVariantRequest(sku, "Phiên bản mặc định", 100_000,
+                200, null, null, null, 10, 0, List.of());
     }
 
     private Product product(UUID categoryId) {

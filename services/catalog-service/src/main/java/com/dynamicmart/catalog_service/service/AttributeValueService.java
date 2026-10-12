@@ -52,7 +52,18 @@ public class AttributeValueService {
 
     public List<ProductAttributeValue> replaceProductValues(UUID productId, UUID categoryId,
                                                             List<AttributeValueRequest> requests) {
-        validate(categoryId, AttributeAppliesTo.PRODUCT, requests);
+        return replaceProductValues(productId, categoryId, requests, true);
+    }
+
+    public List<ProductAttributeValue> replaceDraftProductValues(UUID productId, UUID categoryId,
+                                                                 List<AttributeValueRequest> requests) {
+        return replaceProductValues(productId, categoryId, requests, false);
+    }
+
+    private List<ProductAttributeValue> replaceProductValues(UUID productId, UUID categoryId,
+                                                              List<AttributeValueRequest> requests,
+                                                              boolean requireAllMandatoryValues) {
+        validate(categoryId, AttributeAppliesTo.PRODUCT, requests, requireAllMandatoryValues);
         Map<UUID, ProductAttributeValue> existing = new HashMap<>();
         productValueRepository.findAllByProductId(productId)
                 .forEach(value -> existing.put(value.getAttributeId(), value));
@@ -94,6 +105,12 @@ public class AttributeValueService {
 
     public void validate(UUID categoryId, AttributeAppliesTo appliesTo,
                          List<AttributeValueRequest> requests) {
+        validate(categoryId, appliesTo, requests, true);
+    }
+
+    private void validate(UUID categoryId, AttributeAppliesTo appliesTo,
+                          List<AttributeValueRequest> requests,
+                          boolean requireAllMandatoryValues) {
         List<CategoryAttribute> mappings = categoryAttributeRepository
                 .findAllByCategoryIdOrderBySortOrderAsc(categoryId).stream()
                 .filter(mapping -> mapping.getAppliesTo() == appliesTo)
@@ -114,7 +131,8 @@ public class AttributeValueService {
         }
 
         for (CategoryAttribute mapping : mappings) {
-            if (mapping.isRequired() && !supplied.contains(mapping.getAttributeId())) {
+            if (requireAllMandatoryValues && mapping.isRequired()
+                    && !supplied.contains(mapping.getAttributeId())) {
                 throw badRequest("REQUIRED_ATTRIBUTE_MISSING",
                         "Thiếu thuộc tính bắt buộc của danh mục.");
             }

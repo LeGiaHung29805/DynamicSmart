@@ -1,5 +1,6 @@
 package com.dynamicmart.catalog_service.service;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -44,5 +45,20 @@ class AttributeValueServiceTest {
                 () -> attributeValueService.validate(categoryId, AttributeAppliesTo.PRODUCT, List.of()));
 
         assertEquals("REQUIRED_ATTRIBUTE_MISSING", exception.getCode());
+    }
+
+    @Test
+    void allowsMissingRequiredAttributeWhileSavingProductDraft() {
+        UUID productId = UUID.randomUUID();
+        UUID categoryId = UUID.randomUUID();
+        UUID attributeId = UUID.randomUUID();
+        CategoryAttribute mapping = new CategoryAttribute(UUID.randomUUID(), categoryId,
+                attributeId, AttributeAppliesTo.PRODUCT, true, true, 0);
+        when(categoryAttributeRepository.findAllByCategoryIdOrderBySortOrderAsc(categoryId))
+                .thenReturn(List.of(mapping));
+        when(productValueRepository.findAllByProductId(productId)).thenReturn(List.of());
+
+        assertDoesNotThrow(() -> attributeValueService.replaceDraftProductValues(
+                productId, categoryId, List.of()));
     }
 }
