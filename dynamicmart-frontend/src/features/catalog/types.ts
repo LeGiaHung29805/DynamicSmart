@@ -79,6 +79,7 @@ export interface AttributeValue {
   attributeName: string;
   dataType: AttributeDataType;
   value: unknown;
+  displayValue?: string | null;
 }
 
 export interface InventoryAvailability {

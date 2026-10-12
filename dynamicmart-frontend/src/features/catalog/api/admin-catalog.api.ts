@@ -191,6 +191,13 @@ export function createVariant(productId: string, input: CreateVariantInput) {
   return apiClient.post<ProductVariant>(`/api/v1/catalog/admin/products/${productId}/variants`, input);
 }
 
+export function createVariantsBatch(productId: string, variants: CreateVariantInput[]) {
+  return apiClient.post<ProductVariant[]>(
+    `/api/v1/catalog/admin/products/${productId}/variants/batch`,
+    { variants },
+  );
+}
+
 export function updateVariant(productId: string, variantId: string, input: UpdateVariantInput) {
   return apiClient.put<ProductVariant>(`/api/v1/catalog/admin/products/${productId}/variants/${variantId}`, input);
 }
