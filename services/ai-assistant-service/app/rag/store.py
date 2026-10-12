@@ -109,7 +109,11 @@ class QdrantVectorStore:
             lexical_score = score_lexical_match(query_text, f"{chunk.title} {chunk.content}")
             score = (float(point.score) * 0.7) + (lexical_score * 0.3)
             normalized_query = " ".join(_tokens(query_text))
-            asks_about_assistant = any(term in normalized_query for term in ("tro ly", "chatbot", "gioi han"))
+            asks_about_assistant = any(term in normalized_query for term in (
+                "tro ly", "chatbot", "gioi han", "ban co the lam gi",
+                "ban giup duoc gi", "ho tro nhung gi", "toi nen hoi gi",
+                "ban la ai", "day la gi",
+            ))
             if "gioi-han-tro-ly" in chunk.source and not asks_about_assistant:
                 score -= 0.2
             results.append(SearchResult(chunk=chunk, score=score))
@@ -184,19 +188,51 @@ def score_lexical_match(query: str, document: str) -> float:
     query_tokens = [token for token in _tokens(query) if token not in _STOP_WORDS]
     if not query_tokens:
         return 0.0
-    unique_query_tokens = set(query_tokens)
-    document_tokens = set(_tokens(document))
-    matched = sum(1 for token in unique_query_tokens if token in document_tokens)
-    score = matched / len(unique_query_tokens)
+    normalized_score = _token_match_score(query_tokens, _tokens(document))
+    if not any(ord(character) > 127 for character in query):
+        return normalized_score
 
-    normalized_document = " ".join(_tokens(document))
-    query_bigrams = {
-        " ".join(pair)
-        for pair in zip(query_tokens, query_tokens[1:], strict=False)
-    }
+    accented_query_tokens = [
+        token for token in _accented_tokens(query)
+        if _without_accents(token) not in _STOP_WORDS
+    ]
+    if not accented_query_tokens:
+        return normalized_score
+    accented_score = _token_match_score(accented_query_tokens, _accented_tokens(document))
+    return (accented_score * 0.75) + (normalized_score * 0.25)
+
+
+def _token_match_score(query_tokens: list[str], document_tokens: list[str]) -> float:
+    unique_query_tokens = set(query_tokens)
+    document_token_set = set(document_tokens)
+    matched = sum(1 for token in unique_query_tokens if token in document_token_set)
+    score = matched / len(unique_query_tokens)
+    normalized_document = " ".join(document_tokens)
+    query_bigrams = {" ".join(pair) for pair in zip(query_tokens, query_tokens[1:], strict=False)}
     if query_bigrams and any(phrase in normalized_document for phrase in query_bigrams):
         score = min(1.0, score + 0.25)
     return score
+
+
+def _accented_tokens(value: str) -> list[str]:
+    normalized = unicodedata.normalize("NFC", value.lower())
+    normalized = normalized.replace("phí vận chuyển được tính", "phí giao hàng báo giá")
+    normalized = normalized.replace("phí giao hàng được tính", "phí giao hàng báo giá")
+    normalized = normalized.replace("mã giảm giá", "voucher")
+    normalized = normalized.replace("mã khuyến mãi", "voucher")
+    normalized = normalized.replace("ship hàng", "giao hàng")
+    normalized = normalized.replace("shipping", "giao hàng")
+    normalized = normalized.replace("vận chuyển", "giao hàng")
+    normalized = normalized.replace("đổi trả", "hoàn trả")
+    normalized = normalized.replace("thanh toán khi nhận hàng", "cod")
+    normalized = normalized.replace("trả tiền khi nhận hàng", "cod")
+    normalized = normalized.replace("sản phẩm yêu thích", "wishlist")
+    return re.findall(r"[^\W_]{2,}", normalized, flags=re.UNICODE)
+
+
+def _without_accents(value: str) -> str:
+    normalized = unicodedata.normalize("NFD", value)
+    return "".join(char for char in normalized if unicodedata.category(char) != "Mn").replace("đ", "d")
 
 
 def _tokens(value: str) -> list[str]:

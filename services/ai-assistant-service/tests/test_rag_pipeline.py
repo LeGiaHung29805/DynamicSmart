@@ -116,6 +116,46 @@ class RagPipelineTest(unittest.IsolatedAsyncioTestCase):
             score_lexical_match(question, disclaimer),
         )
 
+    def test_capability_question_prioritizes_assistant_knowledge(self) -> None:
+        store = QdrantVectorStore("test_assistant_capabilities")
+        chunks = [
+            Chunk(
+                "dynamicmart",
+                "assistant",
+                "gioi-han-tro-ly-va-ho-tro.md",
+                "Bạn có thể làm gì?",
+                "Trợ lý có thể tìm sản phẩm và giải thích cách sử dụng DynamicMart.",
+            ),
+            Chunk(
+                "dynamicmart",
+                "catalog",
+                "san-pham.md",
+                "Sản phẩm",
+                "Biến thể có giá và tồn kho riêng.",
+            ),
+        ]
+        store.replace_tenant("dynamicmart", chunks, [[1.0, 0.0], [1.0, 0.0]], "test")
+
+        results = store.search(
+            "dynamicmart",
+            [1.0, 0.0],
+            2,
+            query_text="Bạn có thể làm gì?",
+        )
+
+        self.assertEqual("gioi-han-tro-ly-va-ho-tro.md", results[0].chunk.source)
+        store.close()
+
+    def test_vietnamese_lexical_score_does_not_confuse_ban_and_ban(self) -> None:
+        question = "Bạn có thể làm gì?"
+        assistant_answer = "Bạn có thể yêu cầu trợ lý tìm và gợi ý sản phẩm."
+        catalog_sentence = "Biến thể là đơn vị thực tế được bán và có mã SKU riêng."
+
+        self.assertGreater(
+            score_lexical_match(question, assistant_answer),
+            score_lexical_match(question, catalog_sentence),
+        )
+
     def test_wishlist_question_does_not_match_review_sentence_because_of_question_words(self) -> None:
         question = "Làm sao thêm sản phẩm yêu thích?"
         answer = "Khách có thể thêm sản phẩm vào wishlist của tài khoản."

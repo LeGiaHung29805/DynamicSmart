@@ -7,10 +7,22 @@ INSERT INTO users (
 )
 SELECT
     ('a1000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
-    'seed.customer' || lpad(i::text, 3, '0') || '@dynamicmart.local',
-    'seed.customer' || lpad(i::text, 3, '0') || '@dynamicmart.local',
+    CASE i
+        WHEN 1 THEN 'thao.tran@dynamicmart.local' WHEN 2 THEN 'hieu.nguyen@dynamicmart.local'
+        WHEN 3 THEN 'tien.vu@dynamicmart.local' WHEN 4 THEN 'tung.nguyen@dynamicmart.local'
+        WHEN 5 THEN 'hung.le@dynamicmart.local' ELSE 'seed.customer' || lpad(i::text, 3, '0') || '@dynamicmart.local'
+    END,
+    CASE i
+        WHEN 1 THEN 'thao.tran@dynamicmart.local' WHEN 2 THEN 'hieu.nguyen@dynamicmart.local'
+        WHEN 3 THEN 'tien.vu@dynamicmart.local' WHEN 4 THEN 'tung.nguyen@dynamicmart.local'
+        WHEN 5 THEN 'hung.le@dynamicmart.local' ELSE 'seed.customer' || lpad(i::text, 3, '0') || '@dynamicmart.local'
+    END,
     '$2a$10$tBqz77DaSxqW4Idt2NIdS.7tUnuf.ITT0e2CA.rWK88aSI2WycjVK',
-    format('Khách hàng Seed %s', i),
+    CASE i
+        WHEN 1 THEN 'Trần Phương Thảo' WHEN 2 THEN 'Nguyễn Văn Hiếu'
+        WHEN 3 THEN 'Vũ Mạnh Tiến' WHEN 4 THEN 'Nguyễn Văn Tùng'
+        WHEN 5 THEN 'Lê Gia Hưng' ELSE format('Khách hàng Seed %s', i)
+    END,
     '091' || lpad(i::text, 7, '0'),
     'CUSTOMER', 'ACTIVE', NOW(),
     NOW() - make_interval(days => 60 - i), NOW()
@@ -29,7 +41,11 @@ INSERT INTO addresses (
 SELECT
     ('a2000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('a1000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
-    format('Khách hàng Seed %s', i),
+    CASE i
+        WHEN 1 THEN 'Trần Phương Thảo' WHEN 2 THEN 'Nguyễn Văn Hiếu'
+        WHEN 3 THEN 'Vũ Mạnh Tiến' WHEN 4 THEN 'Nguyễn Văn Tùng'
+        WHEN 5 THEN 'Lê Gia Hưng' ELSE format('Khách hàng Seed %s', i)
+    END,
     '091' || lpad(i::text, 7, '0'),
     format('%s Nguyễn Trãi, Thanh Xuân', 10 + i),
     201, 11007, 'Hà Nội', 'Phường Phú Diễn',

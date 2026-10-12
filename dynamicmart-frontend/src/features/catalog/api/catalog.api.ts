@@ -14,7 +14,7 @@ export interface ProductQuery {
   maximumPriceVnd?: number;
   featured?: boolean;
   attributes?: string[];
-  sort?: "RELEVANCE" | "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "BEST_SELLER";
+  sort?: "RELEVANCE" | "NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "BEST_SELLER" | "PROMOTION";
   page?: number;
   size?: number;
 }

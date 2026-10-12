@@ -378,7 +378,7 @@ public class CatalogProductQueryRepository {
                           AND price_inventory.on_hand_qty - price_inventory.reserved_qty > 0
                      ) DESC, p.id ASC
                     """;
-            case NEWEST, BEST_SELLER -> newestOrder();
+            case NEWEST, BEST_SELLER, PROMOTION -> newestOrder();
         };
     }
 

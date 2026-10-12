@@ -165,7 +165,7 @@ export function CreateReviewModal({
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
                 <p className="font-bold">Chưa xác định dòng đơn hàng để đánh giá.</p>
                 <p className="mt-1 text-slate-600">
-                  Chỉ các sản phẩm thuộc đơn hàng đã hoàn tất (COMPLETED) mới có thể gửi đánh giá.
+                  Chỉ các sản phẩm thuộc đơn hàng đã hoàn tất mới có thể gửi đánh giá.
                   Vui lòng truy cập mục <strong>Đánh giá của tôi</strong> trong hồ sơ cá nhân để đánh giá các sản phẩm đã mua.
                 </p>
                 <Link

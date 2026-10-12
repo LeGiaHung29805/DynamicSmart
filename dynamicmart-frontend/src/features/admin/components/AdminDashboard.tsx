@@ -68,7 +68,7 @@ const operationalWorkspaces = [
     title: "Vận hành Đơn hàng",
     href: "/admin/orders",
     icon: ShoppingBag,
-    description: "Quản lý vòng đời đơn: Đóng gói (PACK), bàn giao (SHIP) và xác nhận giao khách (HANDOVER).",
+    description: "Quản lý vòng đời đơn: đóng gói, đang giao và chờ khách xác nhận đã nhận hàng.",
     tagKey: "orders",
   },
   {
@@ -471,7 +471,7 @@ export function AdminDashboard() {
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">Thống kê đơn và doanh số từ Reporting Service</p>
             </div>
-            <StatusBadge label="Reporting Live" tone="success" />
+            <StatusBadge label="Báo cáo trực tiếp" tone="success" />
           </div>
 
           <div className="mt-4">

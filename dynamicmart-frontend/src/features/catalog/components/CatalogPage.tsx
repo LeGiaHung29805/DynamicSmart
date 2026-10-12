@@ -19,7 +19,8 @@ function positiveNumber(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function apiSort(value: string | undefined, hasKeyword: boolean) {
+function apiSort(value: string | undefined, hasKeyword: boolean, promotionOnly: boolean) {
+  if (promotionOnly) return "PROMOTION" as const;
   if (value === "price-asc") return "PRICE_ASC" as const;
   if (value === "price-desc") return "PRICE_DESC" as const;
   if (value === "best-selling") return "BEST_SELLER" as const;
@@ -35,6 +36,8 @@ function pageHref(filters: CatalogFilters, page: number): string {
   if (filters.maximumPriceVnd) params.set("maximumPriceVnd", filters.maximumPriceVnd);
   filters.attribute?.forEach((value) => params.append("attribute", value));
   if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
+  if (filters.promotion === "true") params.set("promotion", "true");
+  if (filters.featured === "true") params.set("featured", "true");
   if (page > 1) params.set("page", String(page));
   return `/products${params.size ? `?${params.toString()}` : ""}`;
 }
@@ -63,8 +66,9 @@ export async function CatalogPage({ filters }: Readonly<{ filters: CatalogFilter
         categoryId: selectedCategory?.id,
         minimumPriceVnd: positiveNumber(filters.minimumPriceVnd),
         maximumPriceVnd: positiveNumber(filters.maximumPriceVnd),
+        featured: filters.featured === "true" ? true : undefined,
         attributes: filters.attribute,
-        sort: apiSort(filters.sort, Boolean(filters.q?.trim())),
+        sort: apiSort(filters.sort, Boolean(filters.q?.trim()), filters.promotion === "true"),
         page: requestedPage - 1,
         size: 18,
       }),

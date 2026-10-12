@@ -137,7 +137,11 @@ SELECT
     ('d5000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('d4000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('a2000000-0000-4000-8000-' || lpad((((i - 1) % 12) + 1)::text, 12, '0'))::uuid,
-    format('Khách hàng Seed %s', ((i - 1) % 12) + 1),
+    CASE ((i - 1) % 12) + 1
+        WHEN 1 THEN 'Trần Phương Thảo' WHEN 2 THEN 'Nguyễn Văn Hiếu'
+        WHEN 3 THEN 'Vũ Mạnh Tiến' WHEN 4 THEN 'Nguyễn Văn Tùng'
+        WHEN 5 THEN 'Lê Gia Hưng' ELSE format('Khách hàng Seed %s', ((i - 1) % 12) + 1)
+    END,
     '091' || lpad((((i - 1) % 12) + 1)::text, 7, '0'),
     format('%s Nguyễn Trãi, Thanh Xuân', 10 + (((i - 1) % 12) + 1)),
     201, 11007, 'Hà Nội', 'Phường Phú Diễn', NOW() - make_interval(days => 49 - i)

@@ -64,7 +64,13 @@ app:
       issuer: ${JWT_ISSUER:dynamicmart-identity-service}
       hmac-secret-base64: ${JWT_HMAC_SECRET_BASE64}
   checkout:
-    session-ttl: ${CHECKOUT_SESSION_TTL:15m}
+    session-ttl: ${CHECKOUT_SESSION_TTL:10m}
+  delivery-confirmation:
+    # Khách có thể xác nhận sớm; quá thời hạn này hệ thống mới tự xác nhận.
+    auto-confirm-after: ${ORDER_AUTO_CONFIRM_AFTER:7d}
+    fixed-delay: ${ORDER_AUTO_CONFIRM_FIXED_DELAY:1h}
+    initial-delay: ${ORDER_AUTO_CONFIRM_INITIAL_DELAY:2m}
+    batch-size: ${ORDER_AUTO_CONFIRM_BATCH_SIZE:50}
   saga-recovery:
     enabled: ${ORDER_SAGA_RECOVERY_ENABLED:true}
     fixed-delay: ${ORDER_SAGA_RECOVERY_FIXED_DELAY:30s}

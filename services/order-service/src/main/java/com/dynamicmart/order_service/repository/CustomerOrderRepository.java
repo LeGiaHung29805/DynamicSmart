@@ -4,6 +4,7 @@ import com.dynamicmart.order_service.entity.CustomerOrder;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,14 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, UU
     Optional<CustomerOrder> findByCheckoutSessionId(UUID checkoutSessionId);
     Page<CustomerOrder> findAllByCustomerId(UUID customerId, Pageable pageable);
     java.util.List<CustomerOrder> findAllByCustomerIdAndStatus(UUID customerId, com.dynamicmart.order_service.entity.OrderStatus status);
+
+    @Query("""
+            select customerOrder from CustomerOrder customerOrder
+            where customerOrder.status = com.dynamicmart.order_service.entity.OrderStatus.HANDOVER_PENDING
+              and customerOrder.updatedAt <= :deadline
+            order by customerOrder.updatedAt asc
+            """)
+    Page<CustomerOrder> findAwaitingCustomerConfirmationBefore(@Param("deadline") Instant deadline, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select customerOrder from CustomerOrder customerOrder where customerOrder.id = :id")

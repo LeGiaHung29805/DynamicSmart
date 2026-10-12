@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/locations/sync").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/payments",
+                                "/api/v1/payments/admin/*",
                                 "/api/v1/payments/*/callback-audits",
                                 "/api/v1/payments/*/attempts").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST,

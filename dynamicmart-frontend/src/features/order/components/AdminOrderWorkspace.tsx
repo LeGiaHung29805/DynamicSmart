@@ -26,7 +26,7 @@ import {
 } from "../utils/order-format";
 
 const statuses: OrderStatus[] = ["PENDING_PAYMENT", "CONFIRMED", "PACKING", "SHIPPING", "HANDOVER_PENDING", "DELIVERED", "COMPLETED", "CANCELLED"];
-const actionLabel: Record<Exclude<OrderAction, "CONFIRM_RECEIVED">, string> = { PACK: "Bắt đầu đóng gói", SHIP: "Chuyển sang đang giao", HANDOVER: "Chuyển sang chờ bàn giao" };
+const actionLabel: Record<Exclude<OrderAction, "CONFIRM_RECEIVED">, string> = { PACK: "Bắt đầu đóng gói", SHIP: "Chuyển sang đang giao", HANDOVER: "Chờ khách xác nhận" };
 
 export function AdminOrderWorkspace() {
   const router = useRouter();
@@ -39,7 +39,7 @@ export function AdminOrderWorkspace() {
   const [customerId, setCustomerId] = useState("");
   const [applied, setApplied] = useState({ orderNumber: "", customerId: "" });
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const detailLoading = false;
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const operationKeys = useRef(new Map<string, string>());
@@ -73,17 +73,8 @@ export function AdminOrderWorkspace() {
     return () => { ignored = true; };
   }, [applied, isAdmin, page, status]);
 
-  async function inspect(orderId: string) {
-    setDetailLoading(true);
-    setError("");
-    try {
-      const [detail, timeline] = await Promise.all([adminOrdersApi.get(orderId), adminOrdersApi.timeline(orderId)]);
-      setSelected({ ...detail, timeline: timeline.timeline });
-    } catch (cause) {
-      setError(isApiError(cause) ? cause.message : "Không thể tải chi tiết đơn hàng.");
-    } finally {
-      setDetailLoading(false);
-    }
+  function inspect(orderId: string) {
+    router.push(`/admin/orders/${orderId}`);
   }
 
   async function execute(action: Exclude<OrderAction, "CONFIRM_RECEIVED">) {

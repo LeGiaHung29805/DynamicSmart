@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Clock3, RefreshCw, XCircle } from "lucide-react";
+import { CheckCircle2, CircleAlert, Clock3, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { paymentMethodLabel } from "@/features/order/utils/order-format";
@@ -53,6 +53,7 @@ export function PaymentResultPanel() {
 
   const failed = payment?.status === "FAILED" || payment?.status === "EXPIRED";
   const succeeded = payment?.status === "PAID";
+  const requiresManualReview = failed || (payment?.status === "PENDING" && pollCount >= 20);
   const Icon = succeeded ? CheckCircle2 : failed ? XCircle : Clock3;
   const title = succeeded
     ? "Thanh toán đã được xác nhận"
@@ -62,9 +63,9 @@ export function PaymentResultPanel() {
   const detail = succeeded
     ? `Hệ thống đã nhận thông báo hợp lệ từ ${paymentMethodLabel(payment?.method ?? "cổng thanh toán")}.`
     : failed
-      ? "Khoản thanh toán đã thất bại hoặc hết hạn."
+      ? "Cổng thanh toán chưa xác nhận được giao dịch này. Nếu ngân hàng báo đã trừ tiền, đừng thanh toán lại."
       : pollCount >= 20
-        ? "Chưa nhận được xác nhận từ cổng thanh toán. Bạn có thể kiểm tra lại hoặc mở chi tiết đơn hàng."
+        ? "Chưa nhận được xác nhận từ cổng thanh toán. Đừng tạo hoặc thanh toán một đơn khác cho đến khi đã kiểm tra trạng thái."
         : "Trang quay lại không phải bằng chứng thanh toán. Hệ thống đang chờ thông báo có chữ ký và số tiền hợp lệ.";
 
   return (
@@ -77,7 +78,8 @@ export function PaymentResultPanel() {
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {error ?? (loading ? "Vui lòng chờ trong giây lát." : detail)}
         </p>
-        {payment ? <p className="mt-3 font-mono text-xs text-slate-400">Mã đơn: {payment.orderId}</p> : null}
+        {payment ? <div className="mt-3 space-y-1 font-mono text-xs text-slate-400"><p>Mã đơn: {payment.orderId}</p><p>Mã tham chiếu: {reference}</p></div> : null}
+        {requiresManualReview ? <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-950"><CircleAlert className="mt-0.5 size-5 shrink-0 text-amber-700" /><div><p className="font-black">Nếu tài khoản đã bị trừ tiền</p><p className="mt-1 leading-5">Giữ lại mã đơn và mã tham chiếu ở trên, không thanh toán lần hai. Bộ phận hỗ trợ sẽ đối soát với cổng thanh toán và xử lý hoàn tiền thủ công nếu giao dịch đã được ghi nhận.</p></div></div> : null}
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           {payment ? (
             <Link className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-slate-50" href={`/customer/account/orders/${payment.orderId}`}>
@@ -88,6 +90,7 @@ export function PaymentResultPanel() {
               Về trang chủ
             </Link>
           )}
+          {requiresManualReview ? <Link className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900 hover:bg-amber-100" href={`/contact?subject=payment&reference=${encodeURIComponent(reference ?? "")}`}>Liên hệ hỗ trợ</Link> : null}
           {!succeeded ? <Button onClick={() => void refresh(true)}><RefreshCw />Kiểm tra lại</Button> : null}
         </div>
       </section>

@@ -43,6 +43,10 @@ const categoryPresentation = [
   { tokens: ["beauty", "lam-dep"], icon: "sparkles", color: "from-rose-100 to-pink-50 text-rose-700" },
   { tokens: ["sport", "the-thao"], icon: "dumbbell", color: "from-indigo-100 to-blue-50 text-indigo-700" },
   { tokens: ["book", "sach-van-phong"], icon: "bookOpen", color: "from-amber-100 to-orange-50 text-amber-700" },
+  { tokens: ["kitchen", "do-bep"], icon: "house", color: "from-orange-100 to-amber-50 text-orange-700" },
+  { tokens: ["kids", "do-choi"], icon: "gift", color: "from-fuchsia-100 to-pink-50 text-fuchsia-700" },
+  { tokens: ["pet", "thu-cung"], icon: "shoppingBag", color: "from-violet-100 to-purple-50 text-violet-700" },
+  { tokens: ["travel", "du-lich"], icon: "footprints", color: "from-teal-100 to-cyan-50 text-teal-700" },
 ] satisfies ReadonlyArray<Pick<HomeCategoryItem, "icon" | "color"> & { tokens: readonly string[] }>;
 
 const defaultCategoryPresentation: Pick<HomeCategoryItem, "icon" | "color"> = {
@@ -66,7 +70,7 @@ function presentCategories(categories: CategoryTree[]): HomeCategoryItem[] {
       seenGroups.add(groupKey);
       return true;
     })
-    .slice(0, 6)
+    .slice(0, 16)
     .map((category) => {
       const presentationIndex = categoryPresentationIndex(category);
       const presentation = presentationIndex >= 0
@@ -84,37 +88,53 @@ function presentCategories(categories: CategoryTree[]): HomeCategoryItem[] {
     });
 }
 
-function CatalogUnavailable() {
+function EmptyCatalogSection({
+  title,
+  description,
+}: Readonly<{ title: string; description: string }>) {
   return (
     <div className="rounded-3xl border border-amber-200 bg-amber-50 px-6 py-8 text-center">
-      <p className="font-black text-amber-950">Catalog đang tạm thời chưa sẵn sàng</p>
-      <p className="mt-2 text-sm text-amber-800">Hãy khởi động Gateway và catalog-service rồi tải lại trang.</p>
+      <p className="font-black text-amber-950">{title}</p>
+      <p className="mt-2 text-sm text-amber-800">{description}</p>
     </div>
   );
 }
 
-async function loadHomeCatalog(): Promise<{
+type HomeCatalog = {
   categories: HomeCategoryItem[];
   featured: ProductSummary[];
   bestSellers: ProductSummary[];
   newArrivals: ProductSummary[];
-} | null> {
-  try {
-    const [categories, featured, bestSellers, newArrivals] = await Promise.all([
-      getCategories(),
-      getProducts({ featured: true, sort: "NEWEST", page: 0, size: 4 }),
-      getProducts({ sort: "BEST_SELLER", page: 0, size: 4 }),
-      getProducts({ sort: "NEWEST", page: 0, size: 4 }),
-    ]);
-    return {
-      categories: presentCategories(categories),
-      featured: featured.content,
-      bestSellers: bestSellers.content,
-      newArrivals: newArrivals.content,
-    };
-  } catch {
-    return null;
-  }
+};
+
+function resolvedValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
+  return result.status === "fulfilled" ? result.value : fallback;
+}
+
+function resolvedProductContent(
+  result: PromiseSettledResult<{ content: ProductSummary[] }>,
+): ProductSummary[] {
+  return result.status === "fulfilled" ? result.value.content : [];
+}
+
+async function loadHomeCatalog(): Promise<HomeCatalog> {
+  // Trang chủ là tập hợp nhiều truy vấn độc lập. Không để một truy vấn sản phẩm
+  // lỗi tạm thời làm mất luôn danh mục và hiển thị sai rằng Catalog Service dừng.
+  const [categoriesResult, featuredResult, bestSellersResult, newArrivalsResult] = await Promise.allSettled([
+    getCategories(),
+    getProducts({ featured: true, sort: "BEST_SELLER", page: 0, size: 8 }),
+    getProducts({ sort: "BEST_SELLER", page: 0, size: 8 }),
+    getProducts({ sort: "NEWEST", page: 0, size: 8 }),
+  ]);
+
+  const categories = resolvedValue(categoriesResult, []);
+
+  return {
+    categories: presentCategories(categories),
+    featured: resolvedProductContent(featuredResult),
+    bestSellers: resolvedProductContent(bestSellersResult),
+    newArrivals: resolvedProductContent(newArrivalsResult),
+  };
 }
 
 export async function HomePage() {
@@ -142,11 +162,11 @@ export async function HomePage() {
       </div> */}
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 py-16 sm:px-6 lg:gap-28 lg:px-8 lg:py-24">
-        <section className="scroll-mt-28" id="categories">{catalog?.categories.length ? <CategoryCarousel items={catalog.categories} /> : <CatalogUnavailable />}</section>
+        <section className="scroll-mt-28" id="categories">{catalog.categories.length ? <CategoryCarousel items={catalog.categories} /> : <EmptyCatalogSection title="Chưa có danh mục để hiển thị" description="Danh mục sẽ xuất hiện ngay sau khi dữ liệu được đồng bộ." />}</section>
 
         <section>
-          <SectionTitle description="Tuyển chọn nổi bật do đội ngũ DynamicMart đề xuất cho mùa này." eyebrow="Đề xuất hôm nay" href="/products" title="Sản phẩm nổi bật" />
-          {catalog?.featured.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.featured.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
+          <SectionTitle description="8 sản phẩm nổi bật được đội ngũ chọn lọc, ưu tiên các lựa chọn có lượt mua tốt và giá giảm hấp dẫn." eyebrow="Đề xuất hôm nay" href="/products?featured=true&sort=best-selling" title="Sản phẩm nổi bật" />
+          {catalog.featured.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">{catalog.featured.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <EmptyCatalogSection title="Chưa có sản phẩm nổi bật" description="Hãy đánh dấu sản phẩm nổi bật trong trang quản trị để hiển thị tại đây." />}
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
@@ -169,8 +189,8 @@ export async function HomePage() {
         </section>
 
         <section id="best-seller">
-          <SectionTitle description="Những lựa chọn được cộng đồng DynamicMart yêu thích nhất trong tuần." eyebrow="Được săn đón" href="/products?sort=best-selling" title="Best seller tuần này" />
-          {catalog?.bestSellers.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.bestSellers.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
+          <SectionTitle description="8 sản phẩm có lượt mua cao nhất trong 30 ngày gần đây." eyebrow="Được săn đón" href="/products?sort=best-selling" title="Best seller tuần này" />
+          {catalog.bestSellers.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">{catalog.bestSellers.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <EmptyCatalogSection title="Chưa có dữ liệu bán chạy" description="Danh sách sẽ được cập nhật khi có đơn hàng hoàn tất." />}
           <Link className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 sm:hidden" href="/products?sort=best-selling">Xem tất cả <ArrowRight className="size-4" /></Link>
         </section>
 
@@ -185,8 +205,8 @@ export async function HomePage() {
         </section>
 
         <section>
-          <SectionTitle description="Những sản phẩm vừa được cập nhật trên DynamicMart." eyebrow="Vừa lên kệ" href="/products?sort=newest" title="Sản phẩm mới về" />
-          {catalog?.newArrivals.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">{catalog.newArrivals.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <CatalogUnavailable />}
+          <SectionTitle description="8 sản phẩm vừa được nhập và công bố gần nhất trên DynamicMart." eyebrow="Vừa lên kệ" href="/products?sort=newest" title="Sản phẩm mới về" />
+          {catalog.newArrivals.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">{catalog.newArrivals.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <EmptyCatalogSection title="Chưa có sản phẩm mới về" description="Sản phẩm mới sẽ xuất hiện tại đây sau khi được công bố." />}
         </section>
       </div>
     </div>

@@ -26,9 +26,16 @@ mặc định giải phóng sau khi trả lời để tránh hai model chiếm G
 
 Mỗi thư mục con trong `knowledge/` là một `tenant`. Dữ liệu của hai dự án không được truy xuất chéo.
 
-Riêng DynamicMart, câu hỏi tìm sản phẩm được đọc trực tiếp từ Catalog Service qua HTTP.
-Giá, giá khuyến mãi và trạng thái còn hàng không được sao chép vào Qdrant. Khi quản trị viên
-cập nhật Catalog, câu hỏi tiếp theo dùng dữ liệu mới mà không cần re-index.
+Riêng DynamicMart có một Product RAG tách biệt. Mỗi sản phẩm công khai là một vector document
+gồm tên, danh mục, mô tả và ý nghĩa danh mục; sản phẩm không bị chia thành chunk như tài liệu.
+Semantic search lấy các `product_id` phù hợp trong collection `${QDRANT_COLLECTION}_products`,
+sau đó gọi lại Catalog Service để lấy giá, khuyến mãi và tồn kho hiện tại. Vì vậy Qdrant chỉ
+giúp hiểu các cách hỏi tự nhiên như “mặc gì đi làm” hoặc “đồ để nghe nhạc không dây”, không
+trở thành nguồn sự thật của dữ liệu thương mại.
+
+Product index được kiểm tra khi FastAPI khởi động và tối đa mỗi 5 phút khi có truy vấn phù hợp.
+Fingerprint của dữ liệu catalog giúp bỏ qua bước embedding nếu tên, mô tả và danh mục không đổi.
+Parser từ khóa cũ vẫn là fallback khi Ollama hoặc product vector index tạm thời không hoạt động.
 
 Môi trường local chạy Qdrant Server thật bằng Docker Compose và lưu dữ liệu trong named volume.
 Khi deploy, thay `QDRANT_URL` và `QDRANT_API_KEY` để dùng Qdrant Server hoặc Qdrant Cloud;
@@ -129,7 +136,9 @@ Không đưa mật khẩu, token, dữ liệu thanh toán hoặc dữ liệu đ�
 
 Không xuất danh sách sản phẩm, giá hoặc tồn kho thành Markdown để làm tri thức RAG. File snapshot
 `danh-muc-va-san-pham-chi-tiet.md` cũ bị loader bỏ qua nhằm tránh chatbot trả dữ liệu lỗi thời.
-Sản phẩm mới chỉ cần được tạo và công khai trong Catalog Service; không cần khởi động lại FastAPI.
+Sản phẩm mới chỉ cần được tạo và công khai trong Catalog Service. Giá và tồn kho được thấy ngay;
+thay đổi tên, mô tả hoặc danh mục được đồng bộ semantic index trong tối đa 5 phút, hoặc ngay khi
+khởi động lại FastAPI.
 
 ## Test
 

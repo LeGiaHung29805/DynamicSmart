@@ -66,7 +66,7 @@ function useAutoplay(total: number, delay: number) {
   };
 }
 
-function useItemsPerPage(desktopItems = 5) {
+function useItemsPerPage(desktopItems = 5, tabletItems = 3, mobileItems = 2) {
   const [itemsPerPage, setItemsPerPage] = useState(2);
 
   useEffect(() => {
@@ -78,7 +78,7 @@ function useItemsPerPage(desktopItems = 5) {
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, [desktopItems]);
+  }, [desktopItems, mobileItems, tabletItems]);
 
   return itemsPerPage;
 }
@@ -183,7 +183,7 @@ export function HeroCarousel() {
 }
 
 export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ items?: readonly HomeCategoryItem[] }>) {
-  const itemsPerPage = useItemsPerPage(6);
+  const itemsPerPage = useItemsPerPage(8, 8, 8);
   const uniqueItems = useMemo(() => {
     const seen = new Set<string>();
     return items.filter((category) => {
@@ -208,25 +208,25 @@ export function CategoryCarousel({ items = fallbackCategories }: Readonly<{ item
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
           <p className="mb-2 text-xs font-black tracking-[0.2em] text-brand uppercase">Khám phá theo nhu cầu</p>
-          <h2 className="text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl">Danh mục nổi bật</h2>
+          <h2 className="text-2xl font-black tracking-[-0.035em] text-slate-950 sm:text-3xl">Danh mục nổi bật</h2>
         </div>
         {total > 1 ? <CarouselControls current={safeIndex} label="danh mục" onNext={next} onPrevious={previous} total={total} /> : null}
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" key={`${itemsPerPage}-${safeIndex}`}>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3" key={`${itemsPerPage}-${safeIndex}`}>
         {visibleItems.map((category, itemIndex) => {
           const Icon = categoryIcons[category.icon];
           return (
             <Link
-              className="group animate-in fade-in slide-in-from-right-3 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-950/5 sm:p-5"
+              className="group flex min-h-24 items-center gap-3 animate-in fade-in slide-in-from-right-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:min-h-28 sm:p-3.5"
               href={category.href}
               key={`${category.name}-${category.href}`}
               style={{ animationDelay: `${itemIndex * 65}ms` }}
             >
-              <span className={`grid aspect-square place-items-center rounded-2xl bg-gradient-to-br ${category.color}`}>
-                <Icon className="size-8 transition duration-300 group-hover:scale-110 sm:size-10" strokeWidth={1.65} />
+              <span className={`grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${category.color} sm:size-12`}>
+                <Icon className="size-5 transition duration-300 group-hover:scale-110 sm:size-6" strokeWidth={1.65} />
               </span>
-              <div className="mt-4 flex items-start justify-between gap-2">
-                <div><h3 className="font-bold text-slate-900">{category.name}</h3><p className="mt-1 text-xs text-slate-500">{category.caption}</p></div>
+              <div className="min-w-0 flex-1">
+                <div><h3 className="truncate text-sm font-bold text-slate-900 sm:text-base">{category.name}</h3><p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-500">{category.caption}</p></div>
                 <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-slate-300 transition group-hover:text-brand" />
               </div>
             </Link>

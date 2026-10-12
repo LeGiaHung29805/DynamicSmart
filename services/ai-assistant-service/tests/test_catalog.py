@@ -34,9 +34,29 @@ class DynamicMartCatalogClientTest(unittest.TestCase):
     def test_extracts_keyword_from_natural_product_group_phrase(self) -> None:
         office = DynamicMartCatalogClient.parse_search("Các hàng về văn phòng")
         kitchen = DynamicMartCatalogClient.parse_search("Những đồ dùng cho nhà bếp")
+        shirts = DynamicMartCatalogClient.parse_search("Các loại sản phẩm về áo")
 
         self.assertEqual("văn phòng", office.keyword)
         self.assertEqual("nhà bếp", kitchen.keyword)
+        self.assertEqual("áo", shirts.keyword)
+
+    def test_filters_incidental_substring_matches_from_catalog(self) -> None:
+        products = [
+            {
+                "name": "Áo thun Everyday Fit",
+                "shortDescription": "Áo cotton",
+                "category": {"name": "Thời trang"},
+            },
+            {
+                "name": "Bình nước Active Flow",
+                "shortDescription": "Dùng khi chơi thể thao",
+                "category": {"name": "Thể thao"},
+            },
+        ]
+
+        filtered = DynamicMartCatalogClient._relevant_products(products, "áo")
+
+        self.assertEqual(["Áo thun Everyday Fit"], [item["name"] for item in filtered])
 
     def test_matches_keyword_against_nested_or_top_level_category(self) -> None:
         categories = [

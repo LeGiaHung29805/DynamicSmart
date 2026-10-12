@@ -11,7 +11,9 @@ server:
 
 app:
   cors:
-    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+    # Comma-separated browser origins. Keeping localhost and the public tunnel
+    # together allows Next.js to proxy API calls in both local and ngrok flows.
+    frontend-origins: ${FRONTEND_ORIGINS:${FRONTEND_ORIGIN:http://localhost:3000}}
   routes:
     identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
     catalog-service-url: ${CATALOG_SERVICE_URL:http://localhost:8082}
