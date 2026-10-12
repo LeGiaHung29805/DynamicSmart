@@ -48,7 +48,7 @@ Query của danh sách sản phẩm:
 
 Tìm kiếm chuẩn hóa chữ hoa/thường, dấu tiếng Việt, dấu cách/gạch nối và từ viết liền; hỗ trợ nhóm từ đồng nghĩa nghiệp vụ cùng sai chính tả nhẹ bằng PostgreSQL `unaccent`, full-text search và `pg_trgm`. Kết quả ưu tiên khớp chính xác, tiền tố, full-text rồi độ tương đồng. Phiên bản này chỉ gợi ý **sản phẩm và danh mục**, chưa có thực thể hay logic thương hiệu.
 
-Chỉ Product `ACTIVE`, đã phát hành và có ít nhất một Variant `ACTIVE` còn tồn khả dụng được trả trong danh sách. Với `BEST_SELLER`, Catalog lấy thứ tự từ Reporting thuộc Engagement Service và fallback an toàn khi service đó chưa sẵn sàng. Direct sale được Catalog lấy từ Cart Promotion API và fallback về giá niêm yết nếu Cart chậm/lỗi. Engagement cập nhật rating tổng hợp qua `PUT /api/v1/catalog/internal/products/{productId}/rating`; chi tiết review vẫn do Engagement sở hữu.
+Chỉ Product `ACTIVE`, đã phát hành và có ít nhất một Variant `ACTIVE` còn tồn khả dụng được trả trong danh sách. Với `BEST_SELLER`, Catalog lấy thứ tự bán trong 7 ngày gần nhất từ `reporting-service` và fallback an toàn khi service đó chưa sẵn sàng. Khi kết hợp `featured=true`, sản phẩm bán chạy được ưu tiên trước nhưng các sản phẩm nổi bật chưa phát sinh giao dịch vẫn được trả về theo thứ tự mới nhất. Direct sale được Catalog lấy từ Cart Promotion API và fallback về giá niêm yết nếu Cart chậm/lỗi. Engagement cập nhật rating tổng hợp qua `PUT /api/v1/catalog/internal/products/{productId}/rating`; chi tiết review vẫn do Engagement sở hữu.
 
 ## API quản trị
 
@@ -68,6 +68,7 @@ Product/Variant chỉ nhận giá trị của Attribute đã ánh xạ đúng `P
 - `/api/v1/catalog/admin/products/{productId}/publish-readiness`: trả checklist điều kiện trước khi công khai.
 - `/api/v1/catalog/admin/products/{productId}/status`: chuyển `DRAFT`, `ACTIVE`, `INACTIVE`, `ARCHIVED`.
 - `/api/v1/catalog/admin/products/{productId}/variants`: tạo Variant.
+- `/api/v1/catalog/admin/products/{productId}/variants/batch`: tạo tối đa 100 Variant trong cùng một transaction; toàn bộ lô rollback nếu một dòng không hợp lệ.
 - `/api/v1/catalog/admin/products/{productId}/variants/{variantId}`: sửa Variant.
 - `/api/v1/catalog/admin/products/{productId}/variants/{variantId}/status`: đổi trạng thái Variant.
 - `/api/v1/catalog/admin/products/{productId}/images`: thêm ảnh.
@@ -75,7 +76,9 @@ Product/Variant chỉ nhận giá trị của Attribute đã ánh xạ đúng `P
 
 Ở chế độ URL hiện tại, client chỉ cần gửi `imageUrl`, `altText`, `sortOrder`, `primary` và `variantId` nếu là ảnh riêng của Variant. `contentType` và `sizeBytes` là metadata tùy chọn; khi được gửi, Catalog kiểm tra JPEG/PNG/WEBP/AVIF và giới hạn 5 MB. Ảnh đầu tiên trong mỗi phạm vi tự trở thành ảnh chính; khi xóa ảnh chính, ảnh kế tiếp được chọn thay thế. Ảnh Variant phải thuộc đúng Product; mỗi Product hoặc Variant chỉ có một ảnh chính. Product/Variant không có endpoint xóa cứng.
 
-Luồng quản trị chuẩn gồm bốn bước: lưu Product `DRAFT`; tạo/kích hoạt Variant và tồn đầu kỳ; thêm ảnh chính cấp Product; kiểm tra readiness rồi công khai. Product chỉ được gắn vào danh mục lá (danh mục không có con) và chỉ chuyển sang `ACTIVE` khi danh mục và thuộc tính hợp lệ, có Variant `ACTIVE` đủ thông tin vận chuyển, có tồn khả dụng và có ảnh chính cấp Product. Danh mục không được đổi sau khi Product đã có Variant để tránh bộ thuộc tính Product/Variant rơi vào trạng thái không nhất quán.
+Luồng quản trị chuẩn gồm năm bước: lưu Product `DRAFT`; khai báo thuộc tính cấp Product; tạo/kích hoạt Variant và tồn đầu kỳ; thêm ảnh chính cấp Product; kiểm tra readiness rồi công khai. Giao diện có thể sinh ma trận Variant từ các thuộc tính `SELECT` như Màu sắc × Kích cỡ. Catalog khóa Product trong lúc tạo/sửa Variant và từ chối SKU hoặc tổ hợp thuộc tính trùng; thao tác batch là nguyên tử. Sản phẩm không có lựa chọn vẫn dùng một Variant mặc định để giỏ hàng, tồn kho và đơn hàng luôn đi qua cùng một contract `variantId`.
+
+Product chỉ được gắn vào danh mục lá (danh mục không có con) và chỉ chuyển sang `ACTIVE` khi danh mục và thuộc tính hợp lệ, có Variant `ACTIVE` đủ thông tin vận chuyển, không trùng tổ hợp, có tồn khả dụng và có ảnh chính cấp Product. `weightGrams`, `lengthCm`, `widthCm`, `heightCm` là số đo kiện hàng vận chuyển; Size S/M/L/XL phải được cấu hình dưới dạng thuộc tính `VARIANT`. Danh mục không được đổi sau khi Product đã có Variant để tránh bộ thuộc tính Product/Variant rơi vào trạng thái không nhất quán.
 
 ### Điều chỉnh tồn kho
 

@@ -82,14 +82,15 @@ Question status: `OPEN`, `ANSWERED`, `HIDDEN`.
 
 Customer chỉ đọc notification của chính mình.
 
-## Reporting
+## Reporting Service
 
-Reporting chỉ cập nhật từ `OrderCompleted` đã chống trùng bằng `processed_events`.
+Reporting đã được tách thành `reporting-service` (cổng local `8088`) và chỉ cập nhật từ event `OrderCompleted`, đã chống trùng bằng `processed_events`. API Gateway chuyển toàn bộ `/api/v1/reports/**` sang service này.
 
 - `GET /api/v1/reports/sales/daily?from=2026-10-01&to=2026-10-05`
 - `GET /api/v1/reports/products/best-sellers?from=2026-10-01&to=2026-10-05&limit=10`
 
 Revenue P0 là tổng `finalTotalVnd` của order `COMPLETED`, chưa gọi là lợi nhuận và chưa trừ refund.
+Best seller được cộng gộp theo `productId` trên tất cả biến thể; `variantId` trong response là `null` để tránh hiểu nhầm đây là xếp hạng từng biến thể.
 
 ### Internal `OrderCompleted`
 
