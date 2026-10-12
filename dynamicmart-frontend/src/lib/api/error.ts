@@ -11,8 +11,10 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
     this.code = payload.code;
-    this.fields = payload.errors ?? [];
-    this.traceId = payload.traceId;
+    this.fields = payload.errors?.length
+      ? payload.errors
+      : Object.entries(payload.fieldErrors ?? {}).map(([field, message]) => ({ field, message }));
+    this.traceId = payload.traceId ?? payload.correlationId;
   }
 }
 

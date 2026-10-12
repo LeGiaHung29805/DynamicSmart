@@ -7,7 +7,16 @@ export const fieldClass = "min-h-10 w-full rounded-xl border border-slate-200 bg
 export const textAreaClass = `${fieldClass} min-h-24 py-2.5`;
 
 export function errorMessage(error: unknown, fallback = "Không thể hoàn tất thao tác.") {
-  return isApiError(error) ? error.message : error instanceof Error ? error.message : fallback;
+  if (isApiError(error)) {
+    const details = error.fields.map((field) => field.message).filter(Boolean);
+    return details.length ? `${error.message} ${details.join(" ")}` : error.message;
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
+export function apiFieldErrors(error: unknown): Record<string, string> {
+  if (!isApiError(error)) return {};
+  return Object.fromEntries(error.fields.flatMap((item) => item.field ? [[item.field, item.message]] : []));
 }
 
 export function optionalNumber(value: string): number | null {

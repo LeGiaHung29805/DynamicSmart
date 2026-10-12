@@ -21,7 +21,9 @@ export interface ApiErrorPayload {
   code?: string;
   message?: string;
   errors?: ApiValidationError[];
+  fieldErrors?: Record<string, string>;
   traceId?: string;
+  correlationId?: string;
 }
 
 export function isApiResponse<T>(payload: unknown): payload is ApiResponse<T> {
