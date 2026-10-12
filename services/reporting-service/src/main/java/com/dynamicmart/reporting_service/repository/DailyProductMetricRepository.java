@@ -13,14 +13,13 @@ public interface DailyProductMetricRepository extends JpaRepository<DailyProduct
     @Query("""
             select new com.dynamicmart.reporting_service.dto.response.BestSellerResponse(
                 metric.id.productId,
-                metric.id.variantId,
                 sum(metric.quantitySold),
                 sum(metric.grossSalesVnd),
                 sum(metric.netItemSalesVnd)
             )
             from DailyProductMetric metric
             where metric.id.metricDate between :from and :to
-            group by metric.id.productId, metric.id.variantId
+            group by metric.id.productId
             order by sum(metric.quantitySold) desc, sum(metric.netItemSalesVnd) desc
             """)
     List<BestSellerResponse> bestSellers(LocalDate from, LocalDate to, Pageable pageable);

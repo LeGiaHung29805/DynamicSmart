@@ -6,15 +6,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.clients")
 public record CatalogClientProperties(
-        String engagementServiceUrl,
-        int engagementConnectTimeoutMs,
-        int engagementReadTimeoutMs,
+        String reportingServiceUrl,
+        int reportingConnectTimeoutMs,
+        int reportingReadTimeoutMs,
         List<UUID> bestSellerFallbackProductIds
 ) {
     public CatalogClientProperties {
-        engagementServiceUrl = normalizeUrl(engagementServiceUrl, "http://localhost:8086");
-        engagementConnectTimeoutMs = positiveOrDefault(engagementConnectTimeoutMs, 1000);
-        engagementReadTimeoutMs = positiveOrDefault(engagementReadTimeoutMs, 1500);
+        reportingServiceUrl = normalizeUrl(reportingServiceUrl, "http://localhost:8088");
+        reportingConnectTimeoutMs = positiveOrDefault(reportingConnectTimeoutMs, 1000);
+        reportingReadTimeoutMs = positiveOrDefault(reportingReadTimeoutMs, 1500);
         bestSellerFallbackProductIds = bestSellerFallbackProductIds == null
                 ? List.of() : List.copyOf(bestSellerFallbackProductIds);
     }

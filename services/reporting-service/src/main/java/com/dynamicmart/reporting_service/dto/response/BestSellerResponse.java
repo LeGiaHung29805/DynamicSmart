@@ -9,4 +9,8 @@ public record BestSellerResponse(
         long grossSalesVnd,
         long netItemSalesVnd
 ) {
+    public BestSellerResponse(UUID productId, long quantitySold,
+                              long grossSalesVnd, long netItemSalesVnd) {
+        this(productId, null, quantitySold, grossSalesVnd, netItemSalesVnd);
+    }
 }

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.RestClient;
 
-class EngagementReportClientTest {
+class ReportingClientTest {
     private HttpServer server;
 
     @AfterEach
@@ -27,33 +27,31 @@ class EngagementReportClientTest {
     }
 
     @Test
-    void readsCurrentEngagementContractAndSendsInternalKey() throws Exception {
-        UUID productId = UUID.randomUUID();
-        UUID variantId = UUID.randomUUID();
+    void readsReportingContractDeduplicatesProductsAndSendsInternalKey() throws Exception {
+        UUID firstProductId = UUID.randomUUID();
+        UUID secondProductId = UUID.randomUUID();
         AtomicReference<String> internalKey = new AtomicReference<>();
         startServer(exchange -> {
             internalKey.set(exchange.getRequestHeaders().getFirst("X-Internal-Api-Key"));
             respond(exchange, HttpStatus.OK.value(), """
-                    {"data":[{
-                      "productId":"%s",
-                      "variantId":"%s",
-                      "quantitySold":12,
-                      "grossSalesVnd":1200000,
-                      "netItemSalesVnd":1100000
-                    }]}
-                    """.formatted(productId, variantId));
+                    {"data":[
+                      {"productId":"%s","variantId":null,"quantitySold":12,"grossSalesVnd":1200000,"netItemSalesVnd":1100000},
+                      {"productId":"%s","variantId":"%s","quantitySold":5,"grossSalesVnd":500000,"netItemSalesVnd":450000},
+                      {"productId":"%s","variantId":null,"quantitySold":4,"grossSalesVnd":400000,"netItemSalesVnd":350000}
+                    ]}
+                    """.formatted(firstProductId, firstProductId, UUID.randomUUID(), secondProductId));
         });
-        EngagementReportClient client = client(500, 500, List.of());
+        ReportingClient client = client(500, 500, List.of());
 
         List<UUID> result = client.getBestSellers(
-                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 1), 10);
+                LocalDate.of(2026, 10, 7), LocalDate.of(2026, 10, 13), 10);
 
-        assertThat(result).containsExactly(productId);
+        assertThat(result).containsExactly(firstProductId, secondProductId);
         assertThat(internalKey.get()).isEqualTo("test-internal-key");
     }
 
     @Test
-    void fallsBackQuicklyWhenEngagementRespondsTooSlowly() throws Exception {
+    void fallsBackQuicklyWhenReportingRespondsTooSlowly() throws Exception {
         UUID fallbackId = UUID.randomUUID();
         startServer(exchange -> {
             try {
@@ -65,21 +63,21 @@ class EngagementReportClientTest {
                 // The client is expected to close the connection after its read timeout.
             }
         });
-        EngagementReportClient client = client(100, 75, List.of(fallbackId));
+        ReportingClient client = client(100, 75, List.of(fallbackId));
 
         long startedAt = System.nanoTime();
-        List<UUID> result = client.getBestSellers(LocalDate.now().minusDays(30), LocalDate.now(), 10);
+        List<UUID> result = client.getBestSellers(LocalDate.now().minusDays(6), LocalDate.now(), 10);
         Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
         assertThat(result).containsExactly(fallbackId);
         assertThat(elapsed).isLessThan(Duration.ofSeconds(2));
     }
 
-    private EngagementReportClient client(int connectTimeoutMs, int readTimeoutMs,
-                                          List<UUID> fallbackIds) {
+    private ReportingClient client(int connectTimeoutMs, int readTimeoutMs,
+                                   List<UUID> fallbackIds) {
         CatalogClientProperties properties = new CatalogClientProperties(baseUrl(), connectTimeoutMs,
                 readTimeoutMs, fallbackIds);
-        return new EngagementReportClient(properties, "test-internal-key", RestClient.builder());
+        return new ReportingClient(properties, "test-internal-key", RestClient.builder());
     }
 
     private void startServer(com.sun.net.httpserver.HttpHandler handler) throws IOException {

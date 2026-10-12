@@ -120,7 +120,7 @@ export function AdminReportDashboard() {
 
   const displayBestSellers = bestSellers.map((item) => ({
     product: productNames[item.productId] || `Sản phẩm #${item.productId.slice(0, 8)}`,
-    variant: item.variantId ? `Biến thể #${item.variantId.slice(0, 6)}` : "Mặc định",
+    variant: item.variantId ? `Biến thể #${item.variantId.slice(0, 6)}` : "Tổng tất cả biến thể",
     quantity: item.quantitySold,
     revenue: item.netItemSalesVnd || item.grossSalesVnd,
   }));

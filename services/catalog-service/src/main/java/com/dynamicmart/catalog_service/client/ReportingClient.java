@@ -14,17 +14,17 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
-public class EngagementReportClient {
+public class ReportingClient {
     private final RestClient restClient;
     private final List<UUID> fallbackBestSellerIds;
 
-    public EngagementReportClient(CatalogClientProperties properties,
-                                  @Value("${app.internal.api-key:}") String internalApiKey,
-                                  RestClient.Builder builder) {
+    public ReportingClient(CatalogClientProperties properties,
+                           @Value("${app.internal.api-key:}") String internalApiKey,
+                           RestClient.Builder builder) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofMillis(properties.engagementConnectTimeoutMs()));
-        requestFactory.setReadTimeout(Duration.ofMillis(properties.engagementReadTimeoutMs()));
-        RestClient.Builder clientBuilder = builder.baseUrl(properties.engagementServiceUrl())
+        requestFactory.setConnectTimeout(Duration.ofMillis(properties.reportingConnectTimeoutMs()));
+        requestFactory.setReadTimeout(Duration.ofMillis(properties.reportingReadTimeoutMs()));
+        RestClient.Builder clientBuilder = builder.baseUrl(properties.reportingServiceUrl())
                 .requestFactory(requestFactory);
         if (internalApiKey != null && !internalApiKey.isBlank()) {
             clientBuilder.defaultHeader("X-Internal-Api-Key", internalApiKey);
@@ -47,7 +47,11 @@ public class EngagementReportClient {
                     .body(new ParameterizedTypeReference<ApiResponse<List<BestSellerResponse>>>() {});
 
             if (response != null && response.data() != null) {
-                return response.data().stream().map(BestSellerResponse::productId).toList();
+                return response.data().stream()
+                        .map(BestSellerResponse::productId)
+                        .distinct()
+                        .limit(Math.max(limit, 0))
+                        .toList();
             }
             return fallback(limit);
         } catch (RestClientException exception) {
@@ -56,7 +60,7 @@ public class EngagementReportClient {
     }
 
     private List<UUID> fallback(int limit) {
-        return fallbackBestSellerIds.stream().limit(Math.max(limit, 0)).toList();
+        return fallbackBestSellerIds.stream().distinct().limit(Math.max(limit, 0)).toList();
     }
 
     public record ApiResponse<T>(T data) {}

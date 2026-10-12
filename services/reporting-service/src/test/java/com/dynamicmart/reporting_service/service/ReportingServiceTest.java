@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.dynamicmart.reporting_service.dto.event.EventEnvelope;
 import com.dynamicmart.reporting_service.dto.event.OrderCompletedPayload;
+import com.dynamicmart.reporting_service.dto.response.BestSellerResponse;
 import com.dynamicmart.reporting_service.mapper.ReportMapper;
 import com.dynamicmart.reporting_service.repository.DailyProductMetricRepository;
 import com.dynamicmart.reporting_service.repository.DailySalesMetricRepository;
@@ -63,5 +64,17 @@ class ReportingServiceTest {
         assertThat(envelope).isNotNull();
         assertThat(envelope.eventType()).isEqualTo("OrderCompleted");
         assertThat(envelope.payload()).isNotNull();
+    }
+
+    @Test
+    void productBestSellerAggregateHasNoMisleadingVariantId() {
+        UUID productId = UUID.randomUUID();
+
+        BestSellerResponse aggregate = new BestSellerResponse(
+                productId, 20L, 2_000_000L, 1_900_000L);
+
+        assertThat(aggregate.productId()).isEqualTo(productId);
+        assertThat(aggregate.variantId()).isNull();
+        assertThat(aggregate.quantitySold()).isEqualTo(20L);
     }
 }

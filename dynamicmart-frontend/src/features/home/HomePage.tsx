@@ -189,7 +189,7 @@ export async function HomePage() {
         </section>
 
         <section id="best-seller">
-          <SectionTitle description="8 sản phẩm có lượt mua cao nhất trong 30 ngày gần đây." eyebrow="Được săn đón" href="/products?sort=best-selling" title="Best seller tuần này" />
+          <SectionTitle description="8 sản phẩm có tổng số lượng bán cao nhất trong 7 ngày gần đây." eyebrow="Được săn đón" href="/products?sort=best-selling" title="Best seller tuần này" />
           {catalog.bestSellers.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">{catalog.bestSellers.map((product) => <CatalogProductCard key={product.id} product={product} />)}</div> : <EmptyCatalogSection title="Chưa có dữ liệu bán chạy" description="Danh sách sẽ được cập nhật khi có đơn hàng hoàn tất." />}
           <Link className="mt-7 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 sm:hidden" href="/products?sort=best-selling">Xem tất cả <ArrowRight className="size-4" /></Link>
         </section>

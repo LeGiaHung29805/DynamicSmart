@@ -15,7 +15,7 @@ import com.dynamicmart.catalog_service.exception.CatalogException;
 import com.dynamicmart.catalog_service.query.CatalogProductQueryRepository;
 import com.dynamicmart.catalog_service.query.ProductAttributeFilter;
 import com.dynamicmart.catalog_service.query.ProductIdPage;
-import com.dynamicmart.catalog_service.client.EngagementReportClient;
+import com.dynamicmart.catalog_service.client.ReportingClient;
 import com.dynamicmart.catalog_service.query.ProductSearchCriteria;
 import com.dynamicmart.catalog_service.query.ProductSort;
 import com.dynamicmart.catalog_service.repository.CategoryRepository;
@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,14 +49,14 @@ public class CatalogQueryService {
     private final ProductVariantRepository variantRepository;
     private final CategoryRepository categoryRepository;
     private final CatalogResponseAssembler responseAssembler;
-    private final EngagementReportClient reportClient;
+    private final ReportingClient reportClient;
 
     public CatalogQueryService(CatalogProductQueryRepository queryRepository,
                                ProductRepository productRepository,
                                ProductVariantRepository variantRepository,
                                CategoryRepository categoryRepository,
                                CatalogResponseAssembler responseAssembler,
-                               EngagementReportClient reportClient) {
+                               ReportingClient reportClient) {
         this.queryRepository = queryRepository;
         this.productRepository = productRepository;
         this.variantRepository = variantRepository;
@@ -68,7 +69,8 @@ public class CatalogQueryService {
     public PageResponse<ProductSummaryResponse> search(ProductSearchCriteria criteria) {
         validateCriteria(criteria);
         java.time.LocalDate today = java.time.LocalDate.now();
-        List<UUID> bestSellerIds = reportClient.getBestSellers(today.minusDays(30), today, 100);
+        // Khoảng thời gian tính cả hôm nay: today - 6 ngày đến today là đúng 7 ngày.
+        List<UUID> bestSellerIds = reportClient.getBestSellers(today.minusDays(6), today, 100);
         if (criteria.sort() == ProductSort.BEST_SELLER) {
             // Never silently substitute newest products for a best-seller request.
             return bestSellerSearch(criteria, bestSellerIds);
@@ -125,14 +127,20 @@ public class CatalogQueryService {
         ProductSearchCriteria broadCriteria = new ProductSearchCriteria(criteria.keyword(), criteria.categoryId(),
                 criteria.minimumPriceVnd(), criteria.maximumPriceVnd(), criteria.featured(),
                 criteria.attributes(), ProductSort.NEWEST, 0, 1000);
-        Set<UUID> matchingIds = new HashSet<>(queryRepository.search(broadCriteria).productIds());
-        List<UUID> matchingBestSellerIds = bestSellerIds.stream()
-                .filter(matchingIds::contains)
-                .toList();
+        List<UUID> matchingIds = queryRepository.search(broadCriteria).productIds();
+        Set<UUID> matchingIdSet = new HashSet<>(matchingIds);
+        LinkedHashSet<UUID> rankedIds = new LinkedHashSet<>();
+        bestSellerIds.stream().filter(matchingIdSet::contains).forEach(rankedIds::add);
+        // Khu vực featured cần luôn hiển thị đủ sản phẩm được quản trị viên chọn.
+        // Best seller chỉ là ưu tiên xếp hạng; phần còn lại giữ thứ tự NEWEST.
+        if (Boolean.TRUE.equals(criteria.featured())) {
+            matchingIds.forEach(rankedIds::add);
+        }
+        List<UUID> rankedProductIds = List.copyOf(rankedIds);
         Map<UUID, Product> productsById = new HashMap<>();
-        productRepository.findAllById(matchingBestSellerIds)
+        productRepository.findAllById(rankedProductIds)
                 .forEach(product -> productsById.put(product.getId(), product));
-        List<Product> matchingProducts = matchingBestSellerIds.stream()
+        List<Product> matchingProducts = rankedProductIds.stream()
                 .map(productsById::get)
                 .filter(java.util.Objects::nonNull)
                 .toList();
@@ -141,8 +149,8 @@ public class CatalogQueryService {
                 .filter(ProductSummaryResponse::inStock)
                 .forEach(summary -> inStockIds.add(summary.id()));
         List<UUID> orderedIds = new ArrayList<>();
-        matchingBestSellerIds.stream().filter(inStockIds::contains).forEach(orderedIds::add);
-        matchingBestSellerIds.stream().filter(id -> !inStockIds.contains(id)).forEach(orderedIds::add);
+        rankedProductIds.stream().filter(inStockIds::contains).forEach(orderedIds::add);
+        rankedProductIds.stream().filter(id -> !inStockIds.contains(id)).forEach(orderedIds::add);
         int fromIndex = Math.min(Math.multiplyExact(criteria.page(), criteria.size()), orderedIds.size());
         int toIndex = Math.min(fromIndex + criteria.size(), orderedIds.size());
         List<UUID> pageIds = orderedIds.subList(fromIndex, toIndex);
