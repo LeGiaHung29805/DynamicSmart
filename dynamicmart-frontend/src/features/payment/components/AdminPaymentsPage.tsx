@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ErrorState, LoadingState } from "@/components/common/PageState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
@@ -30,15 +31,16 @@ const money = (value: number) => new Intl.NumberFormat("vi-VN", {
 const dateTime = (value?: string) => value ? new Date(value).toLocaleString("vi-VN") : "—";
 
 export function AdminPaymentsPage() {
+  const router = useRouter();
   const [data, setData] = useState<PaymentPage | null>(null);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AdminPayment | null>(null);
-  const [attempts, setAttempts] = useState<PaymentAttempt[]>([]);
-  const [audits, setAudits] = useState<CallbackAudit[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const [attempts] = useState<PaymentAttempt[]>([]);
+  const [audits] = useState<CallbackAudit[]>([]);
+  const detailLoading = false;
+  const detailError: string | null = null;
   const detailRequest = useRef(0);
 
   useEffect(() => {
@@ -57,27 +59,8 @@ export function AdminPaymentsPage() {
     }
   }
 
-  async function inspect(payment: AdminPayment) {
-    const requestId = ++detailRequest.current;
-    setSelected(payment);
-    setAttempts([]);
-    setAudits([]);
-    setDetailError(null);
-    setDetailLoading(true);
-    try {
-      const [nextAttempts, nextAudits] = await Promise.all([
-        adminPaymentsApi.attempts(payment.id),
-        adminPaymentsApi.audits(payment.id),
-      ]);
-      if (requestId !== detailRequest.current) return;
-      setAttempts(nextAttempts);
-      setAudits(nextAudits);
-    } catch {
-      if (requestId !== detailRequest.current) return;
-      setDetailError("Không thể tải lịch sử của khoản thanh toán này. Vui lòng thử lại.");
-    } finally {
-      if (requestId === detailRequest.current) setDetailLoading(false);
-    }
+  function inspect(payment: AdminPayment) {
+    router.push(`/admin/payments/${payment.id}`);
   }
 
   return (
@@ -88,6 +71,8 @@ export function AdminPaymentsPage() {
         description="Theo dõi COD, các lần mở cổng thanh toán và thông báo đối soát đã lọc dữ liệu nhạy cảm."
       />
 
+      <div className={selected ? "grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(380px,.8fr)]" : ""}>
+      <div>
       {loading ? (
         <LoadingState title="Đang tải thanh toán" />
       ) : error ? (
@@ -144,7 +129,9 @@ export function AdminPaymentsPage() {
         </SurfacePanel>
       )}
 
+      </div>
       {selected ? (
+        <div className="xl:sticky xl:top-24">
         <PaymentDetail
           payment={selected}
           attempts={attempts}
@@ -157,7 +144,9 @@ export function AdminPaymentsPage() {
             setSelected(null);
           }}
         />
+        </div>
       ) : null}
+      </div>
     </div>
   );
 }
@@ -198,6 +187,7 @@ function PaymentDetail({ payment, attempts, audits, loading, error, retry, close
               <dt className="text-slate-500">Đã thu</dt><dd>{dateTime(payment.paidAt)}</dd>
               <dt className="text-slate-500">Xác nhận COD</dt><dd>{payment.method === "COD" ? "Khách bấm Đã nhận hàng" : "—"}</dd>
             </dl>
+            {payment.timing === "PREPAID" && (payment.status === "FAILED" || payment.status === "EXPIRED") ? <section className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-black">Quy trình đối soát khi khách báo đã bị trừ tiền</p><ol className="mt-2 list-decimal space-y-1.5 pl-5 text-xs leading-5"><li>So khớp mã tham chiếu ở lần thanh toán với dashboard của nhà cung cấp.</li><li>Kiểm tra callback audit: chữ ký và số tiền phải hợp lệ trước khi kết luận.</li><li>Nếu nhà cung cấp không ghi nhận thành công: thông báo khách đặt lại đơn; đơn cũ đã được hủy và Saga hoàn giữ chỗ.</li><li>Nếu nhà cung cấp xác nhận đã thu tiền: không tự ý chuyển đơn hủy sang giao hàng; lưu biên bản đối soát và hoàn tiền thủ công theo quy trình nội bộ.</li></ol></section> : null}
           </section>
           <section className="space-y-6">
             <AuditTable

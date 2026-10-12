@@ -13,6 +13,7 @@ export const promotionApi = {
   createVoucher: (body: object) => apiClient.post<VoucherDto>("/api/v1/cart/admin/vouchers", body, key()),
   updateDirectSale: (id: string, body: object) => apiClient.put<DirectSaleDto>(`/api/v1/cart/admin/direct-sales/${id}`, body, key()),
   updateVoucher: (id: string, body: object) => apiClient.put<VoucherDto>(`/api/v1/cart/admin/vouchers/${id}`, body, key()),
+  deleteVoucher: (id: string) => apiClient.delete<void>(`/api/v1/cart/admin/vouchers/${id}`),
   setDirectSaleStatus: (id: string, status: string, reason: string) => apiClient.patch<DirectSaleDto>(`/api/v1/cart/admin/direct-sales/${id}/status`, { status, reason }, key()),
   setVoucherStatus: (id: string, status: string, reason: string) => apiClient.patch<VoucherDto>(`/api/v1/cart/admin/vouchers/${id}/status`, { status, reason }, key()),
   assignVoucher: (id: string, customerId: string, expiresAt: string | undefined, reason: string) => apiClient.post(`/api/v1/cart/admin/vouchers/${id}/assignments`, { customerId, expiresAt, reason }, key()),

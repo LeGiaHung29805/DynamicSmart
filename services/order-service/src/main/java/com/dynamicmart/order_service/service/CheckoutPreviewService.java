@@ -142,13 +142,16 @@ public class CheckoutPreviewService {
 
     private VoucherPreview loadVoucherPreview(
             UUID customerId, CheckoutPreviewRequest request, List<CheckoutSessionItem> items, long shippingFeeVnd) {
-        if (request.merchandiseVoucherId() == null && request.shippingVoucherId() == null) {
+        if (request.merchandiseVoucherId() == null && request.shippingVoucherId() == null
+                && isBlank(request.merchandiseVoucherCode()) && isBlank(request.shippingVoucherCode())) {
             return VoucherPreview.empty();
         }
         return voucherPricing.preview(new VoucherPreviewRequest(
                 customerId,
                 request.merchandiseVoucherId(),
+                request.merchandiseVoucherCode(),
                 request.shippingVoucherId(),
+                request.shippingVoucherCode(),
                 shippingFeeVnd,
                 items.stream().map(item -> new VoucherItem(
                         item.getProductId(), item.getVariantId(), item.getQuantity(), item.getUnitPriceVnd())).toList()));
@@ -166,13 +169,17 @@ public class CheckoutPreviewService {
         if (request.shippingVoucherId() != null) {
             expectedVoucherIds.add(request.shippingVoucherId());
         }
+        Set<String> expectedVoucherCodes = new HashSet<>();
+        if (!isBlank(request.merchandiseVoucherCode())) expectedVoucherCodes.add(request.merchandiseVoucherCode().trim().toUpperCase());
+        if (!isBlank(request.shippingVoucherCode())) expectedVoucherCodes.add(request.shippingVoucherCode().trim().toUpperCase());
         Set<UUID> actualVoucherIds = new HashSet<>();
+        Set<String> actualVoucherCodes = new HashSet<>();
         long merchandiseDiscount = 0;
         int shippingCount = 0;
         int merchandiseCount = 0;
         for (AppliedVoucher voucher : result.vouchers()) {
             if (voucher == null || voucher.voucherId() == null || !actualVoucherIds.add(voucher.voucherId())
-                    || isBlank(voucher.voucherCode()) || isBlank(voucher.scope())
+                    || isBlank(voucher.voucherCode()) || !actualVoucherCodes.add(voucher.voucherCode().trim().toUpperCase()) || isBlank(voucher.scope())
                     || voucher.discountAmountVnd() < 0 || voucher.shippingDiscountVnd() < 0) {
                 throw invalidVoucher("Voucher Preview chứa snapshot không hợp lệ hoặc bị trùng.");
             }
@@ -189,7 +196,10 @@ public class CheckoutPreviewService {
                 merchandiseDiscount = addMoney(merchandiseDiscount, voucher.discountAmountVnd());
             }
         }
-        if (!actualVoucherIds.equals(expectedVoucherIds) || shippingCount > 1 || merchandiseCount > 1) {
+        int expectedCount = (!isBlank(request.merchandiseVoucherCode()) || request.merchandiseVoucherId() != null ? 1 : 0)
+                + (!isBlank(request.shippingVoucherCode()) || request.shippingVoucherId() != null ? 1 : 0);
+        if (actualVoucherIds.size() != expectedCount || !actualVoucherIds.containsAll(expectedVoucherIds)
+                || !actualVoucherCodes.containsAll(expectedVoucherCodes) || shippingCount > 1 || merchandiseCount > 1) {
             throw invalidVoucher("Voucher trả về không khớp lựa chọn hoặc vi phạm stacking rule P0.");
         }
 

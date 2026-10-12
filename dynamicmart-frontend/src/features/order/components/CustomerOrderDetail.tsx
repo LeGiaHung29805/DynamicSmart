@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { SurfacePanel } from "@/components/common/SurfacePanel";
 import { Button } from "@/components/ui/Button";
 import { CreateReviewModal } from "@/features/engagement";
-import { customerPaymentsApi, type CustomerPayment } from "@/features/payment";
+import { BankQrPaymentCard, customerPaymentsApi, type CustomerPayment } from "@/features/payment";
 import { paymentStatusLabel, paymentStatusTone } from "@/features/payment/utils/payment-format";
 import { isApiError } from "@/lib/api/error";
 import { customerOrdersApi, type CustomerOrder, type CustomerOrderItem } from "../api/customer-orders.api";
@@ -82,7 +82,7 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
       const nextPayment = await customerPaymentsApi.createAttempt(orderId);
       setPayment(nextPayment);
       if (!nextPayment.redirectUrl) throw new Error("Cổng thanh toán chưa trả về đường dẫn hợp lệ.");
-      window.location.assign(nextPayment.redirectUrl);
+      if (nextPayment.method !== "BANK_QR") window.location.assign(nextPayment.redirectUrl);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể mở cổng thanh toán.");
     } finally {
@@ -95,6 +95,9 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
 
   const canContinuePayment = payment?.status === "PENDING" && payment.method !== "COD"
     && (payment.timing === "PREPAID" || order.status === "HANDOVER_PENDING" || order.status === "DELIVERED");
+  const requiresPaymentReview = order.status === "CANCELLED"
+    && order.paymentTiming === "PREPAID"
+    && (payment?.status === "FAILED" || payment?.status === "EXPIRED");
 
   return (
     <main className="mx-auto min-h-[60vh] w-full max-w-6xl px-4 py-10 sm:px-6">
@@ -128,13 +131,14 @@ export function CustomerOrderDetail({ orderId }: Readonly<{ orderId: string }>) 
           <SurfacePanel>
             <div className="flex items-center gap-3"><CreditCard className="size-5 text-brand" /><h2 className="font-black text-slate-950">Thanh toán</h2></div>
             <dl className="mt-4 space-y-3 text-sm"><InfoRow label="Phương thức" value={paymentMethodLabel(order.paymentMethod)} /><InfoRow label="Thời điểm" value={paymentTimingLabel(order.paymentTiming)} />{payment ? <div className="flex items-center justify-between gap-3"><dt className="text-slate-500">Trạng thái</dt><dd><StatusBadge label={paymentStatusLabel(payment.status)} tone={paymentStatusTone(payment.status)} /></dd></div> : null}{payment?.paidAt ? <InfoRow label="Đã thanh toán lúc" value={formatDateTime(payment.paidAt)} /> : null}</dl>
-            {canContinuePayment ? <Button className="mt-5 w-full" disabled={submitting} onClick={() => void continuePayment()}><CreditCard />{submitting ? "Đang mở cổng thanh toán…" : payment?.redirectUrl ? "Tiếp tục thanh toán" : "Tạo đường dẫn thanh toán"}</Button> : null}
-            {payment?.status === "PENDING" && payment.timing === "POSTPAID" && order.status !== "HANDOVER_PENDING" && order.status !== "DELIVERED" ? <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">Thanh toán trả sau sẽ được mở khi quản trị viên chuyển đơn sang bước chờ bàn giao.</p> : null}
+            {payment?.method === "BANK_QR" && payment.status === "PENDING" && payment.redirectUrl ? <BankQrPaymentCard expiresAt={payment.expiresAt} orderId={order.orderId} orderNumber={order.orderNumber} qrUrl={payment.redirectUrl} /> : canContinuePayment ? <Button className="mt-5 w-full" disabled={submitting} onClick={() => void continuePayment()}><CreditCard />{submitting ? "Đang mở cổng thanh toán…" : "Tạo mã QR"}</Button> : null}
+            {payment?.status === "PENDING" && payment.timing === "POSTPAID" && order.status !== "HANDOVER_PENDING" && order.status !== "DELIVERED" ? <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">Thanh toán trả sau sẽ được mở khi quản trị viên chuyển đơn sang bước chờ bạn xác nhận đã nhận hàng.</p> : null}
           </SurfacePanel>
 
-          {order.availableActions.includes("CONFIRM_RECEIVED") ? <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5"><div className="flex gap-3"><PackageCheck className="mt-0.5 size-6 text-emerald-700" /><div><h2 className="font-black text-emerald-950">Bạn đã nhận được hàng?</h2><p className="mt-1 text-sm leading-6 text-emerald-800">Chỉ xác nhận sau khi đã nhận và kiểm tra kiện hàng. Với COD, hệ thống đồng thời ghi nhận đã thanh toán.</p></div></div><Button className="mt-4 w-full" disabled={submitting} onClick={() => void confirmReceived()}>{submitting ? "Đang xác nhận…" : "Tôi đã nhận hàng"}</Button></section> : null}
+          {order.availableActions.includes("CONFIRM_RECEIVED") ? <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5"><div className="flex gap-3"><PackageCheck className="mt-0.5 size-6 text-emerald-700" /><div><h2 className="font-black text-emerald-950">Bạn đã nhận được hàng?</h2><p className="mt-1 text-sm leading-6 text-emerald-800">Chỉ xác nhận sau khi đã nhận và kiểm tra kiện hàng. Với COD, hệ thống đồng thời ghi nhận đã thanh toán. Nếu bạn không phản hồi, hệ thống sẽ tự xác nhận sau 7 ngày.</p></div></div><Button className="mt-4 w-full" disabled={submitting} onClick={() => void confirmReceived()}>{submitting ? "Đang xác nhận…" : "Tôi đã nhận hàng"}</Button></section> : null}
           {order.status === "COMPLETED" ? <section className="flex gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900"><CheckCircle2 className="size-6 shrink-0 text-emerald-600" /><div><p className="font-black">Đơn hàng đã hoàn tất.</p><p className="mt-1 text-xs leading-5">Cảm ơn bạn đã mua sắm. Bạn có thể đánh giá từng sản phẩm trong đơn.</p></div></section> : null}
           {order.status === "CANCELLED" ? <section className="flex gap-3 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-rose-900"><div className="w-full"><p className="font-black">Đơn hàng đã bị hủy.</p>{order.cancelReason ? <p className="mt-1 text-xs leading-5">Lý do: {orderCancelReasonLabel(order.cancelReason)}</p> : null}</div></section> : null}
+          {requiresPaymentReview ? <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-950"><p className="font-black">Ngân hàng báo đã trừ tiền dù đơn bị hủy?</p><p className="mt-1 text-sm leading-6">Đừng đặt hoặc thanh toán thêm đơn mới. Hãy liên hệ hỗ trợ kèm mã đơn <strong>{order.orderNumber}</strong> và mã thanh toán <strong className="break-all">{payment?.id}</strong>. Chúng tôi sẽ đối soát với cổng thanh toán; nếu xác nhận đã thu tiền, việc hoàn tiền sẽ do quản trị viên xử lý thủ công.</p><Link className="mt-4 inline-flex rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-black text-amber-900 hover:bg-amber-100" href={`/contact?subject=payment&order=${encodeURIComponent(order.orderNumber)}&payment=${encodeURIComponent(payment?.id ?? "")}`}>Liên hệ hỗ trợ thanh toán</Link></section> : null}
           <Button className="w-full" variant="outline" onClick={() => void load()}><RefreshCw />Làm mới trạng thái</Button>
         </aside>
       </div>

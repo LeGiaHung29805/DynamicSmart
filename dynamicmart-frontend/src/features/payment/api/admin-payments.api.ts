@@ -18,6 +18,7 @@ export type CallbackAudit = { id: string; providerReference?: string; checksumVa
 
 export const adminPaymentsApi = {
   list: (page = 0) => apiClient.get<PaymentPage>(`api/v1/payments?page=${page}&size=20`),
+  get: (paymentId: string) => apiClient.get<AdminPayment>(`api/v1/payments/admin/${paymentId}`),
   attempts: (paymentId: string) => apiClient.get<PaymentAttempt[]>(`api/v1/payments/${paymentId}/attempts`),
   audits: (paymentId: string) => apiClient.get<CallbackAudit[]>(`api/v1/payments/${paymentId}/callback-audits`),
 };

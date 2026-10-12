@@ -44,10 +44,31 @@ SELECT
     ('b2000000-0000-4000-8000-' || lpad(product_no::text, 12, '0'))::uuid,
     ('b3000000-0000-4000-8000-' || lpad((((product_no - 1) * 3) + 1)::text, 12, '0'))::uuid,
     4 + (review_no % 2),
-    format('Sản phẩm đúng mô tả, đóng gói tốt. Đánh giá mẫu #%s.', review_no),
+    CASE review_no
+        WHEN 1 THEN 'Tai nghe kết nối nhanh, đeo khoảng hai giờ vẫn êm tai. Hộp đóng gói chắc chắn và giao đúng hẹn.'
+        WHEN 2 THEN 'Áo đúng phom như mô tả, vải mềm và không bị bai sau lần giặt đầu tiên. Sẽ quay lại ủng hộ.'
+        WHEN 3 THEN 'Đèn đủ sáng cho bàn học, ba mức sáng dễ dùng. Nhân viên tư vấn cũng phản hồi rất nhanh.'
+        WHEN 4 THEN 'Sữa rửa mặt dịu nhẹ, da không bị khô căng. Sản phẩm còn nguyên niêm phong khi nhận hàng.'
+        WHEN 5 THEN 'Bình nước kín, bỏ trong balo không bị rò. Dung tích đúng nhu cầu tập luyện của mình.'
+        ELSE 'Sổ giấy dày, viết bút mực không lem sang trang sau. Giao hàng cẩn thận và sản phẩm sạch đẹp.'
+    END,
     'VISIBLE', NOW() - make_interval(days => 48 - i), NOW() - make_interval(days => 48 - i)
 FROM completed
 ON CONFLICT (id) DO UPDATE SET rating = EXCLUDED.rating, content = EXCLUDED.content, status = 'VISIBLE', updated_at = NOW();
+
+-- A review record for every named team customer (identity customer 1..5).
+-- These IDs are deliberately separate from the general review dataset above so the seed remains repeatable.
+INSERT INTO reviews (
+    id, order_item_id, order_id, customer_id, product_id, variant_id,
+    rating, content, status, created_at, updated_at
+)
+VALUES
+    ('f3100000-0000-4000-8000-000000000001', 'd6000000-0000-4000-8000-000000000001', 'd4000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'b2000000-0000-4000-8000-000000000002', 'b3000000-0000-4000-8000-000000000004', 5, 'Sản phẩm đúng mô tả, đóng gói cẩn thận và thao tác đặt hàng dễ theo dõi.', 'VISIBLE', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
+    ('f3100000-0000-4000-8000-000000000002', 'd6000000-0000-4000-8000-000000000002', 'd4000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000002', 'b2000000-0000-4000-8000-000000000004', 'b3000000-0000-4000-8000-000000000010', 4, 'Chất lượng phù hợp mức giá, giao hàng có cập nhật trạng thái rõ ràng.', 'VISIBLE', NOW() - INTERVAL '16 days', NOW() - INTERVAL '16 days'),
+    ('f3100000-0000-4000-8000-000000000003', 'd6000000-0000-4000-8000-000000000003', 'd4000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000003', 'b2000000-0000-4000-8000-000000000006', 'b3000000-0000-4000-8000-000000000016', 5, 'Ảnh và thông số hiển thị đầy đủ, biến thể được chọn đúng khi nhận hàng.', 'VISIBLE', NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
+    ('f3100000-0000-4000-8000-000000000004', 'd6000000-0000-4000-8000-000000000004', 'd4000000-0000-4000-8000-000000000004', 'a1000000-0000-4000-8000-000000000004', 'b2000000-0000-4000-8000-000000000008', 'b3000000-0000-4000-8000-000000000022', 4, 'Mã giảm giá được áp dụng đúng và tổng tiền cập nhật ngay tại bước thanh toán.', 'VISIBLE', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
+    ('f3100000-0000-4000-8000-000000000005', 'd6000000-0000-4000-8000-000000000005', 'd4000000-0000-4000-8000-000000000005', 'a1000000-0000-4000-8000-000000000005', 'b2000000-0000-4000-8000-000000000010', 'b3000000-0000-4000-8000-000000000028', 5, 'Nhân viên hỗ trợ phản hồi nhanh và thông tin đơn hàng rất dễ kiểm tra.', 'VISIBLE', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days')
+ON CONFLICT (id) DO UPDATE SET rating = EXCLUDED.rating, content = EXCLUDED.content, status = EXCLUDED.status, updated_at = EXCLUDED.updated_at;
 
 WITH completed AS (
     SELECT i,
@@ -77,7 +98,12 @@ SELECT
     ('f4000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('b2000000-0000-4000-8000-' || lpad((((i * 5 - 1) % 120) + 1)::text, 12, '0'))::uuid,
     ('a1000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
-    format('Sản phẩm này có bảo hành và đổi trả như thế nào? Câu hỏi mẫu %s.', i),
+    CASE (i - 1) % 4
+        WHEN 0 THEN 'Sản phẩm này có những lựa chọn biến thể nào và hình thực tế có giống mô tả không?'
+        WHEN 1 THEN 'Nếu nhận hàng không vừa hoặc không phù hợp, tôi có thể đổi trả trong bao lâu?'
+        WHEN 2 THEN 'Sản phẩm có bảo hành không và cần lưu ý gì khi sử dụng hằng ngày?'
+        ELSE 'Đơn hàng thường được giao trong mấy ngày tại Hà Nội và có thể theo dõi ở đâu?'
+    END,
     'ANSWERED', NOW() - make_interval(days => 15 - i), NOW()
 FROM generate_series(1, 12) AS s(i)
 ON CONFLICT (id) DO UPDATE SET status = 'ANSWERED', updated_at = NOW();
@@ -87,7 +113,12 @@ SELECT
     ('f5000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('f4000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     '00000000-0000-4000-8000-000000000001',
-    'DynamicMart hỗ trợ đổi trả theo chính sách hiển thị trên trang sản phẩm và đơn hàng.',
+    CASE (i - 1) % 4
+        WHEN 0 THEN 'Mỗi biến thể có ảnh và thông số riêng trên trang sản phẩm. Bạn có thể chọn biến thể trước khi thêm vào giỏ.'
+        WHEN 1 THEN 'DynamicMart hỗ trợ đổi trả trong 7 ngày khi sản phẩm còn nguyên điều kiện theo chính sách hiển thị trên đơn hàng.'
+        WHEN 2 THEN 'Thông tin bảo hành và cách sử dụng được ghi tại mục thông số sản phẩm; bạn vui lòng giữ lại mã đơn để được hỗ trợ.'
+        ELSE 'Thời gian giao dự kiến được GHN hiển thị ở checkout và bạn có thể theo dõi tiến trình trong mục Đơn hàng của tôi.'
+    END,
     NOW() - make_interval(days => 14 - i), NOW()
 FROM generate_series(1, 12) AS s(i)
 ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, updated_at = NOW();
@@ -129,7 +160,14 @@ SELECT
     ('f8000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('f7000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
     ('a1000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
-    'CUSTOMER', 'Tôi cần hỗ trợ kiểm tra trạng thái đơn hàng mẫu.',
+    'CUSTOMER', CASE i
+        WHEN 1 THEN 'Tôi muốn kiểm tra dự kiến giao hàng của đơn này.'
+        WHEN 2 THEN 'Sản phẩm nhận được có thể đổi sang biến thể khác không?'
+        WHEN 3 THEN 'Tôi cần hướng dẫn dùng mã giảm giá cho đơn tiếp theo.'
+        WHEN 4 THEN 'Xin cho biết thời gian bảo hành của sản phẩm đã mua.'
+        WHEN 5 THEN 'Tôi muốn hỏi cách theo dõi đơn hàng trên website.'
+        ELSE 'Tôi cần hỗ trợ xác nhận thông tin thanh toán của đơn.'
+    END,
     CASE WHEN i % 2 = 0 THEN NOW() - make_interval(hours => i) END,
     NOW() - make_interval(hours => i),
     ('fb000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid
@@ -187,3 +225,24 @@ SELECT 'engagement' AS domain,
        (SELECT count(*) FROM review_images WHERE id::text LIKE 'fa000000-%') AS review_images,
        (SELECT count(*) FROM notifications WHERE id::text LIKE 'f6000000-%') AS notifications
 FROM wishlists;
+
+-- Seed agent replies so the customer-support screen has complete conversations.
+INSERT INTO chat_messages (id, conversation_id, sender_id, sender_role, content, read_at, created_at, idempotency_key)
+SELECT
+    ('f8100000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
+    ('f7000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
+    '00000000-0000-4000-8000-000000000001',
+    'ADMIN',
+    CASE i
+        WHEN 1 THEN 'Chào bạn, đơn hàng đang được đối soát với đơn vị giao hàng. Thời gian dự kiến luôn hiển thị trong chi tiết đơn.'
+        WHEN 2 THEN 'Bạn có thể gửi yêu cầu đổi trả từ chi tiết đơn hàng trong thời hạn 7 ngày nếu sản phẩm đáp ứng điều kiện.'
+        WHEN 3 THEN 'Voucher hợp lệ sẽ sáng màu ở checkout. Sau khi chọn, tổng tiền được tính lại ngay ở phần tóm tắt.'
+        WHEN 4 THEN 'Thông tin bảo hành và hướng dẫn sử dụng nằm trong phần Thông số nổi bật của từng sản phẩm.'
+        WHEN 5 THEN 'Bạn vào Tài khoản > Đơn hàng để xem trạng thái, lịch sử xử lý và mã vận đơn nếu đã có.'
+        ELSE 'Chúng tôi đã ghi nhận yêu cầu. Nếu giao dịch đã trừ tiền nhưng chưa tạo đơn, CSKH sẽ hướng dẫn bạn làm việc với quản trị viên.'
+    END,
+    NOW() - make_interval(hours => i - 1),
+    NOW() - make_interval(hours => i - 1),
+    ('fb100000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid
+FROM generate_series(1, 6) AS s(i)
+ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, read_at = EXCLUDED.read_at, created_at = EXCLUDED.created_at;

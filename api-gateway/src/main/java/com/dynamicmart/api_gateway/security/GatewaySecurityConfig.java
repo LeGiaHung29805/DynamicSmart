@@ -1,6 +1,7 @@
 package com.dynamicmart.api_gateway.security;
 
 import java.util.Base64;
+import java.util.Arrays;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -93,9 +94,16 @@ public class GatewaySecurityConfig {
     }
 
     @Bean
-    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.frontend-origin}") String frontendOrigin) {
+    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.frontend-origins}") String frontendOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(java.util.List.of(frontendOrigin));
+        var allowedOrigins = Arrays.stream(frontendOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
+        if (allowedOrigins.isEmpty()) {
+            throw new IllegalStateException("FRONTEND_ORIGINS phải chứa ít nhất một origin hợp lệ.");
+        }
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Idempotency-Key", "X-Correlation-Id"));
         config.setExposedHeaders(java.util.List.of("X-Correlation-Id"));

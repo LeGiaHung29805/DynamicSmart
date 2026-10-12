@@ -20,7 +20,7 @@ function discountLabel(voucher: VoucherWalletItem) {
 }
 
 function scopeLabel(scope: string) {
-  return ({ ORDER_DISCOUNT: "Toàn đơn", SHIPPING_DISCOUNT: "Phí vận chuyển", PRODUCT_DISCOUNT: "Sản phẩm", PRODUCT_LIST_DISCOUNT: "Nhóm sản phẩm", CATEGORY_DISCOUNT: "Danh mục" } as Record<string, string>)[scope] ?? scope;
+  return ({ ORDER_DISCOUNT: "Toàn đơn", SHIPPING_DISCOUNT: "Phí vận chuyển", PRODUCT_DISCOUNT: "Sản phẩm", PRODUCT_LIST_DISCOUNT: "Nhóm sản phẩm", CATEGORY_DISCOUNT: "Danh mục" } as Record<string, string>)[scope] ?? "Ưu đãi";
 }
 
 export function VoucherWalletPage() {

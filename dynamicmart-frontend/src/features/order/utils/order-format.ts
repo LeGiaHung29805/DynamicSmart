@@ -5,7 +5,7 @@ const labels: Record<string, string> = {
   CONFIRMED: "Đã xác nhận",
   PACKING: "Đang đóng gói",
   SHIPPING: "Đang vận chuyển",
-  HANDOVER_PENDING: "Chờ bàn giao",
+  HANDOVER_PENDING: "Chờ khách xác nhận đã nhận",
   DELIVERED: "Đã giao hàng",
   COMPLETED: "Hoàn tất",
   CANCELLED: "Đã hủy",
@@ -18,14 +18,15 @@ const labels: Record<string, string> = {
 };
 
 export function orderStatusLabel(status: OrderStatus | string) {
-  return labels[status] ?? status;
+  return labels[status] ?? "Đang cập nhật";
 }
 
 const timelineReasonLabels: Record<string, string> = {
   ORDER_CREATED: "Khởi tạo đơn hàng thành công",
   ADMIN_PACK: "Quản trị viên xác nhận bắt đầu đóng gói kiện hàng",
   ADMIN_SHIP: "Quản trị viên chuyển kiện hàng cho đơn vị vận chuyển",
-  ADMIN_HANDOVER: "Quản trị viên chuyển đơn sang trạng thái chờ bàn giao",
+  ADMIN_HANDOVER: "Quản trị viên xác nhận đã giao và chờ khách xác nhận nhận hàng",
+  SYSTEM_AUTO_CONFIRM_RECEIVED: "Hệ thống tự xác nhận đã nhận hàng do quá thời hạn phản hồi",
   CUSTOMER_CONFIRM_RECEIVED: "Khách hàng xác nhận đã nhận hàng thành công",
   PAYMENT_SUCCEEDED: "Ghi nhận thanh toán thành công",
   PAYMENT_FAILED: "Thanh toán thất bại",
@@ -36,11 +37,19 @@ const timelineReasonLabels: Record<string, string> = {
   EXPIRED: "Đơn hàng đã hết hạn xử lý",
   VOUCHER_RELEASED: "Đã hoàn lại mã giảm giá",
   INVENTORY_RELEASED: "Đã hoàn lại tồn kho",
+  OrderCreated: "Khởi tạo đơn hàng thành công",
+  OrderCancelled: "Đơn hàng đã được hủy",
+  OrderCompleted: "Đơn hàng đã hoàn tất",
+  PaymentSucceeded: "Ghi nhận thanh toán thành công",
+  PaymentFailed: "Thanh toán thất bại",
+  PaymentExpired: "Hết hạn thời gian thanh toán",
+  VoucherReleased: "Đã hoàn lại mã giảm giá",
+  InventoryReleased: "Đã hoàn lại tồn kho",
 };
 
 export function orderTimelineReasonLabel(reason?: string | null): string {
   if (!reason) return "";
-  return timelineReasonLabels[reason] ?? reason;
+  return timelineReasonLabels[reason] ?? "Cập nhật trạng thái đơn hàng";
 }
 
 const cancelReasonLabels: Record<string, string> = {
@@ -53,7 +62,7 @@ const cancelReasonLabels: Record<string, string> = {
 
 export function orderCancelReasonLabel(reason?: string | null): string {
   if (!reason) return "Không có lý do";
-  return cancelReasonLabels[reason] ?? reason;
+  return cancelReasonLabels[reason] ?? "Đơn hàng được hủy theo quy trình xử lý";
 }
 
 const paymentMethods: Record<PaymentMethod, string> = {

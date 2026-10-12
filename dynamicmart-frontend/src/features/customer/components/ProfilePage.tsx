@@ -63,7 +63,7 @@ export function ProfilePage() {
             </div>
             <div className="space-y-4 p-6 text-sm">
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><ShieldCheck className="size-4" /></span><div><p className="text-xs text-slate-400">Vai trò</p><p className="font-bold">{profile.role === "ADMIN" ? "Quản trị viên" : "Khách hàng"}</p></div></div>
-              <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-sky-50 text-sky-700"><CheckCircle2 className="size-4" /></span><div><p className="text-xs text-slate-400">Trạng thái</p><p className="font-bold text-emerald-700">{profile.status === "ACTIVE" ? "Đang hoạt động" : profile.status}</p></div></div>
+              <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-sky-50 text-sky-700"><CheckCircle2 className="size-4" /></span><div><p className="text-xs text-slate-400">Trạng thái</p><p className="font-bold text-emerald-700">{profile.status === "ACTIVE" ? "Đang hoạt động" : profile.status === "LOCKED" ? "Đã khóa" : profile.status === "DISABLED" ? "Vô hiệu hóa" : "Đang cập nhật"}</p></div></div>
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-amber-50 text-amber-700"><CalendarDays className="size-4" /></span><div><p className="text-xs text-slate-400">Tham gia từ</p><p className="font-bold">{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString("vi-VN") : "Đang cập nhật"}</p></div></div>
             </div>
           </SurfacePanel>

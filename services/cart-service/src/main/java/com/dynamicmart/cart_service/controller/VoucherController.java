@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/v1/cart")
@@ -58,6 +60,9 @@ public class VoucherController {
                                   @Valid @RequestBody VoucherStatusRequest request) {
         return vouchers.changeStatus(user(jwt), id, key, request);
     }
+    @DeleteMapping("/admin/vouchers/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) { vouchers.delete(id); }
     @PostMapping("/admin/vouchers/{id}/assignments")
     public AssignmentResponse assign(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                      @RequestHeader("Idempotency-Key") UUID key,

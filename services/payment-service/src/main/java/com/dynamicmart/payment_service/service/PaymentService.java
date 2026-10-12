@@ -25,7 +25,7 @@ import com.dynamicmart.payment_service.dto.response.PaymentPageResponse;
 
 @Service
 public class PaymentService {
-    private static final Duration VNPAY_TTL = Duration.ofMinutes(15);
+    private static final Duration PAYMENT_TTL = Duration.ofMinutes(10);
     private final PaymentRepository payments;
     private final PaymentAttemptRepository attempts;
     private final OutboxEventRepository outbox;
@@ -193,13 +193,13 @@ public class PaymentService {
     private Payment newPayment(OrderPaymentContextRequest request) {
         Instant now = Instant.now(); Payment payment = new Payment();
         payment.setId(UUID.randomUUID()); payment.setOrderId(request.orderId()); payment.setCustomerId(request.customerId()); payment.setAmountVnd(request.amountVnd()); payment.setTiming(request.timing().name()); payment.setMethod(request.method().name()); payment.setStatus("PENDING"); payment.setCorrelationId(request.correlationId());
-        if (request.timing() == OrderPaymentContextRequest.PaymentTiming.PREPAID && request.method() != OrderPaymentContextRequest.PaymentMethod.COD) payment.setExpiresAt(now.plus(VNPAY_TTL));
+        if (request.timing() == OrderPaymentContextRequest.PaymentTiming.PREPAID && request.method() != OrderPaymentContextRequest.PaymentMethod.COD) payment.setExpiresAt(now.plus(PAYMENT_TTL));
         payment.setCreatedAt(now); payment.setUpdatedAt(now); return payment;
     }
 
     private PaymentAttempt createOnlineAttempt(Payment payment) {
         Instant now = Instant.now(); int attemptNo = attempts.findByPaymentIdOrderByAttemptNoDesc(payment.getId()).size() + 1;
-        Instant expires = now.plus(VNPAY_TTL);
+        Instant expires = now.plus(PAYMENT_TTL);
         if (payment.getExpiresAt() != null && payment.getExpiresAt().isBefore(expires)) expires = payment.getExpiresAt();
         PaymentGatewayRouter.CreatedPayment created = gateways.create(payment.getMethod(), payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmountVnd(), attemptNo, expires);
         PaymentAttempt attempt = new PaymentAttempt(); attempt.setId(UUID.randomUUID()); attempt.setPaymentId(payment.getId()); attempt.setAttemptNo(attemptNo); attempt.setProvider(payment.getMethod()); attempt.setProviderReference(created.reference()); attempt.setAmountVnd(payment.getAmountVnd()); attempt.setStatus("CREATED");

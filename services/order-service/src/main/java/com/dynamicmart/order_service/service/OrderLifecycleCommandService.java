@@ -34,6 +34,7 @@ public class OrderLifecycleCommandService {
     private static final String ADMIN_SHIP = "ADMIN_SHIP";
     private static final String ADMIN_HANDOVER = "ADMIN_HANDOVER";
     private static final String CUSTOMER_CONFIRM_RECEIVED = "CUSTOMER_CONFIRM_RECEIVED";
+    private static final String SYSTEM_AUTO_CONFIRM_RECEIVED = "SYSTEM_AUTO_CONFIRM_RECEIVED";
 
     private final CustomerOrderRepository orders;
     private final OrderItemRepository items;
@@ -120,6 +121,45 @@ public class OrderLifecycleCommandService {
         return record(operationKey, CUSTOMER_CONFIRM_RECEIVED, order, transitions, now);
     }
 
+    /**
+     * A delivery that remains in the customer-confirmation step past the configured
+     * deadline is completed by the system. This deliberately uses the same transition
+     * and COD collection logic as the customer's confirmation.
+     */
+    @Transactional
+    public OrderCommandResponse autoConfirmReceived(UUID orderId) {
+        if (orderId == null) {
+            throw new OrderException(HttpStatus.BAD_REQUEST, "ORDER_COMMAND_INPUT_REQUIRED", "Order ID là bắt buộc.");
+        }
+        CustomerOrder order = orders.findForUpdate(orderId).orElseThrow(this::notFound);
+        if (order.getStatus() != OrderStatus.HANDOVER_PENDING) {
+            return new OrderCommandResponse(order.getId(), order.getStatus(), List.of(), order.getUpdatedAt(), false);
+        }
+
+        boolean paid = order.getPaymentSucceededAt() != null
+                || order.getPaymentTiming() == PaymentTiming.NOT_REQUIRED;
+        boolean cod = order.getPaymentTiming() == PaymentTiming.POSTPAID
+                && order.getPaymentMethod() == PaymentMethod.COD;
+        List<OrderStatus> transitions = stateMachine.customerConfirmReceived(
+                order.getStatus(), order.getPaymentTiming(), paid || cod);
+        Instant now = Instant.now(clock);
+        UUID operationKey = UUID.randomUUID();
+        if (cod && !paid) {
+            payments.collectCodForReceivedOrder(orderId);
+            order.setPaymentSucceededAt(now);
+        }
+        applyTransitions(order, transitions, OrderActorType.SYSTEM, null,
+                SYSTEM_AUTO_CONFIRM_RECEIVED, operationKey, null, now);
+        if (transitions.contains(OrderStatus.DELIVERED)) {
+            order.setShipmentDeliveredAt(now);
+            emit(order, "ShipmentDelivered", operationKey, now);
+        }
+        if (transitions.contains(OrderStatus.COMPLETED)) {
+            emit(order, "OrderCompleted", operationKey, now);
+        }
+        return record(operationKey, SYSTEM_AUTO_CONFIRM_RECEIVED, order, transitions, now);
+    }
+
     private OrderCommandResponse executeAdmin(
             UUID adminId,
             UUID orderId,
@@ -137,7 +177,9 @@ public class OrderLifecycleCommandService {
         Instant now = Instant.now(clock);
         applyTransitions(order, transitions, OrderActorType.ADMIN, adminId,
                 operationType, operationKey, null, now);
-        if (ADMIN_HANDOVER.equals(operationType) && order.getPaymentMethod().isOnline()) {
+        if (ADMIN_HANDOVER.equals(operationType)
+                && order.getPaymentTiming() == PaymentTiming.POSTPAID
+                && order.getPaymentMethod().isOnline()) {
             emit(order, "PaymentDue", operationKey, now);
         }
         return record(operationKey, operationType, order, transitions, now);

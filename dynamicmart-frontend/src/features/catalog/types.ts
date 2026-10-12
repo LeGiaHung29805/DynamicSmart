@@ -11,6 +11,8 @@ export interface CatalogFilters {
   maximumPriceVnd?: string;
   attribute?: string[];
   sort?: string;
+  promotion?: string;
+  featured?: string;
   page?: string;
 }
 

@@ -67,10 +67,8 @@ public class OrderStateMachine {
     }
 
     public OrderStatus adminHandover(OrderStatus current, PaymentTiming timing) {
-        require(timing == PaymentTiming.POSTPAID,
-                "Chỉ đơn trả sau mới có bước chờ bàn giao và thu tiền.");
         require(current == OrderStatus.SHIPPING,
-                "Chỉ đơn trả sau đang giao mới được chuyển sang chờ bàn giao.");
+                "Chỉ đơn đang giao mới được chuyển sang chờ khách xác nhận đã nhận hàng.");
         return OrderStatus.HANDOVER_PENDING;
     }
 
@@ -87,10 +85,7 @@ public class OrderStateMachine {
                     : List.of();
         }
 
-        OrderStatus requiredStatus = timing == PaymentTiming.POSTPAID
-                ? OrderStatus.HANDOVER_PENDING
-                : OrderStatus.SHIPPING;
-        require(current == requiredStatus,
+        require(current == OrderStatus.HANDOVER_PENDING,
                 "Đơn chưa ở trạng thái cho phép khách hàng xác nhận đã nhận.");
 
         boolean canComplete = timing != PaymentTiming.POSTPAID || paymentSucceeded;

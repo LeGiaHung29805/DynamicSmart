@@ -372,7 +372,7 @@ public class CatalogProductQueryRepository {
                           AND price_variant.status = 'ACTIVE'
                      ) DESC, p.id ASC
                     """;
-            case NEWEST, BEST_SELLER -> newestOrder();
+            case NEWEST, BEST_SELLER, PROMOTION -> newestOrder();
         };
         return prioritizeAvailableProducts(ordering);
     }

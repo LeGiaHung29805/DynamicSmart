@@ -1,5 +1,8 @@
 export function getApiBaseUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+  if (baseUrl.trim().toLowerCase() === "same-origin") {
+    return "";
+  }
   return baseUrl.replace(/\/$/, "");
 }
 
@@ -20,7 +23,9 @@ export function getApiFallbackUrl(baseUrl = getApiBaseUrl()): string | undefined
 }
 
 export function getInternalApiBaseUrl(): string {
-  return (process.env.API_GATEWAY_INTERNAL_URL ?? getApiBaseUrl()).replace(/\/$/, "");
+  // Server Components run inside Next.js, so they must use a real URL rather
+  // than the browser-only same-origin value used when exposing the UI via ngrok.
+  return (process.env.API_GATEWAY_INTERNAL_URL ?? "http://localhost:8080").replace(/\/$/, "");
 }
 
 /** Chỉ bật khi trình diễn catalog-service độc lập, không dùng trong môi trường tích hợp. */

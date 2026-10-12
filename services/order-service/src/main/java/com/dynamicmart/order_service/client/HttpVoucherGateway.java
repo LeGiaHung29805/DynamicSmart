@@ -16,8 +16,8 @@ public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReserva
     public HttpVoucherGateway(@Qualifier("cartRestClient") RestClient client) { this.client = client; }
     @Override public VoucherPreview preview(VoucherPreviewRequest request) {
         PricingResponse response = post("/api/v1/cart/internal/voucher-pricing/preview",
-                new PricingRequest(request.customerId(), request.merchandiseVoucherId(), request.shippingVoucherId(),
-                        request.shippingFeeVnd(), request.items()), PricingResponse.class);
+                new PricingRequest(request.customerId(), request.merchandiseVoucherId(), request.merchandiseVoucherCode(),
+                        request.shippingVoucherId(), request.shippingVoucherCode(), request.shippingFeeVnd(), request.items()), PricingResponse.class);
         if (response.vouchers() == null || response.lineDiscounts() == null) throw contractInvalid();
         if (response.vouchers().stream().anyMatch(java.util.Objects::isNull)
                 || response.lineDiscounts().stream().anyMatch(java.util.Objects::isNull)) {
@@ -60,7 +60,7 @@ public class HttpVoucherGateway implements VoucherPricingGateway, VoucherReserva
     }
     private OrderException unavailable() { return new OrderException(HttpStatus.SERVICE_UNAVAILABLE, "CART_VOUCHER_UNAVAILABLE", "Không thể kết nối nghiệp vụ Voucher của Cart Service."); }
     private OrderException contractInvalid() { return new OrderException(HttpStatus.BAD_GATEWAY, "CART_VOUCHER_CONTRACT_INVALID", "Cart Service trả dữ liệu Voucher không hợp lệ."); }
-    private record PricingRequest(UUID customerId, UUID merchandiseVoucherId, UUID shippingVoucherId,
+    private record PricingRequest(UUID customerId, UUID merchandiseVoucherId, String merchandiseCode, UUID shippingVoucherId, String shippingCode,
                                   long shippingFeeVnd, List<VoucherItem> items) { }
     private record PricingResponse(List<PricingVoucher> vouchers, List<PricingLine> lineDiscounts) { }
     private record PricingVoucher(UUID voucherId, String voucherCode, String scope, String discountMethod,

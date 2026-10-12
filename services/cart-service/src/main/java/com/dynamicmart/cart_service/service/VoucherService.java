@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -112,6 +113,15 @@ public class VoucherService {
     }
 
     @Transactional
+    public void delete(UUID id) {
+        Voucher voucher = require(id);
+        if (reservations.existsByVoucherId(id) || customerVouchers.existsByVoucherId(id)) {
+            throw conflict("VOUCHER_HAS_HISTORY", "Voucher đã được cấp hoặc sử dụng nên không thể xóa.");
+        }
+        vouchers.delete(voucher);
+    }
+
+    @Transactional
     public AssignmentResponse assign(UUID actor, UUID voucherId, UUID key, AssignmentRequest request) {
         var duplicate = duplicate(actor, key, "CUSTOMER_VOUCHER");
         if (duplicate != null) return assignment(requireCustomerVoucher(duplicate));
@@ -139,14 +149,19 @@ public class VoucherService {
 
     @Transactional(readOnly = true)
     public List<VoucherResponse> wallet(UUID customerId) {
-        Instant now = Instant.now(); List<VoucherResponse> result = new ArrayList<>(); Set<UUID> seen = new HashSet<>();
-        for (CustomerVoucher cv : customerVouchers.findAllByCustomerIdOrderByAssignedAtDesc(customerId)) {
-            vouchers.findById(cv.getVoucherId()).ifPresent(v -> {
-                boolean eligible = cv.availableAt(now) && v.activeAt(now);
-                result.add(response(v, cv.getId(), eligible, eligible ? null : "Voucher đã hết hạn, đã dùng hoặc bị thu hồi.", 0)); seen.add(v.getId());
-            });
+        Instant now = Instant.now();
+        List<VoucherResponse> result = new ArrayList<>();
+        Map<UUID, CustomerVoucher> assignments = customerVouchers.findAllByCustomerIdOrderByAssignedAtDesc(customerId)
+                .stream().collect(java.util.stream.Collectors.toMap(CustomerVoucher::getVoucherId, value -> value, (first, ignored) -> first));
+        for (Voucher voucher : vouchers.findAllActive(now)) {
+            CustomerVoucher assignment = assignments.get(voucher.getId());
+            boolean eligible = !"ASSIGNED_ONLY".equals(voucher.getDistributionMode())
+                    || assignment != null && assignment.availableAt(now);
+            String reason = eligible ? null : assignment == null
+                    ? "Voucher chỉ dành cho tài khoản được cấp."
+                    : "Voucher đã dùng hoặc bị thu hồi.";
+            result.add(response(voucher, assignment == null ? null : assignment.getId(), eligible, reason, 0));
         }
-        for (Voucher v : vouchers.findVisibleDefaults(now)) if (seen.add(v.getId())) result.add(response(v, null, true, null, 0));
         return result;
     }
 

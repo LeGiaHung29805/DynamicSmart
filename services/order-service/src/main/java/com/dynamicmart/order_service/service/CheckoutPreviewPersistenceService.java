@@ -72,7 +72,11 @@ public class CheckoutPreviewPersistenceService {
                 : refreshQuote(existingQuote, commit, now);
         quotes.save(storedQuote);
 
+        // PostgreSQL có unique index theo checkout_session_id cho từng slot voucher.
+        // Khi khách đổi mã hoặc bấm Preview lần nữa, phải thực thi DELETE trước INSERT;
+        // nếu không Hibernate có thể flush INSERT trước và gây lỗi trùng mã (HTTP 500).
         vouchers.deleteAllByCheckoutSessionId(session.getId());
+        vouchers.flush();
         List<CheckoutSessionVoucher> storedVouchers = commit.appliedVouchers().stream()
                 .map(voucher -> CheckoutSessionVoucher.create(
                         UUID.randomUUID(), session.getId(), voucher.voucherId(), voucher.voucherCode(), voucher.scope(),
