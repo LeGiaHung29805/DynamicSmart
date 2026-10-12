@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, UUID> {
+    boolean existsByProductId(UUID productId);
     boolean existsBySkuIgnoreCase(String sku);
     boolean existsBySkuIgnoreCaseAndIdNot(String sku, UUID id);
     Optional<ProductVariant> findBySkuIgnoreCase(String sku);

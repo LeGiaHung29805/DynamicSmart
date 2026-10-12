@@ -11,6 +11,7 @@ import type {
   InventoryAdjustment,
   PageResponse,
   ProductImage,
+  ProductPublishReadiness,
   ProductStatus,
   ProductVariant,
   VariantStatus,
@@ -83,8 +84,8 @@ export type UpdateVariantInput = Omit<CreateVariantInput, "initialOnHandQuantity
 export interface ProductImageInput {
   variantId?: string | null;
   imageUrl: string;
-  contentType: string;
-  sizeBytes: number;
+  contentType?: string | null;
+  sizeBytes?: number | null;
   altText?: string | null;
   sortOrder: number;
   primary: boolean;
@@ -165,6 +166,10 @@ export function listAdminProducts(query: {
 
 export function getAdminProduct(productId: string) {
   return apiClient.get<AdminProduct>(`/api/v1/catalog/admin/products/${productId}`);
+}
+
+export function getProductPublishReadiness(productId: string) {
+  return apiClient.get<ProductPublishReadiness>(`/api/v1/catalog/admin/products/${productId}/publish-readiness`);
 }
 
 export function createProduct(input: ProductInput) {

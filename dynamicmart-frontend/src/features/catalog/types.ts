@@ -217,6 +217,18 @@ export interface AdminProduct {
   variants: ProductVariant[];
 }
 
+export interface ProductPublishCheck {
+  code: string;
+  label: string;
+  complete: boolean;
+  message: string;
+}
+
+export interface ProductPublishReadiness {
+  ready: boolean;
+  checks: ProductPublishCheck[];
+}
+
 export interface AdminInventoryItem {
   variantId: string;
   productId: string;

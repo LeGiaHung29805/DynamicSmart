@@ -11,6 +11,7 @@ import com.dynamicmart.catalog_service.dto.response.AdminProductResponse;
 import com.dynamicmart.catalog_service.dto.response.ApiResponse;
 import com.dynamicmart.catalog_service.dto.response.PageResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductImageResponse;
+import com.dynamicmart.catalog_service.dto.response.ProductPublishReadinessResponse;
 import com.dynamicmart.catalog_service.dto.response.ProductVariantResponse;
 import com.dynamicmart.catalog_service.entity.ProductStatus;
 import com.dynamicmart.catalog_service.service.ProductManagementService;
@@ -54,6 +55,12 @@ public class AdminProductController {
     @GetMapping("/{productId}")
     public ApiResponse<AdminProductResponse> get(@PathVariable UUID productId) {
         return ApiResponse.of(productService.getProduct(productId));
+    }
+
+    @GetMapping("/{productId}/publish-readiness")
+    public ApiResponse<ProductPublishReadinessResponse> getPublishReadiness(
+            @PathVariable UUID productId) {
+        return ApiResponse.of(productService.getPublishReadiness(productId));
     }
 
     @PostMapping

@@ -8,6 +8,7 @@ import com.dynamicmart.catalog_service.dto.request.CommitInventoryRequest;
 import com.dynamicmart.catalog_service.dto.request.InventoryReservationItemRequest;
 import com.dynamicmart.catalog_service.dto.request.ReleaseInventoryRequest;
 import com.dynamicmart.catalog_service.dto.request.ReserveInventoryRequest;
+import com.dynamicmart.catalog_service.dto.request.UpsertProductImageRequest;
 import com.dynamicmart.catalog_service.dto.response.InventoryReservationResponse;
 import com.dynamicmart.catalog_service.entity.InventoryReservationStatus;
 import com.dynamicmart.catalog_service.exception.CatalogException;
@@ -17,6 +18,7 @@ import com.dynamicmart.catalog_service.query.ProductSort;
 import com.dynamicmart.catalog_service.service.InventoryAdjustmentService;
 import com.dynamicmart.catalog_service.service.InventoryExpirationScheduler;
 import com.dynamicmart.catalog_service.service.InventoryReservationService;
+import com.dynamicmart.catalog_service.service.ProductManagementService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -72,6 +74,7 @@ class InventoryPostgresIntegrationTest {
     @Autowired private InventoryExpirationScheduler expirationScheduler;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private CatalogProductQueryRepository productQueryRepository;
+    @Autowired private ProductManagementService productManagementService;
 
     private ExecutorService executor;
 
@@ -113,6 +116,24 @@ class InventoryPostgresIntegrationTest {
         assertThat(integer("SELECT on_hand_qty - reserved_qty FROM inventory_items WHERE variant_id = ?",
                 VARIANT_ID)).isZero();
         assertThat(integer("SELECT COUNT(*) FROM inventory_reservations")).isEqualTo(1);
+    }
+
+    @Test
+    void publishReadinessUsesInventoryAndPrimaryImageFromPostgres() {
+        var beforeImage = productManagementService.getPublishReadiness(PRODUCT_ID);
+        assertThat(beforeImage.ready()).isFalse();
+        assertThat(beforeImage.checks()).anyMatch(check ->
+                check.code().equals("PRODUCT_PRIMARY_IMAGE_REQUIRED") && !check.complete());
+
+        var image = productManagementService.createImage(PRODUCT_ID,
+                new UpsertProductImageRequest(null, "https://example.com/product.webp",
+                        null, null, "Sản phẩm cuối", 0, false));
+
+        assertThat(image.primary()).isTrue();
+        assertThat(productManagementService.getPublishReadiness(PRODUCT_ID).ready()).isTrue();
+        assertThatThrownBy(() -> productManagementService.deleteImage(PRODUCT_ID, image.id()))
+                .isInstanceOfSatisfying(CatalogException.class, exception ->
+                        assertThat(exception.getCode()).isEqualTo("ACTIVE_PRODUCT_PRIMARY_IMAGE_REQUIRED"));
     }
 
     @Test

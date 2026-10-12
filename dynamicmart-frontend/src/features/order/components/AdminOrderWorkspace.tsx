@@ -18,7 +18,6 @@ import {
   formatDateTime,
   formatVnd,
   orderActorLabel,
-  orderCancelReasonLabel,
   orderStatusLabel,
   orderStatusTone,
   orderTimelineReasonLabel,
